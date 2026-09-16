@@ -11,16 +11,13 @@ import java.util.List;
 import java.util.UUID;
 
 public interface ConsultationSlotRepository extends JpaRepository<ConsultationSlot, UUID> {
+    List<ConsultationSlot> findByTeacher_IdOrderByStartsAt(UUID teacherId);
+
     @Query("""
             select slot from ConsultationSlot slot
             where slot.status = :slotStatus and slot.startsAt >= :from
-              and not exists (
-                  select reservation from Reservation reservation
-                  where reservation.slot = slot and reservation.status in :reservationStatuses
-              )
+              and not exists (select reservation from Reservation reservation where reservation.slot = slot and reservation.status in :reservationStatuses)
             order by slot.startsAt
             """)
-    List<ConsultationSlot> findAvailable(@Param("slotStatus") SlotStatus slotStatus,
-                                         @Param("from") OffsetDateTime from,
-                                         @Param("reservationStatuses") List<ReservationStatus> reservationStatuses);
+    List<ConsultationSlot> findAvailable(@Param("slotStatus") SlotStatus slotStatus, @Param("from") OffsetDateTime from, @Param("reservationStatuses") List<ReservationStatus> reservationStatuses);
 }
