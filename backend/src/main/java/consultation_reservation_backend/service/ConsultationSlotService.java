@@ -21,7 +21,7 @@ public class ConsultationSlotService {
         if (!request.endsAt().isAfter(request.startsAt())) throw new ApiException(HttpStatus.BAD_REQUEST, "Slot end must be after its start.");
         if (!request.startsAt().isAfter(OffsetDateTime.now())) throw new ApiException(HttpStatus.BAD_REQUEST, "A slot must start in the future.");
         AppUser teacher = users.get(request.teacherId());
-        if (teacher.getRole() != UserRole.TEACHER) throw new ApiException(HttpStatus.FORBIDDEN, "Only a teacher can create slots.");
+        if (!teacher.hasRole(UserRole.TEACHER)) throw new ApiException(HttpStatus.FORBIDDEN, "Only a teacher can create slots.");
         try { return SlotResponse.from(slots.saveAndFlush(new ConsultationSlot(teacher, request.startsAt(), request.endsAt()))); }
         catch (DataIntegrityViolationException exception) { throw new ApiException(HttpStatus.CONFLICT, "This slot overlaps another active slot of the teacher."); }
     }

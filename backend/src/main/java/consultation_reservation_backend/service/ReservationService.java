@@ -21,7 +21,7 @@ public class ReservationService {
     public ReservationService(ReservationRepository reservations, ConsultationSlotRepository slots, ReservationHistoryRepository history, UserService users) { this.reservations = reservations; this.slots = slots; this.history = history; this.users = users; }
     public ReservationResponse create(CreateReservationRequest request) {
         AppUser student = users.get(request.studentId());
-        if (student.getRole() != UserRole.STUDENT) throw new ApiException(HttpStatus.FORBIDDEN, "Only a student can create a reservation.");
+        if (!student.hasRole(UserRole.STUDENT)) throw new ApiException(HttpStatus.FORBIDDEN, "Only a student can create a reservation.");
         ConsultationSlot slot = slots.findById(request.slotId()).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Slot not found."));
         if (slot.getStatus() != SlotStatus.ACTIVE || !slot.getStartsAt().isAfter(java.time.OffsetDateTime.now())) throw new ApiException(HttpStatus.CONFLICT, "This slot is not available.");
         if (reservations.findBySlotIdAndStatusIn(slot.getId(), ACTIVE).isPresent()) throw new ApiException(HttpStatus.CONFLICT, "This slot is already reserved.");
