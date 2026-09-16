@@ -23,7 +23,7 @@ public class AuthService {
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) throw new ApiException(HttpStatus.UNAUTHORIZED, "Neplatný login nebo heslo.");
         if (!user.hasRole(request.role())) throw new ApiException(HttpStatus.FORBIDDEN, "Tento účet nemá zvolenou roli.");
         AuthSession session = sessions.save(new AuthSession(user, request.role()));
-        return new LoginResponse(session.getId().toString(), user.getId(), user.getFirstName(), user.getLastName(), user.getRoles(), request.role());
+        return new LoginResponse(session.getId().toString(), user.getId(), user.getLogin(), user.getFirstName(), user.getLastName(), user.getRoles(), request.role());
     }
 
     @Transactional(readOnly = true)
