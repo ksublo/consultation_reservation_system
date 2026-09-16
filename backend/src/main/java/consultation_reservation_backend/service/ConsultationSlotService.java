@@ -26,6 +26,8 @@ public class ConsultationSlotService {
         catch (DataIntegrityViolationException exception) { throw new ApiException(HttpStatus.CONFLICT, "This slot overlaps another active slot of the teacher."); }
     }
     @Transactional(readOnly = true)
+    public List<SlotResponse> forTeacher(UUID teacherId) { return slots.findByTeacher_IdOrderByStartsAt(teacherId).stream().map(SlotResponse::from).toList(); }
+
     public List<SlotResponse> available(OffsetDateTime from) {
         return slots.findAvailable(SlotStatus.ACTIVE, from == null ? OffsetDateTime.now() : from, List.of(ReservationStatus.PENDING, ReservationStatus.CONFIRMED)).stream().map(SlotResponse::from).toList();
     }

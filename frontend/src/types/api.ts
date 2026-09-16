@@ -15,6 +15,7 @@ export interface ConsultationSlot {
   teacherName: string
   startsAt: string
   endsAt: string
+  status: 'ACTIVE' | 'CANCELLED'
 }
 
 export interface ApiError {
@@ -25,3 +26,6 @@ export interface Toast {
   type: 'success' | 'error'
   message: string
 }
+
+export type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED'
+export interface Reservation { id: string; slotId: string; studentId: string; teacherId: string; studentFirstName: string; studentLastName: string; studentLogin: string; studentEmail: string; reasonTitle: string; reasonDescription: string; status: ReservationStatus; createdAt: string; confirmedAt: string | null; cancelledAt: string | null }
