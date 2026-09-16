@@ -28,3 +28,23 @@ main.login-page { position: fixed !important; inset: 0 !important; width: 100vw 
 .toast.success { @apply bg-teal-600 text-white; }
 .toast.error { @apply bg-rose-600 text-white; }
 .back { @apply fixed left-5 top-5 rounded-full bg-white px-4 py-2 text-sm font-bold text-vsb shadow-sm hover:bg-teal-50; }
+/* Compact, single-row application header. */
+.site-navigation { @apply block border-b border-teal-100 bg-white px-0 py-0; }
+.navigation-content { @apply mx-auto flex h-20 w-full max-w-7xl flex-nowrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8; }
+.site-navigation .brand { @apply flex min-w-0 items-center gap-3; }
+.site-navigation .brand img { @apply h-11 w-auto shrink-0 sm:h-12; }
+.site-navigation .brand strong { @apply truncate text-xs font-extrabold tracking-wide text-vsb sm:text-sm; }
+.navigation-actions { @apply ml-auto flex shrink-0 items-center gap-2; }
+.navigation-actions .user-role { @apply hidden whitespace-nowrap text-sm font-medium text-slate-600 sm:block; }
+.navigation-actions .user-role b { @apply font-bold text-ink; }
+.icon-button { @apply grid h-10 w-10 place-items-center rounded-full border bg-white p-0 transition-colors; }
+.icon-button svg { @apply h-5 w-5 fill-none stroke-current stroke-2; }
+.icon-button.refresh-button { @apply border-vsb text-vsb hover:bg-teal-50; }
+.icon-button.logout-button { @apply border-rose-200 text-rose-700 hover:bg-rose-50; }
+.site-navigation .brand strong { @apply text-sm font-medium tracking-normal text-slate-600; }
+.site-navigation .navigation-label,
+.navigation-actions .user-role { @apply text-sm font-medium tracking-normal text-slate-600; }
+/* Only the application title copies the pre-existing Student label styling. */
+.site-navigation .navigation-label { @apply text-sm font-medium tracking-normal text-slate-600; }
+.section-title > div { @apply flex items-baseline gap-2; }
+.section-title > div p { @apply whitespace-nowrap; }
