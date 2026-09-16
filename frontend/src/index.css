@@ -67,3 +67,7 @@ main.login-page { position: fixed !important; inset: 0 !important; width: 100vw 
 .request-row .status { @apply inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold normal-case; }
 .request-row .status.pending { @apply bg-amber-100 text-amber-800; }.request-row .status.confirmed { @apply bg-emerald-100 text-emerald-800; }.request-row .status.cancelled { @apply bg-slate-200 text-slate-600; }
 .request-row .status { @apply inline-flex h-7 w-fit justify-self-start items-center justify-center whitespace-nowrap rounded-md px-2.5 py-0 text-center text-xs font-medium leading-none; }
+.role-buttons { @apply mt-7 grid grid-cols-2 gap-4; }
+.role-buttons button { @apply flex min-h-48 flex-col items-center justify-center gap-5 rounded-3xl border border-teal-200 bg-teal-50 p-5 text-center text-base font-semibold text-ink shadow-sm transition hover:-translate-y-0.5 hover:border-vsb hover:bg-teal-100; }
+.role-buttons button svg { @apply h-20 w-20 fill-none stroke-vsb stroke-[1.4]; }.role-buttons button span { @apply max-w-32; }
+.login-card > img { @apply mx-auto block; }
