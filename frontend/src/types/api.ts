@@ -17,6 +17,12 @@ export interface ConsultationSlot {
   endsAt: string
 }
 
+export interface Teacher {
+  id: string
+  firstName: string
+  lastName: string
+}
+
 export interface ApiError {
   message?: string
 }

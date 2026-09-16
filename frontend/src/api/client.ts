@@ -1,4 +1,4 @@
-import type { ApiError, ConsultationSlot, Session, UserRole } from '../types/api'
+import type { ApiError, ConsultationSlot, Session, Teacher, UserRole } from '../types/api'
 
 const API_ROOT = '/api'
 
@@ -20,5 +20,6 @@ export const api = {
   login: async (login: string, password: string, role: UserRole): Promise<Session> => readJson<Session>(await fetch(`${API_ROOT}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password, role }) })),
   logout: async (token: string): Promise<void> => { await fetch(`${API_ROOT}/auth/logout`, { method: 'POST', headers: authorization(token) }) },
   getSlots: async (token: string): Promise<ConsultationSlot[]> => readJson<ConsultationSlot[]>(await fetch(`${API_ROOT}/slots`, { headers: authorization(token) })),
+  getTeachers: async (token: string): Promise<Teacher[]> => readJson<Teacher[]>(await fetch(`${API_ROOT}/users/teachers`, { headers: authorization(token) })),
   reserve: async (token: string, payload: { slotId: string; studentId: string; reasonTitle: string; reasonDescription: string }): Promise<void> => { await readJson<void>(await fetch(`${API_ROOT}/reservations`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authorization(token) }, body: JSON.stringify(payload) })) },
 }
