@@ -36,4 +36,22 @@ export interface Toast {
 }
 
 export type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED'
-export interface Reservation { id: string; slotId: string; studentId: string; teacherId: string; teacherName: string; studentFirstName: string; studentLastName: string; studentLogin: string; studentEmail: string; reasonTitle: string; reasonDescription: string; status: ReservationStatus; startsAt: string; endsAt: string; createdAt: string; confirmedAt: string | null; cancelledAt: string | null }
+export interface Reservation {
+  id: string
+  slotId: string
+  studentId: string
+  teacherId: string
+  teacherName: string
+  studentFirstName: string
+  studentLastName: string
+  studentLogin: string
+  studentEmail: string
+  reasonTitle: string
+  reasonDescription: string
+  status: ReservationStatus
+  startsAt: string
+  endsAt: string
+  createdAt: string
+  confirmedAt: string | null
+  cancelledAt: string | null
+}
