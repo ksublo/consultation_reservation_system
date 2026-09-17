@@ -22,6 +22,7 @@ export interface Teacher {
   id: string
   firstName: string
   lastName: string
+  login: string
 }
 
 export interface ApiError {
