@@ -3,6 +3,7 @@ package consultation_reservation_backend.service;
 import consultation_reservation_backend.api.*;
 import consultation_reservation_backend.domain.*;
 import consultation_reservation_backend.repository.ConsultationSlotRepository;
+import consultation_reservation_backend.repository.ReservationHistoryRepository;
 import consultation_reservation_backend.repository.ReservationRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -23,7 +24,8 @@ public class ConsultationSlotService {
     private final ConsultationSlotRepository slots;
     private final UserService users;
     private final ReservationRepository reservations;
-    public ConsultationSlotService(ConsultationSlotRepository slots, UserService users, ReservationRepository reservations) { this.slots = slots; this.users = users; this.reservations = reservations; }
+    private final ReservationHistoryRepository history;
+    public ConsultationSlotService(ConsultationSlotRepository slots, UserService users, ReservationRepository reservations, ReservationHistoryRepository history) { this.slots = slots; this.users = users; this.reservations = reservations; this.history = history; }
     public SlotResponse create(CreateSlotRequest request) {
         if (!request.endsAt().isAfter(request.startsAt())) throw new ApiException(HttpStatus.BAD_REQUEST, "Slot end must be after its start.");
         if (!request.startsAt().isAfter(OffsetDateTime.now())) throw new ApiException(HttpStatus.BAD_REQUEST, "A slot must start in the future.");
@@ -44,6 +46,20 @@ public class ConsultationSlotService {
         ConsultationSlot slot = slots.findById(slotId).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Slot not found."));
         if (!slot.getTeacher().getId().equals(teacherId)) throw new ApiException(HttpStatus.FORBIDDEN, "Only the slot owner can cancel it.");
         if (reservations.findBySlotIdAndStatusIn(slot.getId(), List.of(ReservationStatus.PENDING, ReservationStatus.CONFIRMED)).isPresent()) throw new ApiException(HttpStatus.CONFLICT, "Obsazený termín nelze zrušit.");
+        slot.cancel();
+    }
+
+    public void cancelWithActiveReservation(UUID slotId, ActorRequest request) {
+        ConsultationSlot slot = slots.findById(slotId).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Slot not found."));
+        AppUser teacher = users.get(request.actorUserId());
+        if (!slot.getTeacher().getId().equals(teacher.getId())) throw new ApiException(HttpStatus.FORBIDDEN, "Only the slot owner can cancel it.");
+        Reservation reservation = reservations.findBySlotIdAndStatusIn(slot.getId(), List.of(ReservationStatus.PENDING, ReservationStatus.CONFIRMED)).orElse(null);
+        if (reservation != null) {
+            if (slot.getStartsAt().isBefore(OffsetDateTime.now().plusHours(3))) throw new ApiException(HttpStatus.CONFLICT, "Reservations cannot be cancelled less than 3 hours before the consultation starts.");
+            ReservationStatus previous = reservation.getStatus();
+            reservation.cancel(teacher, request.note());
+            history.save(new ReservationHistory(reservation, ReservationAction.CANCELLED, previous, ReservationStatus.CANCELLED, teacher, request.note()));
+        }
         slot.cancel();
     }
 

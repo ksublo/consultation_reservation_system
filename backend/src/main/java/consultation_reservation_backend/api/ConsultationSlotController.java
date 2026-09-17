@@ -19,4 +19,6 @@ public class ConsultationSlotController {
     @GetMapping("/mine") public List<SlotResponse> mine(@RequestParam UUID teacherId) { return slots.forTeacher(teacherId); }
     @PostMapping("/{slotId}/cancel") @ResponseStatus(HttpStatus.NO_CONTENT)
     public void cancel(@PathVariable UUID slotId, @Valid @RequestBody ActorRequest request) { slots.cancel(slotId, request.actorUserId()); }
+    @PostMapping("/{slotId}/cancel-with-reservation") @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void cancelWithReservation(@PathVariable UUID slotId, @Valid @RequestBody ActorRequest request) { slots.cancelWithActiveReservation(slotId, request); }
 }
