@@ -23,6 +23,7 @@ export interface Teacher {
   firstName: string
   lastName: string
   login: string
+  email: string
 }
 
 export interface ApiError {
