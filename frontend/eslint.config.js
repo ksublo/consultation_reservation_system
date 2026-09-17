@@ -1,4 +1,6 @@
 import js from '@eslint/js'
+import prettierConfig from 'eslint-config-prettier'
+import prettierPlugin from 'eslint-plugin-prettier'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
@@ -8,17 +10,13 @@ export default tseslint.config(
   { ignores: ['dist'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  prettierConfig,
   {
-    files: ['**/*.{ts,tsx}'],
-    languageOptions: {
-      ecmaVersion: 2022,
-      globals: globals.browser,
-    },
-    plugins: {
-      'react-hooks': reactHooks,
-      'react-refresh': reactRefresh,
-    },
+    files: ['**/*.{ts,tsx,js}'],
+    languageOptions: { ecmaVersion: 2022, globals: globals.browser },
+    plugins: { prettier: prettierPlugin, 'react-hooks': reactHooks, 'react-refresh': reactRefresh },
     rules: {
+      'prettier/prettier': 'error',
       ...reactHooks.configs.recommended.rules,
       'react-hooks/exhaustive-deps': 'off',
       'react-hooks/set-state-in-effect': 'off',
