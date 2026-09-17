@@ -25,6 +25,7 @@ const apiMessages: Record<string, Record<Language, string>> = {
   'Reservations must be created at least 3 hours before the consultation starts.': { cs: 'Rezervaci lze vytvořit nejpozději 3 hodiny před začátkem konzultace.', en: 'Reservations must be created at least 3 hours before the consultation starts.' },
   'This slot is already reserved.': { cs: 'Tento termín je již rezervovaný.', en: 'This slot is already reserved.' },
   'A student can have at most 3 pending reservations.': { cs: 'Student může mít nejvýše 3 rezervace čekající na schválení.', en: 'A student can have at most 3 pending reservations.' },
+  'A student can have at most 5 pending reservations.': { cs: 'Student může mít nejvýše 5 rezervací čekajících na schválení.', en: 'A student can have at most 5 pending reservations.' },
   'The student already has an overlapping reservation.': { cs: 'Student už má překrývající se rezervaci.', en: 'The student already has an overlapping reservation.' },
   'This slot was just reserved by another student.': { cs: 'Tento termín právě rezervoval jiný student.', en: 'This slot was just reserved by another student.' },
   "Only the slot's teacher can approve it.": { cs: 'Rezervaci může schválit pouze pedagog daného termínu.', en: "Only the slot's teacher can approve it." },
@@ -48,6 +49,6 @@ export const api = {
   cancelSlot: async (token: string, slotId: string, actorUserId: string): Promise<void> => { await readJson<void>(await fetch(`${API_ROOT}/slots/${slotId}/cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authorization(token) }, body: JSON.stringify({ actorUserId }) })) },
   getReservations: async (token: string, userId: string): Promise<Reservation[]> => readJson<Reservation[]>(await fetch(`${API_ROOT}/reservations?userId=${userId}`, { headers: authorization(token) })),
   approveReservation: async (token: string, id: string, actorUserId: string): Promise<void> => { await readJson<void>(await fetch(`${API_ROOT}/reservations/${id}/approve`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authorization(token) }, body: JSON.stringify({ actorUserId }) })) },
-  cancelReservation: async (token: string, id: string, actorUserId: string): Promise<void> => { await readJson<void>(await fetch(`${API_ROOT}/reservations/${id}/cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authorization(token) }, body: JSON.stringify({ actorUserId }) })) },
+  cancelReservation: async (token: string, id: string, actorUserId: string, note = 'Cancelled by user.'): Promise<void> => { await readJson<void>(await fetch(`${API_ROOT}/reservations/${id}/cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authorization(token) }, body: JSON.stringify({ actorUserId, note }) })) },
   reserve: async (token: string, payload: { slotId: string; studentId: string; reasonTitle: string; reasonDescription: string }): Promise<void> => { await readJson<void>(await fetch(`${API_ROOT}/reservations`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authorization(token) }, body: JSON.stringify(payload) })) },
 }

@@ -16,7 +16,7 @@ import java.util.UUID;
 public class ReservationService {
     private static final List<ReservationStatus> ACTIVE = List.of(ReservationStatus.PENDING, ReservationStatus.CONFIRMED);
     private static final int RESERVATION_CUTOFF_HOURS = 3;
-    private static final int MAX_PENDING_RESERVATIONS = 3;
+    private static final int MAX_PENDING_RESERVATIONS = 5;
     private final ReservationRepository reservations;
     private final ConsultationSlotRepository slots;
     private final ReservationHistoryRepository history;
@@ -30,7 +30,7 @@ public class ReservationService {
         if (slot.getStatus() != SlotStatus.ACTIVE || !slot.getStartsAt().isAfter(now)) throw new ApiException(HttpStatus.CONFLICT, "This slot is not available.");
         if (slot.getStartsAt().isBefore(now.plusHours(RESERVATION_CUTOFF_HOURS))) throw new ApiException(HttpStatus.CONFLICT, "Reservations must be created at least 3 hours before the consultation starts.");
         if (reservations.findBySlotIdAndStatusIn(slot.getId(), ACTIVE).isPresent()) throw new ApiException(HttpStatus.CONFLICT, "This slot is already reserved.");
-        if (reservations.countByStudentIdAndStatus(student.getId(), ReservationStatus.PENDING) >= MAX_PENDING_RESERVATIONS) throw new ApiException(HttpStatus.CONFLICT, "A student can have at most 3 pending reservations.");
+        if (reservations.countByStudentIdAndStatus(student.getId(), ReservationStatus.PENDING) >= MAX_PENDING_RESERVATIONS) throw new ApiException(HttpStatus.CONFLICT, "A student can have at most 5 pending reservations.");
         if (!reservations.findOverlappingForStudent(student.getId(), slot.getStartsAt(), slot.getEndsAt(), ACTIVE).isEmpty()) throw new ApiException(HttpStatus.CONFLICT, "The student already has an overlapping reservation.");
         try {
             Reservation reservation = reservations.saveAndFlush(new Reservation(slot, student, request.reasonTitle(), request.reasonDescription()));
