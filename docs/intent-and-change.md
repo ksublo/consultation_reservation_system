@@ -2,78 +2,59 @@
 
 ## Reservation domain
 
-Rezervujeme konzultační termíny studentů u vyučujících.
+Rezervace konzultačních termínů pedagogů na univerzitě.
 
 ## Purpose
 
-Systém umožňuje studentům rezervovat si konzultační termín s vyučujícím. Cílem je zabránit kolizím rezervací a umožnit jednoduchou kontrolu dostupných konzultačních termínů.
+Systém umožňuje studentům rezervovat si konzultaci u konkrétního pedagoga. Pedagogové mohou vytvářet dostupné termíny, schvalovat žádosti studentů a rušit konzultace.
 
 ## Users / Stakeholders
 
-* Student – vytváří a ruší rezervace.
-* Vyučující – poskytuje konzultační termíny a schvaluje rezervace.
-* Administrátor – spravuje systém.
+- Student
+- Pedagog
+- Administrátor systému
 
 ## Core concepts
 
-* Reservation – rezervace konzultačního termínu.
-* Resource – konkrétní konzultační termín.
-* User – student nebo vyučující.
-* Consultant – vyučující poskytující konzultaci.
+- **Reservation** – žádost studenta o konkrétní konzultační termín.
+- **Resource** – konzultační termín vytvořený pedagogem.
+- **User** – student nebo pedagog používající systém.
+- **Consultation slot** – časový interval, který pedagog nabízí pro konzultaci.
+- **Reservation history** – historie vytvoření, schválení a zrušení rezervace.
 
 ## Core operations
 
-* Create reservation
-* Confirm / approve reservation
-* Cancel reservation
-* Check availability
+- Create reservation
+- Confirm / approve reservation
+- Cancel reservation
+- Check availability
 
 ## Persistent state
 
-### Reservation
+U rezervace ukládáme identifikátor studenta, identifikátor termínu, název a popis důvodu konzultace, stav, datum vytvoření, datum schválení nebo zrušení a důvod zrušení.
 
-* ID rezervace
-* ID uživatele
-* ID konzultanta
-* ID resource
-* datum
-* čas začátku
-* čas konce
-* stav rezervace
-
-### Resource
-
-* ID konzultačního termínu
-* ID konzultanta
-* datum
-* čas začátku
-* čas konce
-* dostupnost
+U konzultačního termínu ukládáme identifikátor pedagoga, začátek, konec a stav termínu.
 
 ## State-changing operation
 
-Rezervace může měnit svůj stav:
-
-DRAFT → CONFIRMED → CANCELLED
+Rezervace při vytvoření přechází do stavu `PENDING`. Pedagog ji může schválit do stavu `CONFIRMED`, případně ji může student nebo pedagog zrušit do stavu `CANCELLED`.
 
 ## Common business rule
 
-Confirmed reservations for the same resource must not overlap.
+Pro stejný konzultační termín nemohou existovat dvě aktivní rezervace. Rezervace ve stavu `PENDING` i `CONFIRMED` blokují termín pro další studenty.
 
 ## Domain-specific business rule
 
-Jeden student může mít u stejného vyučujícího maximálně jednu potvrzenou rezervaci za jeden den.
+Konzultační termíny lze vytvářet pouze v pracovní dny mezi 07:15 a 19:15. Student může mít maximálně pět čekajících rezervací a nesmí si rezervovat čas, který se překrývá s jeho jinou aktivní rezervací.
 
 ## External / system boundary
 
-Notification Service.
-
-Systém používá Notification Service pro odeslání upozornění studentovi při potvrzení nebo zrušení rezervace.
+Notification Service – po vytvoření, schválení nebo zrušení rezervace bude systém vytvářet oznámení pro studenta nebo pedagoga. *(ještě ve vývoji)*
 
 ## Assumption
 
-Předpokládáme, že konzultační termíny vytváří vyučující předem a student si může rezervovat pouze dostupný předem vytvořený termín.
+Každý pedagog má své konzultační termíny pod vlastní správou a může schvalovat pouze rezervace vytvořené pro své termíny.
 
 ## Unknown
 
-Zatím nevíme, zda bude možné, aby vyučující změnil nebo zrušil konzultační termín, který už má student rezervovaný.
+Zatím není rozhodnuto, zda budou notifikace pouze přímo v aplikaci, nebo zda se budou odesílat také e-mailem.
