@@ -25,11 +25,20 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
   }
 
   componentDidUpdate(previousProps: ErrorBoundaryProps) {
-    if (previousProps.language !== this.props.language && this.state.hasError) this.setState({ hasError: false })
+    if (previousProps.language !== this.props.language && this.state.hasError)
+      this.setState({ hasError: false })
   }
 
   render() {
-    if (this.state.hasError) return <ErrorPage language={this.props.language} onLanguageChange={this.props.onLanguageChange} reason="error" t={this.props.t} />
+    if (this.state.hasError)
+      return (
+        <ErrorPage
+          language={this.props.language}
+          onLanguageChange={this.props.onLanguageChange}
+          reason="error"
+          t={this.props.t}
+        />
+      )
     return this.props.children
   }
 }
