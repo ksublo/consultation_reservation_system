@@ -15,6 +15,7 @@ export interface ConsultationSlot {
   teacherName: string
   startsAt: string
   endsAt: string
+  status: 'ACTIVE' | 'CANCELLED'
 }
 
 export interface Teacher {
@@ -31,3 +32,6 @@ export interface Toast {
   type: 'success' | 'error'
   message: string
 }
+
+export type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED'
+export interface Reservation { id: string; slotId: string; studentId: string; teacherId: string; teacherName: string; studentFirstName: string; studentLastName: string; studentLogin: string; studentEmail: string; reasonTitle: string; reasonDescription: string; status: ReservationStatus; startsAt: string; endsAt: string; createdAt: string; confirmedAt: string | null; cancelledAt: string | null }
