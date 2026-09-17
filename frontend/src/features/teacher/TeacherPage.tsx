@@ -27,6 +27,7 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
   const [startTime, setStartTime] = useState('09:00')
   const [duration, setDuration] = useState('30')
   const [now, setNow] = useState(() => Date.now())
+  const [slotToCancel, setSlotToCancel] = useState<ConsultationSlot | null>(null)
 
   async function load() {
     try { const [slotData, reservationData] = await Promise.all([api.getTeacherSlots(session.token, session.userId), api.getReservations(session.token, session.userId)]); setSlots(slotData); setRequests(reservationData.filter((item) => item.teacherId === session.userId)); setNow(Date.now()) }
@@ -35,6 +36,7 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
   useEffect(() => { void load() }, [])
 
   const daySlots = useMemo(() => slots.filter((slot) => slot.status === 'ACTIVE' && key(slot.startsAt) === date), [slots, date])
+  const reservationToCancel = slotToCancel ? requests.find((request) => request.slotId === slotToCancel.id && (request.status === 'PENDING' || request.status === 'CONFIRMED')) : undefined
 
   async function add(event: FormEvent) {
     event.preventDefault()
@@ -66,7 +68,31 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
     }
   }
 
+  async function cancelOpenSlot(slot: ConsultationSlot) {
+    try {
+      await api.cancelSlot(session.token, slot.id, session.userId)
+      onToast({ type: 'success', message: t('slotCancelled') })
+      await load()
+    } catch (error) {
+      onToast({ type: 'error', message: error instanceof Error ? error.message : t('slotCancelFailed') })
+    }
+  }
+
+  async function confirmCancelOccupiedSlot() {
+    if (!slotToCancel) return
+    if (!reservationToCancel) { setSlotToCancel(null); await cancelOpenSlot(slotToCancel); return }
+    try {
+      await api.cancelReservation(session.token, reservationToCancel.id, session.userId, t('teacherCancellationNote'))
+      await api.cancelSlot(session.token, slotToCancel.id, session.userId)
+      setSlotToCancel(null)
+      onToast({ type: 'success', message: t('slotCancelled') })
+      await load()
+    } catch (error) {
+      onToast({ type: 'error', message: error instanceof Error ? error.message : t('slotCancelFailed') })
+    }
+  }
+
   if (view === 'requests') return <main><section className="card"><h2>{t('teacherRequests')}</h2><div className="request-table"><div className="request-head"><span>{t('studentColumn')}</span><span>{t('contact')}</span><span>{t('topic')}</span><span>{t('status')}</span><span>{t('actions')}</span></div>{requests.map((request) => { const canCancel = request.status !== 'CANCELLED' && new Date(request.startsAt).getTime() - now >= cancellationCutoffMs; return <div className="request-row" key={request.id}><div><b>{request.studentFirstName} {request.studentLastName}</b><small>{request.studentLogin}</small></div><small>{request.studentEmail}</small><div><b>{request.reasonTitle}</b><p>{request.reasonDescription}</p></div><span className={`status ${request.status.toLowerCase()}`}>{statusLabel(request.status, t)}</span><div className="request-actions"><button className="approve-icon" title={t('approve')} disabled={request.status !== 'PENDING'} onClick={() => api.approveReservation(session.token, request.id, session.userId).then(load)}>✓</button><button className="cancel-icon" title={canCancel ? t('cancel') : t('cancelTooLate')} disabled={!canCancel} onClick={() => void cancelReservation(request)}>×</button></div></div> })}</div></section></main>
 
-  return <main><div className="teacher-grid"><section className="card"><h2>{t('slotsCalendar')}</h2><div className="calendar-header"><button type="button" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}>‹</button><strong>{monthFormatter.format(month)}</strong><button type="button" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}>›</button></div><div className="weekday-row">{weekdays[language].map((day) => <span key={day}>{day}</span>)}</div><div className="calendar-grid">{buildDays(month).map((day) => { const dayKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`; return <button key={dayKey} className={`calendar-day ${slots.some((slot) => slot.status === 'ACTIVE' && key(slot.startsAt) === dayKey) ? 'available' : ''} ${date === dayKey ? 'selected' : ''}`} onClick={() => setDate(dayKey)}>{day.getDate()}</button> })}</div></section><section className="card"><h2>{t('mySlots')}</h2><div className="slot-list teacher-slots">{daySlots.map((slot) => { const occupied = requests.some((request) => request.slotId === slot.id && (request.status === 'PENDING' || request.status === 'CONFIRMED')); return <button className={occupied ? 'slot occupied' : 'slot'} key={slot.id} disabled={occupied} onClick={() => api.cancelSlot(session.token, slot.id, session.userId).then(() => { onToast({ type: 'success', message: t('slotCancelled') }); return load() }).catch((error) => onToast({ type: 'error', message: error instanceof Error ? error.message : t('slotCancelFailed') }))}><span>{time.format(new Date(slot.startsAt))}–{time.format(new Date(slot.endsAt))}</span>{!occupied && <span className="remove-slot">×</span>}{occupied && ` ${t('occupied')}`}</button> })}{!daySlots.length && <p className="muted">{t('noTeacherSlotsForDay')}</p>}</div><h2 className="add-slot-title">{t('addSlot')}</h2><form onSubmit={add}><label>{t('start')}</label><input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /><label>{t('consultationLength')}</label><select value={duration} onChange={(event) => setDuration(event.target.value)}><option value="15">15 {t('minutes')}</option><option value="30">30 {t('minutes')}</option><option value="45">45 {t('minutes')}</option><option value="60">60 {t('minutes')}</option><option value="90">90 {t('minutes')}</option></select><button className="reserve-button">{t('addSlot')}</button></form></section></div></main>
+  return <main><div className="teacher-grid"><section className="card"><h2>{t('slotsCalendar')}</h2><div className="calendar-header"><button type="button" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}>‹</button><strong>{monthFormatter.format(month)}</strong><button type="button" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}>›</button></div><div className="weekday-row">{weekdays[language].map((day) => <span key={day}>{day}</span>)}</div><div className="calendar-grid">{buildDays(month).map((day) => { const dayKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`; return <button key={dayKey} className={`calendar-day ${slots.some((slot) => slot.status === 'ACTIVE' && key(slot.startsAt) === dayKey) ? 'available' : ''} ${date === dayKey ? 'selected' : ''}`} onClick={() => setDate(dayKey)}>{day.getDate()}</button> })}</div></section><section className="card"><h2>{t('mySlots')}</h2><div className="slot-list teacher-slots">{daySlots.map((slot) => { const occupied = requests.some((request) => request.slotId === slot.id && (request.status === 'PENDING' || request.status === 'CONFIRMED')); return <button className={occupied ? 'slot occupied' : 'slot'} key={slot.id} onClick={() => occupied ? setSlotToCancel(slot) : void cancelOpenSlot(slot)}><span>{time.format(new Date(slot.startsAt))}–{time.format(new Date(slot.endsAt))}</span>{!occupied && <span className="remove-slot">×</span>}{occupied && ` ${t('occupied')}`}</button> })}{!daySlots.length && <p className="muted">{t('noTeacherSlotsForDay')}</p>}</div><h2 className="add-slot-title">{t('addSlot')}</h2><form onSubmit={add}><label>{t('start')}</label><input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /><label>{t('consultationLength')}</label><select value={duration} onChange={(event) => setDuration(event.target.value)}><option value="15">15 {t('minutes')}</option><option value="30">30 {t('minutes')}</option><option value="45">45 {t('minutes')}</option><option value="60">60 {t('minutes')}</option><option value="90">90 {t('minutes')}</option></select><button className="reserve-button">{t('addSlot')}</button></form></section></div>{slotToCancel && <div className="modal-backdrop" role="presentation"><section className="confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="cancel-occupied-slot-title"><h2 id="cancel-occupied-slot-title">{t('cancelOccupiedSlotTitle')}</h2><p>{t('cancelOccupiedSlotMessage')}</p>{reservationToCancel && <div className="modal-student"><strong>{reservationToCancel.studentFirstName} {reservationToCancel.studentLastName}</strong><span>{reservationToCancel.studentLogin}</span><span>{reservationToCancel.studentEmail}</span></div>}<p>{t('cancelOccupiedSlotConfirm')}?</p><div className="modal-actions"><button type="button" className="text-button" onClick={() => setSlotToCancel(null)}>{t('back')}</button><button type="button" className="danger-button" onClick={() => void confirmCancelOccupiedSlot()}>{t('cancelOccupiedSlotConfirm')}</button></div></section></div>}</main>
 }

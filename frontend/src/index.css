@@ -75,6 +75,16 @@ main.login-page { position: static !important; inset: auto !important; width: 10
 .teacher-slots .slot .remove-slot { @apply ml-2 text-xl font-black text-rose-700; }
 .teacher-slots .slot { @apply border-yellow-500 bg-yellow-300 text-yellow-950 hover:bg-yellow-400; }
 .teacher-slots .slot { @apply border-emerald-500 bg-emerald-100 text-emerald-900 hover:bg-emerald-200; }
+.teacher-slots .slot.occupied { @apply cursor-pointer border-rose-300 bg-rose-100 text-rose-800 hover:bg-rose-200; }
+.modal-backdrop { @apply fixed inset-0 z-40 grid place-items-center bg-slate-950/40 p-4; }
+.confirmation-modal { @apply grid w-full max-w-md gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl; }
+.confirmation-modal h2 { @apply m-0 text-xl font-extrabold text-ink; }
+.confirmation-modal p { @apply m-0 text-sm leading-6 text-slate-600; }
+.modal-student { @apply grid gap-1 rounded-2xl bg-rose-50 px-4 py-3; }
+.modal-student strong { @apply text-base font-extrabold text-rose-800; }
+.modal-student span { @apply truncate text-sm font-semibold text-rose-700; }
+.modal-actions { @apply flex flex-col-reverse gap-2 sm:flex-row sm:justify-end; }
+.danger-button { @apply rounded-full bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700; }
 .request-table { @apply mt-5 overflow-x-auto; }
 .request-head,.request-row { @apply grid min-w-200 grid-cols-[1.1fr_1.2fr_1.5fr_1fr_auto] gap-4 border-b border-slate-100 p-4 text-sm; }
 .request-head { @apply bg-slate-50 text-xs font-bold uppercase text-slate-500; }
