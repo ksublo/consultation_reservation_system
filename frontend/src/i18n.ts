@@ -102,7 +102,8 @@ const messages = {
     offlineMessage: 'Zkontrolujte prosím připojení k internetu a zkuste stránku znovu načíst.',
     errorEyebrow: 'NĚCO SE POKAZILO',
     errorTitle: 'Stránku se nepodařilo zobrazit',
-    errorMessage: 'Aplikace narazila na neočekávanou chybu. Zkuste akci zopakovat nebo stránku obnovit.',
+    errorMessage:
+      'Aplikace narazila na neočekávanou chybu. Zkuste akci zopakovat nebo stránku obnovit.',
     tryAgain: 'Zkusit znovu',
   },
   en: {
@@ -152,7 +153,8 @@ const messages = {
     reservationFailed: 'The reservation could not be created.',
     loadSlotsFailed: 'Could not load available slots.',
     findTeacher: 'Find a teacher',
-    findTeacherHint: 'After selecting a specific teacher, their available calendar slots will appear.',
+    findTeacherHint:
+      'After selecting a specific teacher, their available calendar slots will appear.',
     upcomingConsultations: 'Upcoming consultations',
     cancelledConsultations: 'Cancelled consultations',
     cancelledConsultationNotice: 'This consultation was cancelled.',
@@ -189,7 +191,8 @@ const messages = {
     slotCreated: 'Slot was created.',
     slotCreateFailed: 'The slot overlaps or could not be created.',
     pastSlotCreateFailed: 'Cannot create a slot in the past.',
-    reservationCutoffFailed: 'Reservations must be created at least 3 hours before the consultation starts.',
+    reservationCutoffFailed:
+      'Reservations must be created at least 3 hours before the consultation starts.',
     workingHoursFailed: 'Slots must be on a workday between 07:15 and 19:15.',
     slotCancelled: 'Slot was cancelled.',
     slotCancelFailed: 'The slot could not be cancelled.',
