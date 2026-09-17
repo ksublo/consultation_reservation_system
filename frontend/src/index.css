@@ -30,12 +30,12 @@ main.login-page { position: static !important; inset: auto !important; width: 10
 .back { @apply fixed left-5 top-5 rounded-full bg-white px-4 py-2 text-sm font-bold text-vsb shadow-sm hover:bg-teal-50; }
 /* Compact, single-row application header. */
 .site-navigation { @apply block border-b border-teal-100 bg-white px-0 py-0; }
-.navigation-content { @apply mx-auto flex h-20 w-full max-w-7xl flex-nowrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8; }
+.navigation-content { @apply mx-auto flex min-h-20 w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:h-20 lg:flex-nowrap lg:px-8 lg:py-0; }
 .site-navigation .brand { @apply flex min-w-0 items-center gap-3; }
 .site-navigation .brand img { @apply h-11 w-auto shrink-0 sm:h-12; }
 .site-navigation .brand strong { @apply truncate text-xs font-extrabold tracking-wide text-vsb sm:text-sm; }
 .navigation-actions { @apply ml-auto flex shrink-0 items-center gap-2; }
-.navigation-actions .user-role { @apply hidden whitespace-nowrap text-sm font-medium text-slate-600 sm:block; }
+.navigation-actions .user-role { @apply hidden max-w-40 truncate whitespace-nowrap text-sm font-medium text-slate-600 sm:block lg:max-w-none; }
 .language-switch { @apply flex shrink-0 rounded-full border border-slate-200 bg-white p-1; }
 .language-switch button { @apply rounded-full px-2 py-1 text-xs font-bold text-slate-500; }
 .language-switch button.active { @apply bg-teal-100 text-vsb-dark; }
@@ -49,6 +49,8 @@ main.login-page { position: static !important; inset: auto !important; width: 10
 .navigation-actions .user-role { @apply text-sm font-medium tracking-normal text-slate-600; }
 /* Only the application title copies the pre-existing Student label styling. */
 .site-navigation .navigation-label { @apply text-sm font-medium tracking-normal text-slate-600; }
+.site-navigation nav { @apply order-3 flex w-full gap-1 overflow-x-auto lg:order-none lg:w-auto; }
+.site-navigation nav button { @apply shrink-0 rounded-full px-3 py-2 text-sm font-medium text-slate-600 hover:bg-teal-50; }
 .section-title > div { @apply flex items-baseline gap-2; }
 .section-title > div p { @apply whitespace-nowrap; }
 .teacher-panel { @apply sm:items-start; }
