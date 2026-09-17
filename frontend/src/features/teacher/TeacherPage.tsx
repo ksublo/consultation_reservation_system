@@ -1,6 +1,72 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api } from '../../api/client'
+import type { Language, TFunction } from '../../i18n'
+import { localeFor } from '../../i18n'
 import type { ConsultationSlot, Reservation, Session, Toast } from '../../types/api'
-type View='slots'|'requests'; interface Props{session:Session;onToast:(toast:Toast)=>void;view:View}
-const key=(v:string)=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Prague'}).format(new Date(v)); const time=(v:string)=>new Intl.DateTimeFormat('cs-CZ',{hour:'2-digit',minute:'2-digit'}).format(new Date(v)); const buildDays=(m:Date)=>{const s=new Date(m.getFullYear(),m.getMonth(),1);s.setDate(s.getDate()-((s.getDay()+6)%7));return Array.from({length:42},(_,i)=>{const d=new Date(s);d.setDate(s.getDate()+i);return d})}
-export default function TeacherPage({session,onToast,view}:Props){const[slots,setSlots]=useState<ConsultationSlot[]>([]);const[requests,setRequests]=useState<Reservation[]>([]);const[date,setDate]=useState(new Date().toISOString().slice(0,10));const[month,setMonth]=useState(new Date());const[startTime,setStartTime]=useState('09:00');const[duration,setDuration]=useState('30');async function load(){try{const[a,b]=await Promise.all([api.getTeacherSlots(session.token,session.userId),api.getReservations(session.token,session.userId)]);setSlots(a);setRequests(b.filter(x=>x.teacherId===session.userId))}catch(e){onToast({type:'error',message:e instanceof Error?e.message:'Nepodařilo se načíst data.'})}}useEffect(()=>{void load()},[]);const daySlots=useMemo(()=>slots.filter(s=>s.status==='ACTIVE'&&key(s.startsAt)===date),[slots,date]);async function add(e:FormEvent){e.preventDefault();try{const start=new Date(`${date}T${startTime}`).toISOString();const end=new Date(new Date(start).getTime()+Number(duration)*60000).toISOString();await api.createSlot(session.token,session.userId,start,end);onToast({type:'success',message:'Termín byl vytvořen.'});await load()}catch(e){onToast({type:'error',message:e instanceof Error?e.message:'Termín se překrývá nebo se nepodařilo vytvořit.'})}}if(view==='requests')return <main><section className="card"><h2>Žádosti o konzultaci</h2><div className="request-table"><div className="request-head"><span>Student</span><span>Kontakt</span><span>Téma</span><span>Stav</span><span>Akce</span></div>{requests.map(r=>{const status=r.status==='PENDING'?'Čeká na schválení':r.status==='CONFIRMED'?'Schváleno':'Stornováno';return <div className="request-row" key={r.id}><div><b>{r.studentFirstName} {r.studentLastName}</b><small>{r.studentLogin}</small></div><small>{r.studentEmail}</small><div><b>{r.reasonTitle}</b><p>{r.reasonDescription}</p></div><span className={`status ${r.status.toLowerCase()}`}>{status}</span><div className="request-actions"><button className="approve-icon" title="Schválit" disabled={r.status!=='PENDING'} onClick={()=>api.approveReservation(session.token,r.id,session.userId).then(load)}>✓</button><button className="cancel-icon" title="Stornovat" disabled={r.status!=='PENDING'} onClick={()=>api.cancelReservation(session.token,r.id,session.userId).then(load)}>×</button></div></div>})}</div></section></main>;return <main><div className="teacher-grid"><section className="card"><h2>Kalendář termínů</h2><div className="calendar-header"><button onClick={()=>setMonth(new Date(month.getFullYear(),month.getMonth()-1,1))}>‹</button><strong>{new Intl.DateTimeFormat('cs-CZ',{month:'long',year:'numeric'}).format(month)}</strong><button onClick={()=>setMonth(new Date(month.getFullYear(),month.getMonth()+1,1))}>›</button></div><div className="weekday-row">{['Po','Út','St','Čt','Pá','So','Ne'].map(x=><span key={x}>{x}</span>)}</div><div className="calendar-grid">{buildDays(month).map(d=>{const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;return <button key={k} className={`calendar-day ${slots.some(s=>s.status==='ACTIVE'&&key(s.startsAt)===k)?'available':''} ${date===k?'selected':''}`} onClick={()=>setDate(k)}>{d.getDate()}</button>})}</div></section><section className="card"><h2>Moje termíny</h2><div className="slot-list teacher-slots">{daySlots.map(s=>{const occupied=requests.some(r=>r.slotId===s.id&&(r.status==='PENDING'||r.status==='CONFIRMED'));return <button className={occupied?'slot occupied':'slot'} key={s.id} disabled={occupied} onClick={()=>api.cancelSlot(session.token,s.id,session.userId).then(()=>{onToast({type:'success',message:'Termín byl zrušen.'});return load()}).catch(e=>onToast({type:'error',message:e instanceof Error?e.message:'Termín se nepodařilo zrušit.'}))}><span>{time(s.startsAt)}–{time(s.endsAt)}</span>{!occupied&&<span className='remove-slot'>×</span>}{occupied&&' Obsazeno'}</button>})}{!daySlots.length&&<p className="muted">Pro tento den nemáte termíny.</p>}</div><h2 className="add-slot-title">Přidat termín</h2><form onSubmit={add}><label>Začátek</label><input type="time" value={startTime} onChange={e=>setStartTime(e.target.value)}/><label>Délka konzultace</label><select value={duration} onChange={e=>setDuration(e.target.value)}><option value="15">15 minut</option><option value="30">30 minut</option><option value="45">45 minut</option><option value="60">60 minut</option></select><button className="reserve-button">Přidat termín</button></form></section></div></main>}
+
+type View = 'slots' | 'requests'
+interface Props { session: Session; onToast: (toast: Toast) => void; view: View; language: Language; t: TFunction }
+
+const weekdays = {
+  cs: ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'],
+  en: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+}
+const key = (value: string) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Prague' }).format(new Date(value))
+const buildDays = (month: Date) => { const start = new Date(month.getFullYear(), month.getMonth(), 1); start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); return Array.from({ length: 42 }, (_, index) => { const day = new Date(start); day.setDate(start.getDate() + index); return day }) }
+const statusLabel = (status: Reservation['status'], t: TFunction) => status === 'PENDING' ? t('pending') : status === 'CONFIRMED' ? t('confirmed') : t('cancelled')
+const cancellationCutoffMs = 3 * 60 * 60 * 1000
+
+export default function TeacherPage({ session, onToast, view, language, t }: Props) {
+  const locale = localeFor(language)
+  const time = useMemo(() => new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }), [locale])
+  const monthFormatter = useMemo(() => new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }), [locale])
+  const [slots, setSlots] = useState<ConsultationSlot[]>([])
+  const [requests, setRequests] = useState<Reservation[]>([])
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [month, setMonth] = useState(new Date())
+  const [startTime, setStartTime] = useState('09:00')
+  const [duration, setDuration] = useState('30')
+  const [now, setNow] = useState(() => Date.now())
+
+  async function load() {
+    try { const [slotData, reservationData] = await Promise.all([api.getTeacherSlots(session.token, session.userId), api.getReservations(session.token, session.userId)]); setSlots(slotData); setRequests(reservationData.filter((item) => item.teacherId === session.userId)); setNow(Date.now()) }
+    catch (error) { onToast({ type: 'error', message: error instanceof Error ? error.message : t('loadDataFailed') }) }
+  }
+  useEffect(() => { void load() }, [])
+
+  const daySlots = useMemo(() => slots.filter((slot) => slot.status === 'ACTIVE' && key(slot.startsAt) === date), [slots, date])
+
+  async function add(event: FormEvent) {
+    event.preventDefault()
+    try {
+      const start = new Date(`${date}T${startTime}`).toISOString()
+      if (new Date(start).getTime() <= Date.now()) { onToast({ type: 'error', message: t('pastSlotCreateFailed') }); return }
+      const end = new Date(new Date(start).getTime() + Number(duration) * 60000).toISOString()
+      const startsAt = new Date(start)
+      const endsAt = new Date(end)
+      const weekday = startsAt.getDay()
+      const startsMinutes = startsAt.getHours() * 60 + startsAt.getMinutes()
+      const endsMinutes = endsAt.getHours() * 60 + endsAt.getMinutes()
+      if (weekday === 0 || weekday === 6 || startsMinutes < 7 * 60 + 15 || endsMinutes > 19 * 60 + 15) { onToast({ type: 'error', message: t('workingHoursFailed') }); return }
+      await api.createSlot(session.token, session.userId, start, end)
+      onToast({ type: 'success', message: t('slotCreated') })
+      await load()
+    } catch (error) {
+      onToast({ type: 'error', message: error instanceof Error ? error.message : t('slotCreateFailed') })
+    }
+  }
+
+  async function cancelReservation(request: Reservation) {
+    try {
+      await api.cancelReservation(session.token, request.id, session.userId, t('cancellationNote'))
+      onToast({ type: 'success', message: t('reservationCancelled') })
+      await load()
+    } catch (error) {
+      onToast({ type: 'error', message: error instanceof Error ? error.message : t('reservationCancelFailed') })
+    }
+  }
+
+  if (view === 'requests') return <main><section className="card"><h2>{t('teacherRequests')}</h2><div className="request-table"><div className="request-head"><span>{t('studentColumn')}</span><span>{t('contact')}</span><span>{t('topic')}</span><span>{t('status')}</span><span>{t('actions')}</span></div>{requests.map((request) => { const canCancel = request.status !== 'CANCELLED' && new Date(request.startsAt).getTime() - now >= cancellationCutoffMs; return <div className="request-row" key={request.id}><div><b>{request.studentFirstName} {request.studentLastName}</b><small>{request.studentLogin}</small></div><small>{request.studentEmail}</small><div><b>{request.reasonTitle}</b><p>{request.reasonDescription}</p></div><span className={`status ${request.status.toLowerCase()}`}>{statusLabel(request.status, t)}</span><div className="request-actions"><button className="approve-icon" title={t('approve')} disabled={request.status !== 'PENDING'} onClick={() => api.approveReservation(session.token, request.id, session.userId).then(load)}>✓</button><button className="cancel-icon" title={canCancel ? t('cancel') : t('cancelTooLate')} disabled={!canCancel} onClick={() => void cancelReservation(request)}>×</button></div></div> })}</div></section></main>
+
+  return <main><div className="teacher-grid"><section className="card"><h2>{t('slotsCalendar')}</h2><div className="calendar-header"><button type="button" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}>‹</button><strong>{monthFormatter.format(month)}</strong><button type="button" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}>›</button></div><div className="weekday-row">{weekdays[language].map((day) => <span key={day}>{day}</span>)}</div><div className="calendar-grid">{buildDays(month).map((day) => { const dayKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`; return <button key={dayKey} className={`calendar-day ${slots.some((slot) => slot.status === 'ACTIVE' && key(slot.startsAt) === dayKey) ? 'available' : ''} ${date === dayKey ? 'selected' : ''}`} onClick={() => setDate(dayKey)}>{day.getDate()}</button> })}</div></section><section className="card"><h2>{t('mySlots')}</h2><div className="slot-list teacher-slots">{daySlots.map((slot) => { const occupied = requests.some((request) => request.slotId === slot.id && (request.status === 'PENDING' || request.status === 'CONFIRMED')); return <button className={occupied ? 'slot occupied' : 'slot'} key={slot.id} disabled={occupied} onClick={() => api.cancelSlot(session.token, slot.id, session.userId).then(() => { onToast({ type: 'success', message: t('slotCancelled') }); return load() }).catch((error) => onToast({ type: 'error', message: error instanceof Error ? error.message : t('slotCancelFailed') }))}><span>{time.format(new Date(slot.startsAt))}–{time.format(new Date(slot.endsAt))}</span>{!occupied && <span className="remove-slot">×</span>}{occupied && ` ${t('occupied')}`}</button> })}{!daySlots.length && <p className="muted">{t('noTeacherSlotsForDay')}</p>}</div><h2 className="add-slot-title">{t('addSlot')}</h2><form onSubmit={add}><label>{t('start')}</label><input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /><label>{t('consultationLength')}</label><select value={duration} onChange={(event) => setDuration(event.target.value)}><option value="15">15 {t('minutes')}</option><option value="30">30 {t('minutes')}</option><option value="45">45 {t('minutes')}</option><option value="60">60 {t('minutes')}</option><option value="90">90 {t('minutes')}</option></select><button className="reserve-button">{t('addSlot')}</button></form></section></div></main>
+}

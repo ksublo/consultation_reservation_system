@@ -2,12 +2,14 @@ package consultation_reservation_backend.service;
 
 import consultation_reservation_backend.api.*;
 import consultation_reservation_backend.domain.AppUser;
+import consultation_reservation_backend.domain.UserRole;
 import consultation_reservation_backend.repository.AppUserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
+import java.util.List;
 
 @Service
 @Transactional
@@ -20,4 +22,6 @@ public class UserService {
         return UserResponse.from(user);
     }
     public AppUser get(UUID id) { return users.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found.")); }
+    @Transactional(readOnly = true)
+    public List<UserResponse> teachers() { return users.findDistinctByRolesContainingOrderByLastNameAscFirstNameAsc(UserRole.TEACHER).stream().map(UserResponse::from).toList(); }
 }
