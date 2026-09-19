@@ -201,6 +201,20 @@ export const api = {
       }),
     )
   },
+  cancelSlotWithReservation: async (
+    token: string,
+    slotId: string,
+    actorUserId: string,
+    note: string,
+  ): Promise<void> => {
+    await readJson<void>(
+      await fetch(`${API_ROOT}/slots/${slotId}/cancel-with-reservation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authorization(token) },
+        body: JSON.stringify({ actorUserId, note }),
+      }),
+    )
+  },
   getReservations: async (token: string, userId: string): Promise<Reservation[]> =>
     readJson<Reservation[]>(
       await fetch(`${API_ROOT}/reservations?userId=${userId}`, { headers: authorization(token) }),

@@ -5,6 +5,7 @@ import { localeFor } from '../../i18n'
 import type { ConsultationSlot, Reservation, Session, Toast } from '../../types/api'
 
 type View = 'slots' | 'requests'
+
 interface Props {
   session: Session
   onToast: (toast: Toast) => void
@@ -17,19 +18,24 @@ const weekdays = {
   cs: ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'],
   en: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
 }
+
 const key = (value: string) =>
   new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Prague' }).format(new Date(value))
+
 const buildDays = (month: Date) => {
   const start = new Date(month.getFullYear(), month.getMonth(), 1)
   start.setDate(start.getDate() - ((start.getDay() + 6) % 7))
+
   return Array.from({ length: 42 }, (_, index) => {
     const day = new Date(start)
     day.setDate(start.getDate() + index)
     return day
   })
 }
+
 const statusLabel = (status: Reservation['status'], t: TFunction) =>
   status === 'PENDING' ? t('pending') : status === 'CONFIRMED' ? t('confirmed') : t('cancelled')
+
 const cancellationCutoffMs = 3 * 60 * 60 * 1000
 
 export default function TeacherPage({ session, onToast, view, language, t }: Props) {
@@ -49,6 +55,7 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
   const [startTime, setStartTime] = useState('09:00')
   const [duration, setDuration] = useState('30')
   const [now, setNow] = useState(() => Date.now())
+  const [slotToCancel, setSlotToCancel] = useState<ConsultationSlot | null>(null)
 
   async function load() {
     try {
@@ -66,6 +73,7 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
       })
     }
   }
+
   useEffect(() => {
     void load()
   }, [])
@@ -74,6 +82,14 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
     () => slots.filter((slot) => slot.status === 'ACTIVE' && key(slot.startsAt) === date),
     [slots, date],
   )
+
+  const reservationToCancel = slotToCancel
+    ? requests.find(
+        (request) =>
+          request.slotId === slotToCancel.id &&
+          (request.status === 'PENDING' || request.status === 'CONFIRMED'),
+      )
+    : undefined
 
   async function add(event: FormEvent) {
     event.preventDefault()
@@ -89,6 +105,7 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
       const weekday = startsAt.getDay()
       const startsMinutes = startsAt.getHours() * 60 + startsAt.getMinutes()
       const endsMinutes = endsAt.getHours() * 60 + endsAt.getMinutes()
+
       if (
         weekday === 0 ||
         weekday === 6 ||
@@ -122,7 +139,41 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
     }
   }
 
-  if (view === 'requests')
+  async function cancelOpenSlot(slot: ConsultationSlot) {
+    try {
+      await api.cancelSlot(session.token, slot.id, session.userId)
+      onToast({ type: 'success', message: t('slotCancelled') })
+      await load()
+    } catch (error) {
+      onToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : t('slotCancelFailed'),
+      })
+    }
+  }
+
+  async function confirmCancelOccupiedSlot() {
+    if (!slotToCancel) return
+
+    try {
+      await api.cancelSlotWithReservation(
+        session.token,
+        slotToCancel.id,
+        session.userId,
+        t('teacherCancellationNote'),
+      )
+      setSlotToCancel(null)
+      onToast({ type: 'success', message: t('slotCancelled') })
+      await load()
+    } catch (error) {
+      onToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : t('slotCancelFailed'),
+      })
+    }
+  }
+
+  if (view === 'requests') {
     return (
       <main>
         <section className="card">
@@ -161,7 +212,9 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
                       title={t('approve')}
                       disabled={request.status !== 'PENDING'}
                       onClick={() =>
-                        api.approveReservation(session.token, request.id, session.userId).then(load)
+                        void api
+                          .approveReservation(session.token, request.id, session.userId)
+                          .then(load)
                       }
                     >
                       ✓
@@ -182,6 +235,7 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
         </section>
       </main>
     )
+  }
 
   return (
     <main>
@@ -210,11 +264,20 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
           </div>
           <div className="calendar-grid">
             {buildDays(month).map((day) => {
-              const dayKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`
+              const dayKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(
+                2,
+                '0',
+              )}-${String(day.getDate()).padStart(2, '0')}`
+              const hasActiveSlot = slots.some(
+                (slot) => slot.status === 'ACTIVE' && key(slot.startsAt) === dayKey,
+              )
+
               return (
                 <button
                   key={dayKey}
-                  className={`calendar-day ${slots.some((slot) => slot.status === 'ACTIVE' && key(slot.startsAt) === dayKey) ? 'available' : ''} ${date === dayKey ? 'selected' : ''}`}
+                  className={`calendar-day ${hasActiveSlot ? 'available' : ''} ${
+                    date === dayKey ? 'selected' : ''
+                  }`}
                   onClick={() => setDate(dayKey)}
                 >
                   {day.getDate()}
@@ -223,6 +286,7 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
             })}
           </div>
         </section>
+
         <section className="card">
           <h2>{t('mySlots')}</h2>
           <div className="slot-list teacher-slots">
@@ -236,21 +300,7 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
                 <button
                   className={occupied ? 'slot occupied' : 'slot'}
                   key={slot.id}
-                  disabled={occupied}
-                  onClick={() =>
-                    api
-                      .cancelSlot(session.token, slot.id, session.userId)
-                      .then(() => {
-                        onToast({ type: 'success', message: t('slotCancelled') })
-                        return load()
-                      })
-                      .catch((error) =>
-                        onToast({
-                          type: 'error',
-                          message: error instanceof Error ? error.message : t('slotCancelFailed'),
-                        }),
-                      )
-                  }
+                  onClick={() => (occupied ? setSlotToCancel(slot) : void cancelOpenSlot(slot))}
                 >
                   <span>
                     {time.format(new Date(slot.startsAt))}–{time.format(new Date(slot.endsAt))}
@@ -282,6 +332,41 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
           </form>
         </section>
       </div>
+
+      {slotToCancel && (
+        <div className="modal-backdrop" role="presentation">
+          <section
+            className="confirmation-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cancel-occupied-slot-title"
+          >
+            <h2 id="cancel-occupied-slot-title">{t('cancelOccupiedSlotTitle')}</h2>
+            <p>{t('cancelOccupiedSlotMessage')}</p>
+            {reservationToCancel && (
+              <div className="modal-student">
+                <strong>
+                  {reservationToCancel.studentFirstName} {reservationToCancel.studentLastName}
+                </strong>
+                <span>{reservationToCancel.studentLogin}</span>
+                <span>{reservationToCancel.studentEmail}</span>
+              </div>
+            )}
+            <div className="modal-actions">
+              <button type="button" className="text-button" onClick={() => setSlotToCancel(null)}>
+                {t('back')}
+              </button>
+              <button
+                type="button"
+                className="danger-button"
+                onClick={() => void confirmCancelOccupiedSlot()}
+              >
+                {t('cancelOccupiedSlotConfirm')}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   )
 }
