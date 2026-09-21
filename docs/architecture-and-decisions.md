@@ -45,3 +45,7 @@ Každá změna rezervace se uloží do historie. Lze tak dohledat vytvoření, s
 ### Authentication uses sessions
 
 Po přihlášení backend vytvoří relaci. Frontend posílá token relace při požadavcích na chráněné API.
+
+### Occupied slot cancellation is atomic
+
+Zrušení obsazeného konzultačního termínu mění stav rezervace i stav samotného termínu. Frontend proto volá jeden backend endpoint a backend provede obě změny v jedné transakci. Tím se zabrání částečnému stavu, kdy by byla rezervace zrušená, ale termín by zůstal aktivní.

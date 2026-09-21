@@ -45,7 +45,9 @@ Pro stejný konzultační termín nemohou existovat dvě aktivní rezervace. Rez
 
 ## Domain-specific business rule
 
-Konzultační termíny lze vytvářet pouze v pracovní dny mezi 07:15 a 19:15. Student může mít maximálně pět čekajících rezervací a nesmí si rezervovat čas, který se překrývá s jeho jinou aktivní rezervací.
+Konzultační termíny lze vytvářet pouze v pracovní dny mezi 07:15 a 19:15.
+
+Další implementovaná pravidla: student může mít maximálně pět čekajících rezervací a nesmí si rezervovat čas, který se překrývá s jeho jinou aktivní rezervací.
 
 ## External / system boundary
 
@@ -58,3 +60,13 @@ Každý pedagog má své konzultační termíny pod vlastní správou a může s
 ## Unknown
 
 Zatím není rozhodnuto, zda budou notifikace pouze přímo v aplikaci, nebo zda se budou odesílat také e-mailem.
+
+## Selected future pressure
+
+Category: R — Risk / Higher consequence
+
+Concrete pressure:
+Zrušení obsazeného konzultačního termínu nesmí nechat systém v částečně změněném stavu, například se zrušenou rezervací, ale stále aktivním termínem.
+
+Why it is relevant to our reservation system:
+Pedagog může rušit termín, který už má rezervovaný student. Taková operace mění stav rezervace i stav termínu, proto musí být konzistentní a provedená jako jedna transakce na backendu.
