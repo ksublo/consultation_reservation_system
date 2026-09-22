@@ -108,6 +108,7 @@ export default function BookingPage({
           firstName: user.firstName,
           lastName: user.lastName,
           login: user.login,
+          email: user.email,
           name: `${user.firstName} ${user.lastName}`,
         }))
         .map((item) => ({
@@ -115,6 +116,8 @@ export default function BookingPage({
           normalizedName: normalizeSearchText(item.name),
           normalizedLastName: normalizeSearchText(item.lastName),
           normalizedFirstName: normalizeSearchText(item.firstName),
+          normalizedLogin: normalizeSearchText(item.login),
+          normalizedEmail: normalizeSearchText(item.email),
           slotCount: slots.filter((slot) => slot.teacherId === item.id).length,
         }))
         .sort((left, right) => left.name.localeCompare(right.name, 'cs-CZ')),
@@ -129,7 +132,9 @@ export default function BookingPage({
         (item) =>
           item.normalizedName.includes(query) ||
           item.normalizedLastName.startsWith(query) ||
-          item.normalizedFirstName.startsWith(query),
+          item.normalizedFirstName.startsWith(query) ||
+          item.normalizedLogin.includes(query) ||
+          item.normalizedEmail.includes(query),
       )
       .slice(0, 6)
   }, [teacherQuery, teachers])
@@ -176,9 +181,8 @@ export default function BookingPage({
   function selectTeacher(id: string) {
     const first = slots.find((slot) => slot.teacherId === id)
     const firstDate = first ? slotDateKey(first.startsAt) : ''
-    const nextTeacher = teachers.find((item) => item.id === id)
     setTeacherId(id)
-    setTeacherQuery(nextTeacher?.name ?? '')
+    setTeacherQuery('')
     setSelectedDate(firstDate)
     setSlotId('')
     if (firstDate) setMonth(monthFor(firstDate))
@@ -249,7 +253,15 @@ export default function BookingPage({
       <section className="teacher-panel">
         <div>
           <span className="label">{t('teacherSearch')}</span>
-          <h2>{t('enterTeacherName')}</h2>
+          {teacher ? (
+            <div className="selected-teacher">
+              <h2>{teacher.firstName} {teacher.lastName}</h2>
+              <span>{teacher.login}</span>
+              <span>{teacher.email}</span>
+            </div>
+          ) : (
+            <h2>{t('enterTeacherName')}</h2>
+          )}
         </div>
         <div className="teacher-search">
           <label htmlFor="teacher-search">{t('teacher')}</label>
@@ -261,11 +273,9 @@ export default function BookingPage({
             placeholder={t('teacherPlaceholder')}
             autoComplete="off"
           />
-          {showTeacherResults && (
+          {showTeacherResults && teacherQuery.trim().length >= 2 && (
             <div className="teacher-results">
-              {teacherQuery.trim().length < 2 ? (
-                <span className="muted">{t('startTypingTeacher')}</span>
-              ) : teacherMatches.length ? (
+              {teacherMatches.length ? (
                 teacherMatches.map((item) => (
                   <button
                     key={item.id}
@@ -273,9 +283,9 @@ export default function BookingPage({
                     className="teacher-result"
                     onClick={() => selectTeacher(item.id)}
                   >
-                    <strong>
-                      {item.name} <small>{item.login}</small>
-                    </strong>
+                    <strong>{item.name}</strong>
+                    <b>{item.login}</b>
+                    <b>{item.email}</b>
                     <span>
                       {item.slotCount} {t('freeSlots')}
                     </span>
