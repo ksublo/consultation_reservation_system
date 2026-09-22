@@ -266,6 +266,15 @@ main.login-page {
 .teacher-panel {
   @apply sm:items-start;
 }
+.selected-teacher {
+  @apply mt-1 grid gap-1;
+}
+.selected-teacher h2 {
+  @apply mt-0;
+}
+.selected-teacher span {
+  @apply block max-w-xs truncate text-sm font-semibold text-slate-500 normal-case tracking-normal;
+}
 .teacher-search {
   @apply grid w-full gap-2 sm:max-w-md;
 }
@@ -279,13 +288,14 @@ main.login-page {
   @apply grid max-h-56 gap-2 overflow-y-auto rounded-2xl border border-slate-100 bg-slate-50 p-2;
 }
 .teacher-result {
-  @apply flex min-h-12 items-center justify-between gap-3 rounded-xl border border-transparent bg-white px-3 py-2 text-left hover:border-vsb hover:bg-teal-50;
+  @apply grid min-h-12 grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 rounded-xl border border-transparent bg-white px-3 py-2 text-left hover:border-vsb hover:bg-teal-50;
 }
-.teacher-result strong {
-  @apply min-w-0 truncate text-sm font-bold text-ink;
+.teacher-result strong,
+.teacher-result b {
+  @apply min-w-0 truncate text-sm font-extrabold text-black;
 }
-.teacher-result strong small {
-  @apply ml-2 text-xs font-semibold text-slate-500;
+.teacher-result b {
+  @apply text-xs;
 }
 .teacher-result span {
   @apply shrink-0 whitespace-nowrap text-xs font-semibold text-slate-500;
