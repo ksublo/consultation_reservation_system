@@ -1,24 +1,11 @@
 # Evidence and Evolution
 
-## Evidence
+## C01 Engineering Spike
 
-- Backend obsahuje základní test spuštění aplikačního kontextu.
-- Databázové schéma a ukázková data jsou spravovány Flyway migracemi.
-- Backend obsahuje REST controllery pro uživatele, konzultační termíny a rezervace.
-- Backend ukládá historii změn rezervace.
-- Frontend aplikace existuje v samostatném adresáři `frontend`.
+**Question / unknown:** Ověřit, zda rezervační systém ukládá a následně načítá data ze skutečné PostgreSQL databáze.
 
-## Implemented functionality
+**What we did:** Spustili jsme PostgreSQL, backend a frontend přes Docker Compose. Flyway při spuštění backendu provedl databázové migrace a vložil ukázková data. Ve frontendu jsme následně načetli dostupné konzultační termíny z backendového API a data jsme ověřili také v PostgreSQL databázi.
 
-- Přihlášení uživatele.
-- Vytváření konzultačních termínů pedagogem.
-- Zobrazení dostupných termínů.
-- Vytvoření rezervace studentem.
-- Schválení a zrušení rezervace.
-- Kontrola dostupnosti a ochrana proti kolizím.
-- Historie změn rezervace.
+**Observed result:** PostgreSQL databáze byla úspěšně vytvořena, Flyway aplikoval migrace a ukázkové termíny se zobrazily ve frontendu. Backend tedy správně zapisuje a čte perzistentní data z databáze.
 
-## Current limitations
-
-
-## Next steps
+**Decision / what changes because of the result:** PostgreSQL, Flyway a Docker Compose ponecháváme jako standardní základ projektu pro lokální spuštění a správu databázového schématu. Další funkce rezervací budeme implementovat nad tímto ověřeným perzistentním úložištěm.
