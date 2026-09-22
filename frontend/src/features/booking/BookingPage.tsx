@@ -255,7 +255,9 @@ export default function BookingPage({
           <span className="label">{t('teacherSearch')}</span>
           {teacher ? (
             <div className="selected-teacher">
-              <h2>{teacher.firstName} {teacher.lastName}</h2>
+              <h2>
+                {teacher.firstName} {teacher.lastName}
+              </h2>
               <span>{teacher.login}</span>
               <span>{teacher.email}</span>
             </div>
