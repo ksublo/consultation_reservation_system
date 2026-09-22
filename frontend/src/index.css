@@ -508,3 +508,102 @@ main.login-page {
 .error-actions {
   @apply mt-2 flex justify-center;
 }
+
+/* Responsive navigation and account menu */
+.navigation-content {
+  @apply relative;
+}
+.menu-toggle {
+  @apply grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:border-vsb hover:bg-teal-50 hover:text-vsb focus:outline-none focus:ring-2 focus:ring-teal-200;
+}
+.hamburger-icon {
+  @apply grid w-5 gap-1;
+}
+.hamburger-icon span {
+  @apply block h-0.5 w-5 rounded-full bg-current transition-transform duration-200;
+}
+.menu-toggle.open .hamburger-icon span:nth-child(1) {
+  @apply translate-y-1.5 rotate-45;
+}
+.menu-toggle.open .hamburger-icon span:nth-child(2) {
+  @apply scale-x-0;
+}
+.menu-toggle.open .hamburger-icon span:nth-child(3) {
+  @apply -translate-y-1.5 -rotate-45;
+}
+.navigation-menu-backdrop {
+  @apply fixed inset-0 z-40 cursor-default bg-slate-900/15;
+}
+.navigation-menu {
+  @apply absolute right-4 top-[calc(100%+0.5rem)] z-50 grid w-[min(22rem,calc(100vw-2rem))] gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl sm:right-6 lg:right-8;
+}
+.menu-account {
+  @apply grid gap-0.5 rounded-xl bg-teal-50 px-4 py-3;
+}
+.menu-account span {
+  @apply text-xs font-bold uppercase tracking-wider text-slate-500;
+}
+.menu-account strong {
+  @apply text-sm font-bold text-ink;
+}
+.menu-navigation {
+  @apply grid gap-1 border-y border-slate-100 py-3 lg:hidden;
+}
+.menu-navigation button {
+  @apply rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-600 hover:bg-teal-50 hover:text-vsb;
+}
+.menu-navigation button.active {
+  @apply bg-teal-100 text-vsb-dark;
+}
+.menu-controls {
+  @apply flex items-center justify-between gap-3 border-t border-slate-100 pt-3;
+}
+.menu-icon-actions {
+  @apply flex shrink-0 items-center gap-2;
+}
+.menu-icon-action {
+  @apply grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-vsb hover:bg-teal-50 hover:text-vsb;
+}
+.menu-icon-action svg {
+  @apply h-5 w-5 fill-none stroke-current stroke-2;
+}
+.menu-icon-action.danger {
+  @apply border-rose-200 text-rose-700 hover:bg-rose-50;
+}
+@media (max-width: 1023px) {
+  .navigation-actions .user-role {
+    @apply hidden;
+  }
+}
+/* Exactly one navigation mode is visible at a time. */
+.site-navigation .primary-navigation,
+.site-navigation .desktop-controls {
+  display: none;
+}
+.site-navigation .menu-toggle {
+  display: grid;
+}
+.site-navigation .menu-navigation {
+  display: grid;
+}
+@media (min-width: 1024px) {
+  .site-navigation .primary-navigation,
+  .site-navigation .desktop-controls {
+    display: flex;
+  }
+  .site-navigation .primary-navigation {
+    gap: 0.25rem;
+  }
+  .site-navigation .desktop-controls {
+    gap: 1rem;
+  }
+  .site-navigation .menu-toggle,
+  .site-navigation .menu-navigation {
+    display: none;
+  }
+}
+/* The legacy header rule assigns order-3 to every nav element. */
+.site-navigation .primary-navigation,
+.site-navigation .menu-navigation {
+  order: 0;
+}
