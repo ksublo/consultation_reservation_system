@@ -250,8 +250,8 @@
           },
           {
             "type": "note",
-            "variant": "warning",
-            "content": "Je potřeba dopracovat: týmově potvrdit, že PENDING má zůstat blokující stav i ve finální baseline v0.2, a přidat automatické testy sousedních intervalů [start, end)."
+            "variant": "info",
+            "content": "Týmově potvrzeno pro finální baseline v0.2: PENDING zůstává blokující stav. Automatické testy sousedních intervalů [start, end) jsou doplněné."
           }
         ]
       },

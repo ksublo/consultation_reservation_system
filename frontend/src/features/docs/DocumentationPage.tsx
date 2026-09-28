@@ -91,7 +91,6 @@ function ContentBlock({ block }: { block: Block }) {
 
 export default function DocumentationPage({ language, t }: DocumentationPageProps) {
   const [tab, setTab] = useState<DocsSection>('c01')
-  const [documentZoom, setDocumentZoom] = useState(90)
   const documents = language === 'cs' ? csDocumentation : enDocumentation
   const current = documents[tab] as Document
   return (
@@ -112,33 +111,7 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
           ))}
         </div>
         <article className="docs-content">
-          <div className="docs-view-controls" aria-label="Velikost dokumentace">
-            <span>Velikost dokumentace: {documentZoom}%</span>
-            <div>
-              <button
-                type="button"
-                onClick={() => setDocumentZoom((value) => Math.max(70, value - 10))}
-                disabled={documentZoom === 70}
-              >
-                A−
-              </button>
-              <button
-                type="button"
-                onClick={() => setDocumentZoom(90)}
-                disabled={documentZoom === 90}
-              >
-                Přizpůsobit
-              </button>
-              <button
-                type="button"
-                onClick={() => setDocumentZoom((value) => Math.min(120, value + 10))}
-                disabled={documentZoom === 120}
-              >
-                A+
-              </button>
-            </div>
-          </div>
-          <div className="docs-document" style={{ zoom: `${documentZoom}%` }}>
+          <div className="docs-document">
             <p className="docs-eyebrow">{t('documentation')}</p>
             <h1>{current.title}</h1>
             <div className="docs-blocks">

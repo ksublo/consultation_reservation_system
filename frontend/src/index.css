@@ -786,16 +786,3 @@ main.login-page {
 .docs-note.info {
   @apply border-sky-200 bg-sky-50 text-sky-950;
 }
-
-.docs-view-controls {
-  @apply mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-bold text-slate-600;
-}
-.docs-view-controls > div {
-  @apply flex items-center gap-2;
-}
-.docs-view-controls button {
-  @apply rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-extrabold text-slate-700 hover:border-teal-400 hover:text-vsb disabled:cursor-not-allowed disabled:opacity-45;
-}
-.docs-document {
-  transform-origin: top left;
-}
