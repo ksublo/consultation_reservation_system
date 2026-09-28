@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api } from '../../api/client'
 import type { Language, TFunction } from '../../i18n'
 import { localeFor } from '../../i18n'
-import type { ConsultationSlot, Reservation, Session, Teacher, Toast } from '../../types/api'
+import type { ConsultationSlot, Session, Teacher, Toast } from '../../types/api'
 
 const timeZone = 'Europe/Prague'
 const weekdays = {
@@ -64,7 +64,6 @@ export default function BookingPage({
   )
   const [slots, setSlots] = useState<ConsultationSlot[]>([])
   const [teacherSlots, setTeacherSlots] = useState<ConsultationSlot[]>([])
-  const [reservations, setReservations] = useState<Reservation[]>([])
   const [teacherUsers, setTeacherUsers] = useState<Teacher[]>([])
   const [teacherId, setTeacherId] = useState('')
   const [teacherQuery, setTeacherQuery] = useState('')
@@ -74,20 +73,16 @@ export default function BookingPage({
   const [reasonTitle, setReasonTitle] = useState('')
   const [reasonDescription, setReasonDescription] = useState('')
   const [loading, setLoading] = useState(true)
-  const [now, setNow] = useState(() => Date.now())
 
   async function loadSlots() {
     try {
       setLoading(true)
-      const [data, users, reservationData] = await Promise.all([
+      const [data, users] = await Promise.all([
         api.getSlots(session.token),
         api.getTeachers(session.token),
-        api.getReservations(session.token, session.userId),
       ])
       setSlots(data)
       setTeacherUsers(users)
-      setReservations(reservationData.filter((item) => item.studentId === session.userId))
-      setNow(Date.now())
     } catch (error) {
       onToast({
         type: 'error',
@@ -173,23 +168,6 @@ export default function BookingPage({
     () => visibleSlots.filter((slot) => availableSlotIds.has(slot.id)),
     [availableSlotIds, visibleSlots],
   )
-  const upcomingReservations = useMemo(() => {
-    return reservations.filter((reservation) => {
-      const startsAt = new Date(reservation.startsAt).getTime()
-      return (
-        reservation.status !== 'CANCELLED' &&
-        startsAt >= now &&
-        startsAt - now <= 3 * 60 * 60 * 1000
-      )
-    })
-  }, [now, reservations])
-  const cancelledReservations = useMemo(() => {
-    return reservations.filter(
-      (reservation) =>
-        reservation.status === 'CANCELLED' && new Date(reservation.startsAt).getTime() >= now,
-    )
-  }, [now, reservations])
-
   function updateTeacherQuery(value: string) {
     setTeacherQuery(value)
     setTeacherId('')
@@ -249,33 +227,6 @@ export default function BookingPage({
 
   return (
     <main>
-      {upcomingReservations.length > 0 && (
-        <section className="card upcoming-warning">
-          <h2>{t('upcomingConsultations')}</h2>
-          {upcomingReservations.map((reservation) => (
-            <p key={reservation.id}>
-              <strong>{reservation.teacherName}</strong> ·{' '}
-              {dateFormatter.format(new Date(reservation.startsAt))}{' '}
-              {timeFormatter.format(new Date(reservation.startsAt))}–
-              {timeFormatter.format(new Date(reservation.endsAt))}
-            </p>
-          ))}
-        </section>
-      )}
-      {cancelledReservations.length > 0 && (
-        <section className="card cancellation-warning">
-          <h2>{t('cancelledConsultations')}</h2>
-          {cancelledReservations.map((reservation) => (
-            <p key={reservation.id}>
-              <strong>{reservation.teacherName}</strong> ·{' '}
-              {dateFormatter.format(new Date(reservation.startsAt))}{' '}
-              {timeFormatter.format(new Date(reservation.startsAt))}–
-              {timeFormatter.format(new Date(reservation.endsAt))}
-              <span>{t('cancelledConsultationNotice')}</span>
-            </p>
-          ))}
-        </section>
-      )}
       <section className="teacher-panel">
         <div>
           <span className="label">{t('teacherSearch')}</span>

@@ -8,7 +8,7 @@ import Login from './features/auth/Login'
 import BookingPage from './features/booking/BookingPage'
 import MyReservationsPage from './features/booking/MyReservationsPage'
 import TeacherPage from './features/teacher/TeacherPage'
-import type { Notification, Session, UserRole } from './types/api'
+import type { Notification, Session, Toast, UserRole } from './types/api'
 import { createTranslator, type Language } from './i18n'
 import './index.css'
 
@@ -34,6 +34,7 @@ export default function App() {
   const [loginRole, setLoginRole] = useState<UserRole | null>(null)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [publicView, setPublicView] = useState<'home' | 'docs'>('home')
+  const [toast, setToast] = useState<Toast | null>(null)
   const [refreshSignal, setRefreshSignal] = useState(0)
   const [teacherView, setTeacherView] = useState<'slots' | 'requests'>('slots')
   const [studentView, setStudentView] = useState<'booking' | 'reservations'>('booking')
@@ -64,6 +65,11 @@ export default function App() {
     const interval = window.setInterval(() => void loadNotifications(), 30000)
     return () => window.clearInterval(interval)
   }, [session])
+  useEffect(() => {
+    if (!toast) return
+    const timeout = window.setTimeout(() => setToast(null), 3500)
+    return () => window.clearTimeout(timeout)
+  }, [toast])
   function refreshNotifications() {
     void loadNotifications()
   }
@@ -178,9 +184,15 @@ export default function App() {
       <ErrorBoundary language={language} onLanguageChange={setLanguage} t={t}>
         <div className="app-shell">
           {navigation}
+          {toast && (
+            <div className={`toast ${toast.type}`}>
+              {toast.type === 'success' && '✓ '}
+              {toast.message}
+            </div>
+          )}
           <TeacherPage
             session={session}
-            onToast={refreshNotifications}
+            onToast={setToast}
             view={teacherView}
             language={language}
             t={t}

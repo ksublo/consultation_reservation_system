@@ -208,6 +208,15 @@ main.login-page {
 .navigation-actions {
   @apply ml-auto flex items-center gap-3;
 }
+.toast {
+  @apply fixed right-4 top-24 z-50 w-fit max-w-sm rounded-xl px-4 py-3 text-sm font-semibold shadow-lg;
+}
+.toast.error {
+  @apply bg-rose-600 text-white;
+}
+.toast.success {
+  @apply bg-teal-600 text-white;
+}
 .navigation-actions > span {
   @apply hidden text-sm font-semibold text-slate-500 sm:block;
 }
