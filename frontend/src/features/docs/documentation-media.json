@@ -1,0 +1,19 @@
+{
+  "images": {
+    "useCases": {
+      "src": "c02-use-cases.png",
+      "alt": "Diagram případů užití rezervačního systému",
+      "caption": "Use-case diagram — C02"
+    },
+    "reservationState": {
+      "src": "c02-reservation-state.png",
+      "alt": "Stavový diagram životního cyklu rezervace",
+      "caption": "Reservation lifecycle — C02"
+    },
+    "activity": {
+      "src": "c02-activity-diagram.png",
+      "alt": "Diagram aktivit čtyř operací rezervace",
+      "caption": "Activity diagram — C02"
+    }
+  }
+}

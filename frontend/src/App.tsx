@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from './api/client'
 import ErrorBoundary from './components/ErrorBoundary'
 import ErrorPage from './components/ErrorPage'
+import DocumentationPage from './features/docs/DocumentationPage'
 import Navigation from './components/Navigation'
 import Login from './features/auth/Login'
 import BookingPage from './features/booking/BookingPage'
@@ -31,6 +32,7 @@ export default function App() {
   const [language, setLanguageState] = useState<Language>(storedLanguage)
   const [online, setOnline] = useState(() => navigator.onLine)
   const [loginRole, setLoginRole] = useState<UserRole | null>(null)
+  const [publicView, setPublicView] = useState<'home' | 'docs'>('home')
   const [toast, setToast] = useState<Toast | null>(null)
   const [refreshSignal, setRefreshSignal] = useState(0)
   const [teacherView, setTeacherView] = useState<'slots' | 'requests'>('slots')
@@ -82,27 +84,38 @@ export default function App() {
     return (
       <ErrorBoundary language={language} onLanguageChange={setLanguage} t={t}>
         <div className="app-shell">
-          <Navigation language={language} onLanguageChange={setLanguage} t={t} />
-          <main className="login-page">
-            <section className="login-card">
-              <p>{t('landingEyebrow')}</p>
-              <h1>{t('landingTitle')}</h1>
-              <div className="role-buttons">
-                <button type="button" onClick={() => setLoginRole('STUDENT')}>
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8c0-3.3 3.1-6 7-6s7 2.7 7 6" />
-                  </svg>
-                  <span>{t('studentRoleButton')}</span>
-                </button>
-                <button type="button" onClick={() => setLoginRole('TEACHER')}>
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="m4 10 8-5 8 5-8 5-8-5Zm3 3v4c0 1.5 2.2 3 5 3s5-1.5 5-3v-4" />
-                  </svg>
-                  <span>{t('teacherRoleButton')}</span>
-                </button>
-              </div>
-            </section>
-          </main>
+          <Navigation
+            title={publicView === 'docs' ? t('documentation') : undefined}
+            language={language}
+            onLanguageChange={setLanguage}
+            onDocumentation={() => setPublicView((view) => (view === 'docs' ? 'home' : 'docs'))}
+            isDocumentation={publicView === 'docs'}
+            t={t}
+          />
+          {publicView === 'docs' ? (
+            <DocumentationPage language={language} t={t} />
+          ) : (
+            <main className="login-page">
+              <section className="login-card">
+                <p>{t('landingEyebrow')}</p>
+                <h1>{t('landingTitle')}</h1>
+                <div className="role-buttons">
+                  <button type="button" onClick={() => setLoginRole('STUDENT')}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8c0-3.3 3.1-6 7-6s7 2.7 7 6" />
+                    </svg>
+                    <span>{t('studentRoleButton')}</span>
+                  </button>
+                  <button type="button" onClick={() => setLoginRole('TEACHER')}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="m4 10 8-5 8 5-8 5-8-5Zm3 3v4c0 1.5 2.2 3 5 3s5-1.5 5-3v-4" />
+                    </svg>
+                    <span>{t('teacherRoleButton')}</span>
+                  </button>
+                </div>
+              </section>
+            </main>
+          )}
         </div>
       </ErrorBoundary>
     )

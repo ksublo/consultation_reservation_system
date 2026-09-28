@@ -1,0 +1,520 @@
+{
+  "c01": {
+    "title": "C01 — Project foundation",
+    "sections": [
+      {
+        "id": "c01-1",
+        "title": "1. Team and repository",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Team: Consultify"
+          },
+          {
+            "type": "paragraph",
+            "content": "Members: Fatima, Kseniia"
+          },
+          {
+            "type": "paragraph",
+            "content": "Repository: https://github.com/ksublo/consultation_reservation_system"
+          },
+          {
+            "type": "paragraph",
+            "content": "The repository is currently private."
+          }
+        ]
+      },
+      {
+        "id": "c01-2",
+        "title": "2. Reservation domain",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "Domain: university teacher consultation slot reservations.",
+              "Resource: a specific consultation slot.",
+              "Reservation: student, selected slot, title and description of the reason, and status.",
+              "User: a student creates a reservation; a teacher creates slots and approves or cancels reservations.",
+              "States: PENDING, CONFIRMED, CANCELLED.",
+              "Operations: create a slot and reservation, approve, cancel, and check availability.",
+              "Common rule: two active reservations cannot exist for the same slot; both PENDING and CONFIRMED block the slot.",
+              "Domain rule: a slot can only be created on weekdays between 07:15 and 19:15. A student can have at most five pending reservations.",
+              "System boundary: Notification Service (still in development)."
+            ]
+          }
+        ]
+      },
+      {
+        "id": "c01-3",
+        "title": "3. Repository and stack",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "Monorepo with frontend/ and backend/ folders.",
+              "Frontend: React, TypeScript and Vite.",
+              "Backend: Java 21, Spring Boot and Maven.",
+              "Persistence: PostgreSQL and Flyway migrations.",
+              "README and documentation in docs/ exist; the repository is ready for shared work."
+            ]
+          }
+        ]
+      },
+      {
+        "id": "c01-4",
+        "title": "4. Project Frame",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "The complete Project Frame is filled in docs/intent-and-change.md. It describes the system purpose, roles, concepts, persistent state, operations, reservation state transitions, business rules, Notification Service, assumption and an open question."
+          }
+        ]
+      },
+      {
+        "id": "c01-5",
+        "title": "5. Selected future pressure",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Category: C — Changeability."
+          },
+          {
+            "type": "paragraph",
+            "content": "Future change: a teacher will be able to reject a reservation with a reason. A REJECTED state will be added and the slot will become available to other students again."
+          },
+          {
+            "type": "paragraph",
+            "content": "This is relevant because the change affects the state model, history, business rules and frontend."
+          }
+        ]
+      },
+      {
+        "id": "c01-6",
+        "title": "6. Change and review loop",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Tasks follow the team workflow. One team member implements a change in their own branch, another member reviews it in a pull request, and the change is merged into main after approval. The review verifies functionality, readability, project rules and conflicts."
+          }
+        ]
+      },
+      {
+        "id": "c01-7",
+        "title": "7. Engineering spike — Persistence",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "We verified real reservation persistence in PostgreSQL. Docker Compose runs the database, backend and frontend; Flyway creates the schema and demo data at startup. The backend reads slots through the REST API and data can be verified in the database."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Evidence: compose.yaml, DOCKER.md and Flyway migrations in backend/src/main/resources/db/migration/.",
+              "Result: availability is protected by both the backend and database constraints, so two active reservations cannot exist for the same slot."
+            ]
+          },
+          {
+            "type": "code",
+            "language": "bash",
+            "content": "docker compose up --build"
+          }
+        ]
+      },
+      {
+        "id": "c01-8",
+        "title": "8. Evidence and decision",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Evidence is documented in docs/evidence-and-evolution.md: the question verified PostgreSQL reads and writes; Docker Compose was used for the run; Flyway migrations and visible demo slots were observed. Decision: PostgreSQL, Flyway and Docker Compose remain the standard for local startup and database schema management."
+          }
+        ]
+      },
+      {
+        "id": "c01-9",
+        "title": "9. CP1 walking skeleton",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "POST /api/reservations → validation → persist to PostgreSQL → 201 Created with reservation ID → automated integration check. The definition is in README.md."
+          }
+        ]
+      },
+      {
+        "id": "c01-10",
+        "title": "10. Status before C02",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "The reservation domain, Resource / Reservation / User model, states, operations, rules, system boundary, Project Frame, selected future pressure, review workflow, engineering spike, evidence and CP1 skeleton are described and evidenced."
+          }
+        ]
+      }
+    ]
+  },
+  "c02": {
+    "title": "C02 — Basic behaviour specification",
+    "sections": [
+      {
+        "id": "c02-1",
+        "title": "Current C02 status",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "The application already supports reservation creation, available slot viewing, teacher approval and reservation cancellation. The overview distinguishes completed implementation from documentation still required for C02."
+          }
+        ]
+      },
+      {
+        "id": "c02-2",
+        "title": "1. Four basic operations — current specification",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "The following is a proposed baseline based on actual application behaviour. In our process Create makes a PENDING request and a separate Approve changes it to CONFIRMED."
+          }
+        ]
+      },
+      {
+        "id": "c02-3",
+        "title": "OP-01 — Create Reservation",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Goal: a student submits a consultation request for one teacher slot."
+          },
+          {
+            "type": "paragraph",
+            "content": "Trigger: an authenticated student selects a slot, consultation title and description, then submits the form."
+          },
+          {
+            "type": "paragraph",
+            "content": "Observable requirement: the system creates one PENDING reservation and returns its identifier and state."
+          },
+          {
+            "type": "paragraph",
+            "content": "Preconditions: student and slot exist; the slot is ACTIVE and future; the student has fewer than five pending reservations and has no overlap with another active reservation."
+          },
+          {
+            "type": "paragraph",
+            "content": "Success state: the new PENDING reservation blocks the slot and creation is written to reservation_history."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Success: submit → validate slot and rules → persist PENDING → return 201 Created.",
+              "Failures: unknown student/slot, inactive or past slot, blocked slot, student overlap or exceeded limit → no reservation is created."
+            ]
+          },
+          {
+            "type": "note",
+            "variant": "warning",
+            "content": "Still required: team acceptance as REQ-01 and automated successful and negative verification."
+          }
+        ]
+      },
+      {
+        "id": "c02-4",
+        "title": "OP-02 — Check Availability",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Goal: a student or teacher can identify usable consultation slots."
+          },
+          {
+            "type": "paragraph",
+            "content": "Observable requirement: the system returns only future ACTIVE slots without a PENDING or CONFIRMED reservation."
+          },
+          {
+            "type": "paragraph",
+            "content": "Success state: a slot list is returned; no reservation or slot is changed."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Success: load active slots → exclude past and blocked slots → return available slots.",
+              "Boundary: a past, cancelled or PENDING/CONFIRMED occupied slot is unavailable."
+            ]
+          },
+          {
+            "type": "note",
+            "variant": "warning",
+            "content": "Still required: explicit acceptance of [start, end) interval semantics and verification examples for adjacent and overlapping intervals."
+          }
+        ]
+      },
+      {
+        "id": "c02-5",
+        "title": "OP-03 — Approve Reservation / Confirm Reservation",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Goal: a teacher accepts a pending request as a confirmed consultation."
+          },
+          {
+            "type": "paragraph",
+            "content": "Observable requirement: only the owner of the slot can change PENDING to CONFIRMED."
+          },
+          {
+            "type": "paragraph",
+            "content": "Preconditions: the reservation exists, is PENDING and the actor owns the slot."
+          },
+          {
+            "type": "paragraph",
+            "content": "Success state: status becomes CONFIRMED and history is stored."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Success: teacher confirms → ownership and state are validated → status becomes CONFIRMED.",
+              "Failures: other teacher/student → 403; CONFIRMED/CANCELLED source state → rejected without change."
+            ]
+          },
+          {
+            "type": "note",
+            "variant": "warning",
+            "content": "Still required: a complete standalone Approve specification for v0.2 and a concurrency-conflict test."
+          }
+        ]
+      },
+      {
+        "id": "c02-6",
+        "title": "OP-04 — Cancel Reservation",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Goal: a student or teacher cancels an active future consultation and releases its slot."
+          },
+          {
+            "type": "paragraph",
+            "content": "Observable requirement: a PENDING or CONFIRMED reservation can become CANCELLED at least three hours before its start."
+          },
+          {
+            "type": "paragraph",
+            "content": "Success state: actor, note, cancellation time and history are stored; the slot stops being blocked."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Success: authorised actor cancels → backend validates state, ownership and time → persists CANCELLED.",
+              "Failures: unrelated actor, already cancelled reservation or less than three hours before start → no change."
+            ]
+          },
+          {
+            "type": "note",
+            "variant": "warning",
+            "content": "Still required: team rationale for the three-hour limit and automated boundary tests at exactly three hours."
+          }
+        ]
+      },
+      {
+        "id": "c02-7",
+        "title": "2. Requirement acceptance review",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Meaning, need, observable result, feasibility, verifiability, state/time, concurrency, consistency and uncertainty must be reviewed by the team for every accepted requirement."
+          },
+          {
+            "type": "note",
+            "variant": "warning",
+            "content": "Still required: record this review for REQ-01 to REQ-04 and mark Baseline v0.1 as team-approved."
+          }
+        ]
+      },
+      {
+        "id": "c02-8",
+        "title": "3. Shared domain rules and invariants",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "BR-01 Intervals: slots use [start, end) semantics; one slot may end exactly when the next begins.",
+              "BR-02 Exclusivity: one slot cannot have more than one active PENDING or CONFIRMED reservation.",
+              "BR-03 Cancellation: an authorised actor can cancel an active reservation at least three hours before start.",
+              "BR-04 Domain rule: teachers create slots only on weekdays from 07:15 to 19:15; students have a pending-reservation limit and no active overlap."
+            ]
+          },
+          {
+            "type": "note",
+            "variant": "warning",
+            "content": "Still required: formally approve these rules and reference them from OP-01 to OP-04 instead of duplicating their wording."
+          }
+        ]
+      },
+      {
+        "id": "c02-9",
+        "title": "C02 checklist — 15 mandatory items",
+        "blocks": [
+          {
+            "type": "checklist",
+            "items": [
+              {
+                "label": "All four operations have a complete textual specification.",
+                "done": false
+              },
+              {
+                "label": "Every accepted requirement passed a requirement acceptance review.",
+                "done": false
+              },
+              {
+                "label": "Shared domain rules and invariants are defined only once.",
+                "done": false
+              },
+              {
+                "label": "A use-case diagram with actors and minimum-system goals exists.",
+                "done": true
+              },
+              {
+                "label": "A state diagram for the complete Reservation lifecycle exists.",
+                "done": true
+              },
+              {
+                "label": "The textual specification and both diagrams are mutually consistent.",
+                "done": false
+              },
+              {
+                "label": "Specification Baseline v0.1 was explicitly approved by the team.",
+                "done": false
+              },
+              {
+                "label": "The running application demonstrates all four basic operations.",
+                "done": true
+              },
+              {
+                "label": "A successful and a negative/boundary example was run for every operation.",
+                "done": false
+              },
+              {
+                "label": "Approval-process change impact was analysed before changing the specification.",
+                "done": false
+              },
+              {
+                "label": "Affected and unaffected parts after the change are explicitly identified.",
+                "done": false
+              },
+              {
+                "label": "Approve Reservation is fully specified as a new operation.",
+                "done": false
+              },
+              {
+                "label": "The use-case and state diagrams are updated to v0.2.",
+                "done": false
+              },
+              {
+                "label": "The running application matches the approved v0.2 baseline.",
+                "done": false
+              },
+              {
+                "label": "Evidence connects the specification to running behaviour and contains a driver for C03.",
+                "done": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "c02-10",
+        "title": "Implemented in the application",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "Create Reservation: a student creates a reservation for an active future slot; its resulting state is PENDING.",
+              "Check Availability: frontend and API show only active, available slots; PENDING and CONFIRMED block a slot.",
+              "Confirm / Approve Reservation: the slot owner can change PENDING to CONFIRMED.",
+              "Cancel Reservation: a student or teacher can cancel an active reservation at least 3 hours before its start; the record remains in history.",
+              "Rules in code: weekdays 07:15–19:15, pending reservation limit, student overlap control and one active reservation per slot.",
+              "The database treats PENDING and CONFIRMED reservations as blocking states and stores change history."
+            ]
+          }
+        ]
+      },
+      {
+        "id": "c02-11",
+        "title": "Still required before submitting C02",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "Complete OP-01 to OP-04 specification with goal, trigger, observable requirement, preconditions, scenarios, failures and verification examples.",
+              "Shared BR-01 to BR-04 rules and invariants, including exact [start, end) interval semantics.",
+              "Requirement acceptance review record and explicit team approval of Specification Baseline v0.1.",
+              "One successful and one negative or boundary example for every operation. At present there is only a context-load test, not a behavioural/integration suite.",
+              "Approval-process change-impact analysis, Baseline v0.2 and C02 evidence in docs/evidence-and-evolution.md.",
+              "Explicit architectural drivers to carry into C03."
+            ]
+          },
+          {
+            "type": "note",
+            "variant": "warning",
+            "content": "The diagrams below reflect the current PENDING, CONFIRMED and CANCELLED process. Their conditions must be aligned with the final v0.2 text baseline before submission."
+          }
+        ]
+      },
+      {
+        "id": "c02-12",
+        "title": "Use-case diagram",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "A student creates and cancels their own reservations; a teacher checks availability, approves requests and cancels reservations for their slot."
+          },
+          {
+            "type": "image",
+            "src": "c02-use-cases.png",
+            "alt": "Reservation system use-case diagram",
+            "caption": "Use-case diagram — C02"
+          }
+        ]
+      },
+      {
+        "id": "c02-13",
+        "title": "Reservation state diagram",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "A reservation starts as PENDING, a teacher can confirm it to CONFIRMED, and active reservations can be cancelled to CANCELLED according to the policy."
+          },
+          {
+            "type": "image",
+            "src": "c02-reservation-state.png",
+            "alt": "Reservation lifecycle state diagram",
+            "caption": "Reservation lifecycle — C02"
+          }
+        ]
+      },
+      {
+        "id": "c02-14",
+        "title": "Activity diagram",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "The diagram covers availability checking, creation, confirmation and cancellation including principal validation decisions."
+          },
+          {
+            "type": "image",
+            "src": "c02-activity-diagram.png",
+            "alt": "Reservation operations activity diagram",
+            "caption": "Activity diagram — C02"
+          }
+        ]
+      }
+    ]
+  },
+  "c03": {
+    "title": "C03 — Implementation",
+    "sections": [
+      {
+        "id": "c03-1",
+        "title": "Coming soon",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "C03 outputs will be added here gradually."
+          }
+        ]
+      }
+    ]
+  }
+}
