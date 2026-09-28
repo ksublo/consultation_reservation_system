@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api } from '../../api/client'
 import type { Language, TFunction } from '../../i18n'
 import { localeFor } from '../../i18n'
-import type { ConsultationSlot, Reservation, Session, Teacher, Toast } from '../../types/api'
+import type { ConsultationSlot, Session, Teacher, Toast } from '../../types/api'
 
 const timeZone = 'Europe/Prague'
 const weekdays = {
@@ -63,7 +63,6 @@ export default function BookingPage({
     [locale],
   )
   const [slots, setSlots] = useState<ConsultationSlot[]>([])
-  const [reservations, setReservations] = useState<Reservation[]>([])
   const [teacherUsers, setTeacherUsers] = useState<Teacher[]>([])
   const [teacherId, setTeacherId] = useState('')
   const [teacherQuery, setTeacherQuery] = useState('')
@@ -73,20 +72,16 @@ export default function BookingPage({
   const [reasonTitle, setReasonTitle] = useState('')
   const [reasonDescription, setReasonDescription] = useState('')
   const [loading, setLoading] = useState(true)
-  const [now, setNow] = useState(() => Date.now())
 
   async function loadSlots() {
     try {
       setLoading(true)
-      const [data, users, reservationData] = await Promise.all([
+      const [data, users] = await Promise.all([
         api.getSlots(session.token),
         api.getTeachers(session.token),
-        api.getReservations(session.token, session.userId),
       ])
       setSlots(data)
       setTeacherUsers(users)
-      setReservations(reservationData.filter((item) => item.studentId === session.userId))
-      setNow(Date.now())
     } catch (error) {
       onToast({
         type: 'error',

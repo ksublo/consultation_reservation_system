@@ -7,7 +7,7 @@ import Login from './features/auth/Login'
 import BookingPage from './features/booking/BookingPage'
 import MyReservationsPage from './features/booking/MyReservationsPage'
 import TeacherPage from './features/teacher/TeacherPage'
-import type { Notification, Session, Toast, UserRole } from './types/api'
+import type { Notification, Session, UserRole } from './types/api'
 import { createTranslator, type Language } from './i18n'
 import './index.css'
 
@@ -62,7 +62,7 @@ export default function App() {
     const interval = window.setInterval(() => void loadNotifications(), 30000)
     return () => window.clearInterval(interval)
   }, [session])
-  function refreshNotifications(_: Toast) {
+  function refreshNotifications() {
     void loadNotifications()
   }
   async function markNotificationRead(notificationId: string) {
