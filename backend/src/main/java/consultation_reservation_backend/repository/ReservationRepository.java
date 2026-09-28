@@ -12,7 +12,13 @@ import java.util.UUID;
 
 public interface ReservationRepository extends JpaRepository<Reservation, UUID> {
     Optional<Reservation> findBySlotIdAndStatusIn(UUID slotId, List<ReservationStatus> statuses);
-    List<Reservation> findByStudentIdOrSlotTeacherIdOrderByCreatedAtDesc(UUID studentId, UUID teacherId);
+    @Query("""
+            select reservation from Reservation reservation
+            where (reservation.student.id = :userId or reservation.slot.teacher.id = :userId)
+              and reservation.slot.startsAt >= :from
+            order by reservation.createdAt desc
+            """)
+    List<Reservation> findUpcomingForUser(@Param("userId") UUID userId, @Param("from") OffsetDateTime from);
     long countByStudentIdAndStatus(UUID studentId, ReservationStatus status);
 
     @Query("""

@@ -63,7 +63,7 @@ public class ReservationService {
     }
     @Transactional(readOnly = true)
     public List<ReservationResponse> forUser(UUID userId) {
-        return reservations.findByStudentIdOrSlotTeacherIdOrderByCreatedAtDesc(userId, userId).stream().map(ReservationResponse::from).toList();
+        return reservations.findUpcomingForUser(userId, OffsetDateTime.now()).stream().map(ReservationResponse::from).toList();
     }
     private Reservation get(UUID id) { return reservations.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Reservation not found.")); }
 }

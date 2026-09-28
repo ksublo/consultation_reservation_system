@@ -109,7 +109,7 @@ export default function MyReservationsPage({
   t,
 }: Props) {
   const [reservations, setReservations] = useState<Reservation[]>([])
-  const [showHistory, setShowHistory] = useState(true)
+  const [showHistory, setShowHistory] = useState(false)
   const [loading, setLoading] = useState(true)
   const [now, setNow] = useState(() => Date.now())
 
@@ -189,14 +189,17 @@ export default function MyReservationsPage({
               {historicalReservations.length} {t('records')}
             </p>
           </div>
-          <label className="history-toggle">
-            <input
-              type="checkbox"
-              checked={showHistory}
-              onChange={(event) => setShowHistory(event.target.checked)}
-            />
-            {t('showHistory')}
-          </label>
+          <button
+            className="history-toggle"
+            type="button"
+            aria-label={showHistory ? t('hideHistory') : t('showHistory')}
+            aria-expanded={showHistory}
+            onClick={() => setShowHistory((current) => !current)}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d={showHistory ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
+            </svg>
+          </button>
         </div>
         {showHistory && (
           <ReservationList
