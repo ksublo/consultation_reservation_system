@@ -66,6 +66,8 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
   const [duration, setDuration] = useState('30')
   const [now, setNow] = useState(() => Date.now())
   const [slotToCancel, setSlotToCancel] = useState<ConsultationSlot | null>(null)
+  const [showRequests, setShowRequests] = useState(true)
+  const [showTeacherSlots, setShowTeacherSlots] = useState(true)
 
   async function load() {
     try {
@@ -186,61 +188,76 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
     return (
       <main>
         <section className="card">
-          <h2>{t('teacherRequests')}</h2>
-          <div className="request-table">
-            <div className="request-head">
-              <span>{t('studentColumn')}</span>
-              <span>{t('contact')}</span>
-              <span>{t('topic')}</span>
-              <span>{t('status')}</span>
-              <span>{t('actions')}</span>
-            </div>
-            {requests.map((request) => {
-              const canCancel =
-                request.status !== 'CANCELLED' &&
-                new Date(request.startsAt).getTime() - now >= cancellationCutoffMs
-              return (
-                <div className="request-row" key={request.id}>
-                  <div>
-                    <b>
-                      {request.studentFirstName} {request.studentLastName}
-                    </b>
-                    <small>{request.studentLogin}</small>
-                  </div>
-                  <small>{request.studentEmail}</small>
-                  <div>
-                    <b>{request.reasonTitle}</b>
-                    <p>{request.reasonDescription}</p>
-                  </div>
-                  <span className={`status ${request.status.toLowerCase()}`}>
-                    {statusLabel(request.status, t)}
-                  </span>
-                  <div className="request-actions">
-                    <button
-                      className="approve-icon"
-                      title={t('approve')}
-                      disabled={request.status !== 'PENDING'}
-                      onClick={() =>
-                        void api
-                          .approveReservation(session.token, request.id, session.userId)
-                          .then(load)
-                      }
-                    >
-                      ✓
-                    </button>
-                    <button
-                      className="cancel-icon"
-                      title={canCancel ? t('cancel') : t('cancelTooLate')}
-                      disabled={!canCancel}
-                      onClick={() => void cancelReservation(request)}
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
+          <div className="section-title">
+            <h2>{t('teacherRequests')}</h2>
+            <button
+              className="history-toggle"
+              type="button"
+              aria-label={showRequests ? t('hideHistory') : t('showHistory')}
+              aria-expanded={showRequests}
+              onClick={() => setShowRequests((current) => !current)}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d={showRequests ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
+              </svg>
+            </button>
           </div>
+          {showRequests && (
+            <div className="request-table">
+              <div className="request-head">
+                <span>{t('studentColumn')}</span>
+                <span>{t('contact')}</span>
+                <span>{t('topic')}</span>
+                <span>{t('status')}</span>
+                <span>{t('actions')}</span>
+              </div>
+              {requests.map((request) => {
+                const canCancel =
+                  request.status !== 'CANCELLED' &&
+                  new Date(request.startsAt).getTime() - now >= cancellationCutoffMs
+                return (
+                  <div className="request-row" key={request.id}>
+                    <div>
+                      <b>
+                        {request.studentFirstName} {request.studentLastName}
+                      </b>
+                      <small>{request.studentLogin}</small>
+                    </div>
+                    <small>{request.studentEmail}</small>
+                    <div>
+                      <b>{request.reasonTitle}</b>
+                      <p>{request.reasonDescription}</p>
+                    </div>
+                    <span className={`status ${request.status.toLowerCase()}`}>
+                      {statusLabel(request.status, t)}
+                    </span>
+                    <div className="request-actions">
+                      <button
+                        className="approve-icon"
+                        title={t('approve')}
+                        disabled={request.status !== 'PENDING'}
+                        onClick={() =>
+                          void api
+                            .approveReservation(session.token, request.id, session.userId)
+                            .then(load)
+                        }
+                      >
+                        ✓
+                      </button>
+                      <button
+                        className="cancel-icon"
+                        title={canCancel ? t('cancel') : t('cancelTooLate')}
+                        disabled={!canCancel}
+                        onClick={() => void cancelReservation(request)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </section>
       </main>
     )
@@ -302,31 +319,50 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
         </section>
 
         <section className="card">
-          <h2>{t('mySlots')}</h2>
-          <p className="selected-slot-date">{dateFormatter.format(new Date(`${date}T12:00:00`))}</p>
-          <div className="slot-list teacher-slots">
-            {daySlots.map((slot) => {
-              const occupied = requests.some(
-                (request) =>
-                  request.slotId === slot.id &&
-                  (request.status === 'PENDING' || request.status === 'CONFIRMED'),
-              )
-              return (
-                <button
-                  className={occupied ? 'slot occupied' : 'slot'}
-                  key={slot.id}
-                  onClick={() => (occupied ? setSlotToCancel(slot) : void cancelOpenSlot(slot))}
-                >
-                  <span>
-                    {time.format(new Date(slot.startsAt))}–{time.format(new Date(slot.endsAt))}
-                  </span>
-                  {!occupied && <span className="remove-slot">×</span>}
-                  {occupied && ` ${t('occupied')}`}
-                </button>
-              )
-            })}
-            {!daySlots.length && <p className="muted">{t('noTeacherSlotsForDay')}</p>}
+          <div className="section-title">
+            <div>
+              <h2>{t('mySlots')}</h2>
+              <p className="selected-slot-date">
+                {dateFormatter.format(new Date(`${date}T12:00:00`))}
+              </p>
+            </div>
+            <button
+              className="history-toggle"
+              type="button"
+              aria-label={showTeacherSlots ? t('hideHistory') : t('showHistory')}
+              aria-expanded={showTeacherSlots}
+              onClick={() => setShowTeacherSlots((current) => !current)}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d={showTeacherSlots ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
+              </svg>
+            </button>
           </div>
+          {showTeacherSlots && (
+            <div className="slot-list teacher-slots">
+              {daySlots.map((slot) => {
+                const occupied = requests.some(
+                  (request) =>
+                    request.slotId === slot.id &&
+                    (request.status === 'PENDING' || request.status === 'CONFIRMED'),
+                )
+                return (
+                  <button
+                    className={occupied ? 'slot occupied' : 'slot'}
+                    key={slot.id}
+                    onClick={() => (occupied ? setSlotToCancel(slot) : void cancelOpenSlot(slot))}
+                  >
+                    <span>
+                      {time.format(new Date(slot.startsAt))}–{time.format(new Date(slot.endsAt))}
+                    </span>
+                    {!occupied && <span className="remove-slot">×</span>}
+                    {occupied && ` ${t('occupied')}`}
+                  </button>
+                )
+              })}
+              {!daySlots.length && <p className="muted">{t('noTeacherSlotsForDay')}</p>}
+            </div>
+          )}
           <h2 className="add-slot-title">{t('addSlot')}</h2>
           <form className="teacher-slot-form" onSubmit={add}>
             <div className="slot-form-field">

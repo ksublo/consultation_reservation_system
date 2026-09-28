@@ -574,6 +574,15 @@ main.login-page {
 .cancellation-warning span {
   @apply mt-1 block text-amber-800;
 }
+.dismissible-notice {
+  @apply mt-3 grid grid-cols-[1fr_auto] items-start gap-3;
+}
+.dismissible-notice p {
+  @apply mt-0;
+}
+.notice-dismiss {
+  @apply grid h-7 w-7 place-items-center rounded-full border border-amber-300 bg-white text-lg font-bold leading-none text-amber-800 hover:border-amber-500 hover:bg-amber-100;
+}
 .error-page {
   @apply fixed inset-0 grid min-h-screen w-screen max-w-none place-items-center bg-slate-50 p-6;
 }

@@ -32,6 +32,16 @@ const normalizeSearchText = (value: string) =>
     .replace(/\p{Diacritic}/gu, '')
     .toLocaleLowerCase('cs-CZ')
     .trim()
+const hiddenCancelledReservationsKey = 'hiddenCancelledReservationIds'
+
+function readHiddenCancelledReservationIds(): string[] {
+  try {
+    const raw = sessionStorage.getItem(hiddenCancelledReservationsKey)
+    return raw ? (JSON.parse(raw) as string[]) : []
+  } catch {
+    return []
+  }
+}
 
 interface BookingPageProps {
   session: Session
@@ -75,6 +85,10 @@ export default function BookingPage({
   const [reasonDescription, setReasonDescription] = useState('')
   const [loading, setLoading] = useState(true)
   const [now, setNow] = useState(() => Date.now())
+  const [showCancelledConsultations, setShowCancelledConsultations] = useState(true)
+  const [hiddenCancelledReservationIds, setHiddenCancelledReservationIds] = useState<string[]>(
+    readHiddenCancelledReservationIds,
+  )
 
   async function loadSlots() {
     try {
@@ -186,9 +200,11 @@ export default function BookingPage({
   const cancelledReservations = useMemo(() => {
     return reservations.filter(
       (reservation) =>
-        reservation.status === 'CANCELLED' && new Date(reservation.startsAt).getTime() >= now,
+        reservation.status === 'CANCELLED' &&
+        new Date(reservation.startsAt).getTime() >= now &&
+        !hiddenCancelledReservationIds.includes(reservation.id),
     )
-  }, [now, reservations])
+  }, [hiddenCancelledReservationIds, now, reservations])
 
   function updateTeacherQuery(value: string) {
     setTeacherQuery(value)
@@ -264,16 +280,46 @@ export default function BookingPage({
       )}
       {cancelledReservations.length > 0 && (
         <section className="card cancellation-warning">
-          <h2>{t('cancelledConsultations')}</h2>
-          {cancelledReservations.map((reservation) => (
-            <p key={reservation.id}>
-              <strong>{reservation.teacherName}</strong> ·{' '}
-              {dateFormatter.format(new Date(reservation.startsAt))}{' '}
-              {timeFormatter.format(new Date(reservation.startsAt))}–
-              {timeFormatter.format(new Date(reservation.endsAt))}
-              <span>{t('cancelledConsultationNotice')}</span>
-            </p>
-          ))}
+          <div className="section-title">
+            <h2>{t('cancelledConsultations')}</h2>
+            <button
+              className="history-toggle"
+              type="button"
+              aria-label={showCancelledConsultations ? t('hideHistory') : t('showHistory')}
+              aria-expanded={showCancelledConsultations}
+              onClick={() => setShowCancelledConsultations((current) => !current)}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d={showCancelledConsultations ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
+              </svg>
+            </button>
+          </div>
+          {showCancelledConsultations &&
+            cancelledReservations.map((reservation) => (
+              <div className="dismissible-notice" key={reservation.id}>
+                <p>
+                  <strong>{reservation.teacherName}</strong> ·{' '}
+                  {dateFormatter.format(new Date(reservation.startsAt))}{' '}
+                  {timeFormatter.format(new Date(reservation.startsAt))}–
+                  {timeFormatter.format(new Date(reservation.endsAt))}
+                  <span>{t('cancelledConsultationNotice')}</span>
+                </p>
+                <button
+                  className="notice-dismiss"
+                  type="button"
+                  aria-label={t('cancel')}
+                  onClick={() =>
+                    setHiddenCancelledReservationIds((current) => {
+                      const next = [...current, reservation.id]
+                      sessionStorage.setItem(hiddenCancelledReservationsKey, JSON.stringify(next))
+                      return next
+                    })
+                  }
+                >
+                  ×
+                </button>
+              </div>
+            ))}
         </section>
       )}
       <section className="teacher-panel">

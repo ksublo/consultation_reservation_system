@@ -109,6 +109,7 @@ export default function MyReservationsPage({
   t,
 }: Props) {
   const [reservations, setReservations] = useState<Reservation[]>([])
+  const [showActiveReservations, setShowActiveReservations] = useState(true)
   const [showHistory, setShowHistory] = useState(false)
   const [loading, setLoading] = useState(true)
   const [now, setNow] = useState(() => Date.now())
@@ -171,15 +172,28 @@ export default function MyReservationsPage({
             <h2>{t('myReservations')}</h2>
             <p>{loading ? t('loading') : `${activeReservations.length} ${t('currentCount')}`}</p>
           </div>
+          <button
+            className="history-toggle"
+            type="button"
+            aria-label={showActiveReservations ? t('hideHistory') : t('showHistory')}
+            aria-expanded={showActiveReservations}
+            onClick={() => setShowActiveReservations((current) => !current)}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d={showActiveReservations ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
+            </svg>
+          </button>
         </div>
-        <ReservationList
-          reservations={activeReservations}
-          empty={t('noActiveReservations')}
-          language={language}
-          onCancel={(reservation) => void cancelReservation(reservation)}
-          t={t}
-          now={now}
-        />
+        {showActiveReservations && (
+          <ReservationList
+            reservations={activeReservations}
+            empty={t('noActiveReservations')}
+            language={language}
+            onCancel={(reservation) => void cancelReservation(reservation)}
+            t={t}
+            now={now}
+          />
+        )}
       </section>
       <section className="card reservation-history">
         <div className="section-title">
