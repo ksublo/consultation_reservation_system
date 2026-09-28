@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
 @import 'tailwindcss';
 
 @theme {
@@ -7,7 +5,7 @@
   --color-vsb-hover: #26b2a8;
   --color-vsb-dark: #007f78;
   --color-ink: #102a43;
-  --font-sans: 'Inter', 'Arial', sans-serif;
+  --font-sans: Arial, sans-serif;
 }
 
 body {
@@ -188,14 +186,56 @@ main.login-page {
 .navigation-actions > span {
   @apply hidden text-sm font-semibold text-slate-500 sm:block;
 }
-.toast {
-  @apply fixed right-4 top-24 z-50 max-w-sm rounded-2xl px-5 py-3 text-sm font-semibold shadow-lg;
+.notification-button,
+.mobile-notification-button {
+  @apply relative;
 }
-.toast.success {
-  @apply bg-teal-600 text-white;
+.mobile-notification-button {
+  display: grid;
 }
-.toast.error {
-  @apply bg-rose-600 text-white;
+.notification-badge {
+  @apply absolute -right-1 -top-1 grid min-h-4 min-w-4 place-items-center rounded-full bg-rose-600 px-1 text-[10px] font-extrabold text-white;
+}
+.notification-modal-backdrop {
+  @apply fixed inset-0 z-50 grid place-items-start bg-slate-900/35 p-4 pt-24;
+}
+.notification-modal {
+  @apply w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl;
+}
+.notification-modal-header {
+  @apply flex items-center justify-between border-b border-slate-100 pb-3;
+}
+.notification-modal-header h2 {
+  @apply text-lg font-extrabold text-ink;
+}
+.notification-modal-header button {
+  @apply grid h-8 w-8 place-items-center rounded-full text-xl hover:bg-slate-100;
+}
+.notification-empty {
+  @apply py-8 text-center text-sm text-slate-500;
+}
+.notification-list {
+  @apply mt-3 grid gap-2;
+}
+.notification-list li {
+  @apply relative rounded-xl border border-slate-100 p-3 pr-10 text-sm text-slate-600;
+}
+.notification-list li.unread {
+  @apply border-teal-200 bg-teal-50;
+}
+.notification-list strong,
+.notification-list span,
+.notification-list small {
+  @apply block;
+}
+.notification-list strong {
+  @apply text-ink;
+}
+.notification-list small {
+  @apply mt-1 font-semibold text-teal-800;
+}
+.notification-read {
+  @apply absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full text-lg text-slate-500 hover:bg-slate-200 hover:text-slate-900;
 }
 .back {
   @apply fixed left-5 top-5 rounded-full bg-white px-4 py-2 text-sm font-bold text-vsb shadow-sm hover:bg-teal-50;
@@ -592,6 +632,17 @@ main.login-page {
 }
 .site-navigation .menu-toggle {
   display: grid;
+}
+@media (min-width: 1024px) {
+  .mobile-notification-button {
+    display: none;
+  }
+  .notification-modal-backdrop {
+    @apply fixed inset-0 z-50 block bg-transparent p-0;
+  }
+  .notification-modal {
+    @apply absolute right-8 top-24 max-h-[min(34rem,calc(100vh-7rem))] overflow-y-auto;
+  }
 }
 .site-navigation .menu-navigation {
   display: grid;

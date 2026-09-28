@@ -20,8 +20,9 @@ public class ReservationService {
     private final ReservationRepository reservations;
     private final ConsultationSlotRepository slots;
     private final ReservationHistoryRepository history;
+    private final NotificationService notifications;
     private final UserService users;
-    public ReservationService(ReservationRepository reservations, ConsultationSlotRepository slots, ReservationHistoryRepository history, UserService users) { this.reservations = reservations; this.slots = slots; this.history = history; this.users = users; }
+    public ReservationService(ReservationRepository reservations, ConsultationSlotRepository slots, ReservationHistoryRepository history, UserService users, NotificationService notifications) { this.reservations = reservations; this.slots = slots; this.history = history; this.users = users; this.notifications = notifications; }
     public ReservationResponse create(CreateReservationRequest request) {
         AppUser student = users.get(request.studentId());
         if (!student.hasRole(UserRole.STUDENT)) throw new ApiException(HttpStatus.FORBIDDEN, "Only a student can create a reservation.");
@@ -35,6 +36,7 @@ public class ReservationService {
         try {
             Reservation reservation = reservations.saveAndFlush(new Reservation(slot, student, request.reasonTitle(), request.reasonDescription()));
             history.save(new ReservationHistory(reservation, ReservationAction.CREATED, null, ReservationStatus.PENDING, student, null));
+            notifications.create(slot.getTeacher(), reservation, "RESERVATION_CREATED", "Nová žádost o konzultaci", "Student " + student.getFirstName() + " " + student.getLastName() + " požádal o konzultaci.");
             return ReservationResponse.from(reservation);
         } catch (DataIntegrityViolationException exception) { throw new ApiException(HttpStatus.CONFLICT, "This slot was just reserved by another student."); }
     }
@@ -45,6 +47,7 @@ public class ReservationService {
         if (reservation.getStatus() != ReservationStatus.PENDING) throw new ApiException(HttpStatus.CONFLICT, "Only a pending reservation can be approved.");
         reservation.confirm();
         history.save(new ReservationHistory(reservation, ReservationAction.CONFIRMED, ReservationStatus.PENDING, ReservationStatus.CONFIRMED, teacher, request.note()));
+        notifications.create(reservation.getStudent(), reservation, "RESERVATION_APPROVED", "Rezervace byla schválena", "Pedagog " + teacher.getFirstName() + " " + teacher.getLastName() + " schválil vaši žádost o konzultaci.");
         return ReservationResponse.from(reservation);
     }
     public ReservationResponse cancel(UUID reservationId, ActorRequest request) {
@@ -59,6 +62,12 @@ public class ReservationService {
         ReservationStatus previous = reservation.getStatus();
         reservation.cancel(actor, request.note());
         history.save(new ReservationHistory(reservation, ReservationAction.CANCELLED, previous, ReservationStatus.CANCELLED, actor, request.note()));
+        AppUser recipient = isStudent ? reservation.getSlot().getTeacher() : reservation.getStudent();
+        String message = previous == ReservationStatus.PENDING && !isStudent
+                ? "Pedagog " + actor.getFirstName() + " " + actor.getLastName() + " vaši žádost o konzultaci zamítl."
+                : isStudent ? "Student " + actor.getFirstName() + " " + actor.getLastName() + " zrušil rezervaci."
+                : "Pedagog " + actor.getFirstName() + " " + actor.getLastName() + " zrušil potvrzenou konzultaci.";
+        notifications.create(recipient, reservation, "RESERVATION_CANCELLED", previous == ReservationStatus.PENDING && !isStudent ? "Žádost byla zamítnuta" : "Rezervace byla zrušena", message);
         return ReservationResponse.from(reservation);
     }
     @Transactional(readOnly = true)

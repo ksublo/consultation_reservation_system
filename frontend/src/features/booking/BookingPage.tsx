@@ -155,22 +155,6 @@ export default function BookingPage({
       ),
     [slots, teacherId, selectedDate],
   )
-  const upcomingReservations = useMemo(() => {
-    return reservations.filter((reservation) => {
-      const startsAt = new Date(reservation.startsAt).getTime()
-      return (
-        reservation.status !== 'CANCELLED' &&
-        startsAt >= now &&
-        startsAt - now <= 3 * 60 * 60 * 1000
-      )
-    })
-  }, [now, reservations])
-  const cancelledReservations = useMemo(() => {
-    return reservations.filter(
-      (reservation) =>
-        reservation.status === 'CANCELLED' && new Date(reservation.startsAt).getTime() >= now,
-    )
-  }, [now, reservations])
 
   function updateTeacherQuery(value: string) {
     setTeacherQuery(value)
@@ -223,33 +207,6 @@ export default function BookingPage({
 
   return (
     <main>
-      {upcomingReservations.length > 0 && (
-        <section className="card upcoming-warning">
-          <h2>{t('upcomingConsultations')}</h2>
-          {upcomingReservations.map((reservation) => (
-            <p key={reservation.id}>
-              <strong>{reservation.teacherName}</strong> ·{' '}
-              {dateFormatter.format(new Date(reservation.startsAt))}{' '}
-              {timeFormatter.format(new Date(reservation.startsAt))}–
-              {timeFormatter.format(new Date(reservation.endsAt))}
-            </p>
-          ))}
-        </section>
-      )}
-      {cancelledReservations.length > 0 && (
-        <section className="card cancellation-warning">
-          <h2>{t('cancelledConsultations')}</h2>
-          {cancelledReservations.map((reservation) => (
-            <p key={reservation.id}>
-              <strong>{reservation.teacherName}</strong> ·{' '}
-              {dateFormatter.format(new Date(reservation.startsAt))}{' '}
-              {timeFormatter.format(new Date(reservation.startsAt))}–
-              {timeFormatter.format(new Date(reservation.endsAt))}
-              <span>{t('cancelledConsultationNotice')}</span>
-            </p>
-          ))}
-        </section>
-      )}
       <section className="teacher-panel">
         <div>
           <span className="label">{t('teacherSearch')}</span>
