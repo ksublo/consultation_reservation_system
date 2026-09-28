@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface ConsultationSlotRepository extends JpaRepository<ConsultationSlot, UUID> {
-    List<ConsultationSlot> findByTeacher_IdOrderByStartsAt(UUID teacherId);
+    List<ConsultationSlot> findByTeacher_IdAndStartsAtGreaterThanEqualOrderByStartsAt(UUID teacherId, OffsetDateTime from);
 
     @Query("""
             select slot from ConsultationSlot slot

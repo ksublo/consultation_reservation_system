@@ -8,6 +8,9 @@ type StudentView = 'booking' | 'reservations'
 
 interface NavigationProps {
   activeRole?: UserRole
+  title?: string
+  onDocumentation?: () => void
+  isDocumentation?: boolean
   userLogin?: string
   onLogout?: () => void
   onRefresh?: () => void
@@ -71,8 +74,19 @@ function MenuIcon() {
   )
 }
 
+function BackIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M19 12H5m6-6-6 6 6 6" />
+    </svg>
+  )
+}
+
 export default function Navigation({
   activeRole,
+  title,
+  onDocumentation,
+  isDocumentation,
   userLogin,
   onLogout,
   onRefresh,
@@ -178,7 +192,7 @@ export default function Navigation({
       <div className="navigation-content">
         <div className="brand">
           <img src={logo} alt="VŠB Technical University of Ostrava" />
-          <span className="navigation-label">{t('appTitle')}</span>
+          <span className="navigation-label">{title ?? t('appTitle')}</span>
         </div>
 
         {renderNavigation('primary-navigation')}
@@ -189,6 +203,11 @@ export default function Navigation({
             </span>
           )}
           <div className="desktop-controls">
+            {onDocumentation && !isDocumentation && (
+              <button className="documentation-link" type="button" onClick={onDocumentation}>
+                {t('documentation')}
+              </button>
+            )}
             <div className="language-switch" aria-label={t('language')}>
               <button
                 className={language === 'cs' ? 'active' : ''}
@@ -250,6 +269,16 @@ export default function Navigation({
               {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
             </button>
           )}
+          {onDocumentation && isDocumentation && (
+            <button
+              className="docs-back-button"
+              type="button"
+              aria-label={t('back')}
+              onClick={onDocumentation}
+            >
+              <BackIcon />
+            </button>
+          )}
           <button
             className={`menu-toggle ${menuOpen ? 'open' : ''}`}
             type="button"
@@ -276,6 +305,20 @@ export default function Navigation({
                   <span>{roleLabel}</span>
                   <strong>{userLogin}</strong>
                 </div>
+              )}
+
+              {onDocumentation && !isDocumentation && (
+                <nav className="public-menu-navigation" aria-label={t('documentation')}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onDocumentation()
+                      closeMenu()
+                    }}
+                  >
+                    {t('documentation')}
+                  </button>
+                </nav>
               )}
 
               {renderNavigation('menu-navigation')}

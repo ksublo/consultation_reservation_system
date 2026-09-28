@@ -1,0 +1,414 @@
+{
+  "c01": {
+    "title": "C01 — Založení projektu",
+    "sections": [
+      {
+        "id": "c01-1",
+        "title": "1. Tým a repozitář",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Tým: Consultify"
+          },
+          {
+            "type": "paragraph",
+            "content": "Členové: Fatima, Kseniia"
+          },
+          {
+            "type": "paragraph",
+            "content": "Repozitář: https://github.com/ksublo/consultation_reservation_system"
+          },
+          {
+            "type": "paragraph",
+            "content": "Repozitář je zatím soukromý."
+          }
+        ]
+      },
+      {
+        "id": "c01-2",
+        "title": "2. Rezervační doména",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "Doména: rezervace konzultačních termínů pedagogů na univerzitě.",
+              "Resource: konkrétní konzultační termín (consultation slot).",
+              "Reservation: student, vybraný termín, název a popis důvodu, stav.",
+              "User: student vytváří rezervaci; pedagog vytváří termíny a rezervaci schvaluje nebo ruší.",
+              "Stavy: PENDING, CONFIRMED, CANCELLED.",
+              "Operace: vytvoření termínu a rezervace, schválení, zrušení a kontrola dostupnosti.",
+              "Společné pravidlo: pro stejný termín nesmí existovat dvě aktivní rezervace; PENDING i CONFIRMED termín blokují.",
+              "Vlastní pravidlo: termín lze vytvořit pouze ve všední dny mezi 07:15 a 19:15. Student může mít nejvýše pět čekajících rezervací.",
+              "Systémová hranice: Notification Service (ještě ve vývoji)."
+            ]
+          }
+        ]
+      },
+      {
+        "id": "c01-3",
+        "title": "3. Repozitář a stack",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "Monorepo se složkami frontend/ a backend/.",
+              "Frontend: React, TypeScript a Vite.",
+              "Backend: Java 21, Spring Boot a Maven.",
+              "Persistence: PostgreSQL a Flyway migrace.",
+              "README a dokumentace v docs/ existují; repozitář je připravený pro společnou práci."
+            ]
+          }
+        ]
+      },
+      {
+        "id": "c01-4",
+        "title": "4. Project Frame",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Kompletní Project Frame je vyplněn v docs/intent-and-change.md. Popisuje účel systému, role, pojmy, persistentní stav, operace, přechody stavů, business pravidla, Notification Service, předpoklad i otevřenou otázku."
+          }
+        ]
+      },
+      {
+        "id": "c01-5",
+        "title": "5. Selected future pressure",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Kategorie: C — Changeability."
+          },
+          {
+            "type": "paragraph",
+            "content": "Budoucí změna: pedagog bude moci rezervaci zamítnout s důvodem. Přibude stav REJECTED a termín se znovu nabídne dalším studentům."
+          },
+          {
+            "type": "paragraph",
+            "content": "Je to relevantní, protože změna ovlivní stavový model, historii, business pravidla i frontend."
+          }
+        ]
+      },
+      {
+        "id": "c01-6",
+        "title": "6. Change + review smyčka",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Tasky vytváříme podle týmového workflow. Změnu provede člen týmu na vlastní větvi, jiný člen ji zkontroluje v pull requestu a po schválení se změna sloučí do main. Review ověřuje funkčnost, čitelnost, pravidla projektu i konflikty."
+          }
+        ]
+      },
+      {
+        "id": "c01-7",
+        "title": "7. Engineering spike — Persistence",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Ověřili jsme skutečnou perzistenci rezervací v PostgreSQL. Docker Compose spouští databázi, backend a frontend; Flyway při startu vytvoří schéma a ukázková data. Backend načítá termíny přes REST API a data lze ověřit v databázi."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Evidence: compose.yaml, DOCKER.md a Flyway migrace v backend/src/main/resources/db/migration/.",
+              "Výsledek: dostupnost termínu chrání backend i databázová omezení, proto nevzniknou dvě aktivní rezervace stejného termínu."
+            ]
+          },
+          {
+            "type": "code",
+            "language": "bash",
+            "content": "docker compose up --build"
+          }
+        ]
+      },
+      {
+        "id": "c01-8",
+        "title": "8. Evidence a rozhodnutí",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Evidence je vyplněna v docs/evidence-and-evolution.md: otázka ověřovala čtení a zápis do PostgreSQL, provedeným krokem bylo spuštění přes Docker Compose, výsledkem byly aplikované Flyway migrace a viditelné ukázkové termíny. Rozhodnutí: PostgreSQL, Flyway a Docker Compose zůstávají standardem pro lokální spuštění a databázové schéma."
+          }
+        ]
+      },
+      {
+        "id": "c01-9",
+        "title": "9. CP1 walking skeleton",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "POST /api/reservations → validace → uložení do PostgreSQL → 201 Created s ID rezervace → automatická integrační kontrola. Definice je v README.md."
+          }
+        ]
+      },
+      {
+        "id": "c01-10",
+        "title": "10. Stav před C02",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Rezervační doména, model Resource / Reservation / User, stavy, operace, pravidla, systémová hranice, Project Frame, selected future pressure, review workflow, engineering spike, evidence a CP1 skeleton jsou popsané a doložené."
+          }
+        ]
+      }
+    ]
+  },
+  "c02": {
+    "title": "C02 — Specifikace základního chování",
+    "sections": [
+      {
+        "id": "c02-1",
+        "title": "1. Baseline v0.1 — minimální systém",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Aplikace už obsahuje vytvoření rezervace, zobrazení dostupných termínů, schválení pedagogem a zrušení rezervace. Níže je přehled hotového kódu a dokumentace, kterou ještě potřebujeme doplnit."
+          }
+        ]
+      },
+      {
+        "id": "c02-2",
+        "title": "2. Úplná specifikace operací",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Společná pravidla jsou definována níže v části Doménová pravidla. Jednotlivé operace na ně pouze odkazují."
+          }
+        ]
+      },
+      {
+        "id": "c02-3",
+        "title": "OP-01 — Create Reservation",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Student si vybere volný termín pedagoga, doplní název a popis konzultace a odešle žádost. Systém vytvoří čekající PENDING rezervaci; termín tím zablokuje pro další studenty, ale pedagog ji ještě nepotvrdil."
+          },
+          {
+            "type": "code",
+            "language": "text",
+            "content": "Cíl / hodnota pro uživatele:\nStudent vytvoří žádost o konzultaci pro konkrétní termín pedagoga.\n\nSpouštěcí událost:\nPřihlášený student odešle vybraný consultation slot, název a popis konzultace.\n\nPozorovatelný požadavek:\nREQ-01: Systém vytvoří jednu Reservation ve stavu PENDING pro existující aktivní budoucí slot, pokud jsou splněna doménová pravidla.\n\nPředpoklady:\n- Student existuje a je oprávněn vytvořit rezervaci.\n- Slot existuje, je ACTIVE a začíná v budoucnosti.\n\nStav po úspěšném provedení:\n- existuje jedna nová Reservation;\n- Reservation.status = PENDING;\n- je uložen záznam CREATED v reservation_history.\n\nZměna stavu:\n[none] → PENDING\n\nOdkaz na doménová pravidla / invarianty:\nBR-02 Exkluzivita slotu; BR-04 Pravidla termínů a studenta.\n\nHlavní úspěšný scénář:\n1. Student odešle slot, název a popis.\n2. Systém ověří studenta, termín a relevantní pravidla.\n3. Systém uloží Reservation ve stavu PENDING.\n4. Systém uloží historii CREATED a vrátí 201 Created s identifikátorem a stavem.\n\nAlternativní / chybové výsledky:\n- neznámý student nebo slot → zamítnutí; rezervace nevznikne;\n- neaktivní, minulý nebo již blokovaný slot → zamítnutí; rezervace nevznikne;\n- překročení limitu PENDING nebo překryv termínů studenta → zamítnutí; rezervace nevznikne.\n\nPříklady ověření:\n- aktivní budoucí slot + validní student → jedna PENDING rezervace;\n- již blokovaný slot → odmítnuto;\n- student s překrývající se aktivní rezervací → odmítnuto.\n\nZdůvodnění / zdroj:\nStudent vyjadřuje zájem o konzultaci; pedagog ji následně rozhodne potvrdit nebo zrušit."
+          }
+        ]
+      },
+      {
+        "id": "c02-4",
+        "title": "OP-02 — Check Availability",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Kalendář a API ukazují jen aktivní budoucí termíny bez čekající nebo potvrzené rezervace. Kontrola pouze čte data a nic nemění."
+          },
+          {
+            "type": "code",
+            "language": "text",
+            "content": "Cíl / hodnota pro uživatele:\nStudent i pedagog zjistí, které konzultační termíny lze rezervovat.\n\nSpouštěcí událost:\nUživatel otevře kalendář nebo požádá API o dostupné termíny.\n\nPozorovatelný požadavek:\nREQ-02: Systém vrátí ACTIVE budoucí slot jako dostupný pouze tehdy, pokud pro něj neexistuje Reservation ve stavu PENDING ani CONFIRMED.\n\nPředpoklady:\n- Požadavek pracuje s existujícími consultation slots.\n\nStav po úspěšném provedení:\n- vrátí se seznam dostupných slotů;\n- Reservation ani ConsultationSlot se nemění.\n\nZměna stavu:\nŽádná.\n\nOdkaz na doménová pravidla / invarianty:\nBR-01 Intervalová sémantika; BR-02 Exkluzivita slotu.\n\nHlavní úspěšný scénář:\n1. Uživatel požádá o dostupné termíny.\n2. Systém vybere ACTIVE budoucí sloty.\n3. Systém vyřadí sloty blokované PENDING nebo CONFIRMED rezervací.\n4. Systém vrátí zbývající dostupné sloty.\n\nAlternativní / chybové výsledky:\n- minulý slot → není vrácen jako dostupný;\n- CANCELLED slot → není vrácen jako dostupný;\n- PENDING nebo CONFIRMED rezervace → slot není vrácen jako dostupný.\n\nPříklady ověření:\n- ACTIVE budoucí slot bez rezervace → dostupný;\n- slot s PENDING rezervací → nedostupný;\n- slot s CONFIRMED rezervací → nedostupný.\n\nZdůvodnění / zdroj:\nUživatel potřebuje vybírat jen termíny, které nemohou vést ke kolizi rezervace."
+          }
+        ]
+      },
+      {
+        "id": "c02-5",
+        "title": "OP-03 — Confirm Reservation",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Pedagog v přehledu žádostí potvrdí čekající rezervaci svého termínu. Jen vlastník daného slotu může změnit PENDING na CONFIRMED."
+          },
+          {
+            "type": "code",
+            "language": "text",
+            "content": "Cíl / hodnota pro uživatele:\nPedagog přijme čekající žádost jako potvrzenou konzultaci.\n\nSpouštěcí událost:\nPedagog zvolí potvrzení konkrétní PENDING rezervace svého termínu.\n\nPozorovatelný požadavek:\nREQ-03: Systém změní Reservation z PENDING na CONFIRMED pouze tehdy, pokud akci provádí pedagog vlastnící consultation slot.\n\nPředpoklady:\n- Reservation existuje;\n- Reservation.status = PENDING;\n- aktér je TEACHER vlastnící daný slot.\n\nStav po úspěšném provedení:\n- Reservation.status = CONFIRMED;\n- slot zůstává blokovaný;\n- je uložen záznam CONFIRMED v reservation_history.\n\nZměna stavu:\nPENDING → CONFIRMED\n\nOdkaz na doménová pravidla / invarianty:\nBR-02 Exkluzivita slotu.\n\nHlavní úspěšný scénář:\n1. Pedagog vybere čekající žádost.\n2. Systém ověří existenci rezervace, její stav a vlastnictví slotu.\n3. Systém změní stav na CONFIRMED.\n4. Systém uloží historii CONFIRMED a vrátí potvrzenou rezervaci.\n\nAlternativní / chybové výsledky:\n- neexistující rezervace → zamítnutí;\n- student nebo jiný pedagog → 403 Forbidden;\n- CONFIRMED nebo CANCELLED rezervace → zamítnutí; stav se nemění.\n\nPříklady ověření:\n- vlastník slotu + PENDING → CONFIRMED;\n- jiný pedagog + PENDING → 403;\n- CANCELLED → odmítnuto bez změny.\n\nZdůvodnění / zdroj:\nPedagog musí mít kontrolu nad tím, které žádosti pro svůj termín potvrdí."
+          }
+        ]
+      },
+      {
+        "id": "c02-6",
+        "title": "OP-04 — Cancel Reservation",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Student ruší vlastní rezervaci, pedagog může zrušit rezervaci svého termínu. Storno je možné alespoň tři hodiny před začátkem a mění stav na CANCELLED se zachováním historie."
+          },
+          {
+            "type": "code",
+            "language": "text",
+            "content": "Cíl / hodnota pro uživatele:\nOprávněný student nebo pedagog zruší aktivní budoucí konzultaci.\n\nSpouštěcí událost:\nStudent zruší vlastní rezervaci nebo pedagog zruší rezervaci svého termínu.\n\nPozorovatelný požadavek:\nREQ-04: Systém změní PENDING nebo CONFIRMED rezervaci na CANCELLED, pokud ji ruší oprávněný aktér alespoň tři hodiny před začátkem.\n\nPředpoklady:\n- Reservation existuje;\n- Reservation.status je PENDING nebo CONFIRMED;\n- aktér je student rezervace nebo pedagog vlastnící slot;\n- currentTime je nejméně tři hodiny před startsAt.\n\nStav po úspěšném provedení:\n- Reservation.status = CANCELLED;\n- uloží se actor, cancellation note a cancelledAt;\n- je uložen záznam CANCELLED v reservation_history;\n- slot přestane být blokovaný.\n\nZměna stavu:\nPENDING → CANCELLED nebo CONFIRMED → CANCELLED\n\nOdkaz na doménová pravidla / invarianty:\nBR-03 Pravidlo stornování; BR-02 Exkluzivita slotu.\n\nHlavní úspěšný scénář:\n1. Oprávněný aktér odešle požadavek na zrušení.\n2. Systém ověří stav, oprávnění a časovou hranici.\n3. Systém změní stav na CANCELLED a uloží údaje o stornování.\n4. Systém uloží historii CANCELLED a vrátí zrušenou rezervaci.\n\nAlternativní / chybové výsledky:\n- neexistující rezervace → zamítnutí;\n- cizí aktér → 403 Forbidden;\n- již CANCELLED → zamítnutí bez změny;\n- méně než tři hodiny do začátku → zamítnutí bez změny.\n\nPříklady ověření:\n- student ruší PENDING 4 hodiny před začátkem → CANCELLED;\n- pedagog ruší CONFIRMED 3 hodiny před začátkem → CANCELLED;\n- zrušení 2 hodiny před začátkem → odmítnuto.\n\nZdůvodnění / zdroj:\nStorno musí uvolnit termín a zachovat auditovatelnou historii změny."
+          }
+        ]
+      },
+      {
+        "id": "c02-8",
+        "title": "8. Společná doménová pravidla a invarianty",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Náš consultation slot je exkluzivní resource: jeden konkrétní časový termín může v jednom okamžiku patřit jen jedné aktivní rezervaci. Tato pravidla platí napříč Create, Check Availability, Confirm i Cancel a neopakují se uvnitř jednotlivých operací."
+          },
+          {
+            "type": "code",
+            "language": "text",
+            "content": "BR-01 — Interval semantics\nConsultation slots používají polouzavřené intervaly [start, end). Konec jednoho termínu se tedy může rovnat začátku dalšího termínu bez překryvu.\n\nBR-02 — Exclusive Resource invariant\nPro jeden consultation slot nesmí existovat více než jedna aktivní Reservation. V našem systému jsou aktivními a blokujícími stavy PENDING i CONFIRMED.\n\nDůvod: student nemůže získat termín, který už čeká na rozhodnutí pedagoga nebo je potvrzený. Databáze tento invariant chrání unikátním indexem one_active_reservation_per_slot.\n\nBR-03 — Cancellation policy\nReservation ve stavu PENDING nebo CONFIRMED může zrušit student, který ji vytvořil, nebo pedagog vlastnící daný consultation slot. Zrušení je dovoleno, pokud je currentTime nejméně tři hodiny před startsAt.\n\nZrušení mění stav na CANCELLED; Reservation se fyzicky nemaže. Ukládá se cancelledAt, actor, případná cancellation note a záznam do reservation_history. CANCELLED Reservation již slot neblokuje.\n\nBR-04 — Domain-specific rule from C01\nPedagog může vytvořit consultation slot pouze v pracovní den mezi 07:15 a 19:15. Student může mít maximálně pět PENDING rezervací a nesmí mít časový překryv s jinou aktivní rezervací.\n\nDůvod: pravidlo odpovídá běžnému provozu univerzitních konzultací a chrání pedagoga i studenta před kolizemi."
+          },
+          {
+            "type": "note",
+            "variant": "info",
+            "content": "Týmově potvrzeno pro finální baseline v0.2: PENDING zůstává blokující stav. Automatické testy sousedních intervalů [start, end) jsou doplněné."
+          }
+        ]
+      },
+      {
+        "id": "c02-12",
+        "title": "9. Vizuální pohledy na systém",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Diagramy níže popisují celý minimální systém a odpovídají aktuálním stavům PENDING, CONFIRMED a CANCELLED."
+          }
+        ]
+      },
+      {
+        "id": "c02-13",
+        "title": "9a. Diagram případů užití",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Student a pedagog a jejich čtyři základní cíle v hranici rezervačního systému."
+          },
+          {
+            "type": "image",
+            "src": "c02-use-cases.png",
+            "alt": "Diagram případů užití rezervačního systému",
+            "caption": "Use-case diagram — C02"
+          }
+        ]
+      },
+      {
+        "id": "c02-14",
+        "title": "9b. Stavový diagram Reservation",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Životní cyklus rezervace: PENDING → CONFIRMED nebo CANCELLED; zrušit lze aktivní rezervaci podle přijatého pravidla."
+          },
+          {
+            "type": "image",
+            "src": "c02-reservation-state.png",
+            "alt": "Stavový diagram životního cyklu rezervace",
+            "caption": "Reservation lifecycle — C02"
+          }
+        ]
+      },
+      {
+        "id": "c02-15",
+        "title": "9c. Diagram aktivit",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Tok kontroly dostupnosti, vytvoření, potvrzení a zrušení rezervace."
+          },
+          {
+            "type": "image",
+            "src": "c02-activity-diagram.png",
+            "alt": "Diagram aktivit čtyř operací rezervace",
+            "caption": "Activity diagram — C02"
+          }
+        ]
+      },
+      {
+        "id": "c02-review",
+        "title": "10. Kontrola konzistence a přijetí baseline v0.1",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Tým provedl společnou kontrolu REQ-01 až REQ-04. Kontrola se soustředí na pozorovatelné chování, nikoli na volbu databáze nebo jiného technického řešení."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Význam: ACTIVE, PENDING, CONFIRMED, CANCELLED, budoucí slot a tříhodinová hranice mají stejný význam ve specifikaci, API i UI.",
+              "Zdůvodnění: každý požadavek chrání konkrétní hodnotu pro studenta nebo pedagoga; žádný pouze nepředepisuje implementaci.",
+              "Ověřitelnost: každý REQ má úspěšný i zamítavý/hraniční příklad s očekávaným stavem a HTTP výsledkem.",
+              "Souběh: dva paralelní pokusy o vytvoření rezervace stejného slotu smí skončit nejvýše jednou aktivní rezervací.",
+              "Konzistence: Create blokuje PENDING slot, Approve pouze mění jeho stav na CONFIRMED a Cancel jej znovu uvolní.",
+              "Nejistota: notifikace nejsou součástí baseline; nejsou proto tvrzením ani podmínkou operací."
+            ]
+          },
+          {
+            "type": "code",
+            "language": "specification",
+            "content": "Specification Baseline v0.1\nRozsah: Create Reservation, Check Availability, Confirm Reservation, Cancel Reservation.\nSchválení: doplní tým při společné revizi (datum, jména a commit/tag).\nZdroje ověření: odpověď API, uložený stav Reservation a reservation_history."
+          }
+        ]
+      },
+      {
+        "id": "c02-change",
+        "title": "11. Dopad změny C02 — schvalovací proces",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "V baseline v0.2 přibývá explicitní krok schválení učitelem. Aplikace tento krok již realizuje endpointem Approve Reservation; čekající stav PENDING vyjadřuje žádost čekající na rozhodnutí učitele."
+          },
+          {
+            "type": "code",
+            "language": "specification",
+            "content": "Změněná podmínka:\nReservation se po vytvoření nestává CONFIRMED automaticky; učitel musí žádost schválit.\n\nDotčené části:\nCreate vytváří PENDING; Availability považuje PENDING za blokující; Confirm je v UI/API realizováno jako Approve; stavový a use-case pohled obsahují rozhodnutí učitele.\n\nNedotčené části:\nIntervaly [start,end), vlastnictví slotu, pravidlo zrušení a historie zůstávají stejné, protože změna nemění časovou semantiku ani auditní povinnost.\n\nRozhodnutí pro aktuální v0.2:\nVšechny consultation slots vyžadují schválení učitelem. PENDING blokuje slot, aby nedošlo k souběžným žádostem. Zamítnutí a vypršení nejsou v této verzi implementované a jsou explicitním tématem pro následující změnu, nikoli skrytým chováním."
+          },
+          {
+            "type": "note",
+            "variant": "info",
+            "content": "Architektonický driver pro C03: stavová operace učitele, audit historie a ochrana souběhu musí zůstat konzistentní napříč API a perzistencí."
+          }
+        ]
+      },
+      {
+        "id": "c02-approve",
+        "title": "12. OP-05 — Approve Reservation (baseline v0.2)",
+        "blocks": [
+          {
+            "type": "code",
+            "language": "specification",
+            "content": "Cíl / hodnota pro uživatele:\nPedagog rozhodne, zda čekající žádost o jeho termín přijme jako potvrzenou konzultaci.\n\nSpouštěcí událost:\nPedagog zvolí schválení PENDING Reservation vlastního consultation slotu.\n\nPozorovatelný požadavek:\nREQ-05: Systém změní PENDING Reservation na CONFIRMED pouze učiteli, který vlastní daný slot.\n\nPředpoklady:\n- Reservation existuje a má status PENDING;\n- aktér je TEACHER vlastnící slot.\n\nStav po úspěšném provedení:\n- Reservation.status = CONFIRMED;\n- vznikne záznam CONFIRMED v reservation_history;\n- slot zůstává blokovaný.\n\nZměna stavu:\nPENDING → CONFIRMED\n\nHlavní scénář:\n1. Pedagog zvolí čekající žádost.\n2. Systém ověří vlastnictví a zdrojový stav.\n3. Systém uloží CONFIRMED a historii.\n4. API vrátí aktualizovanou rezervaci.\n\nChybové výsledky:\n- jiný pedagog nebo student → 403;\n- neexistující, CONFIRMED nebo CANCELLED rezervace → bez změny, 4xx.\n\nPříklady ověření:\n- vlastník + PENDING → CONFIRMED;\n- jiný pedagog + PENDING → 403;\n- CANCELLED → odmítnuto."
+          }
+        ]
+      },
+      {
+        "id": "c02-evidence",
+        "title": "13. Evidence C02 → běžící aplikace",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Běžící aplikace demonstruje vytvoření žádosti, filtr dostupných termínů, schválení učitelem a zrušení oprávněným aktérem. Stav se ověřuje odpovědí API i údaji v PostgreSQL."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Create: validní student a budoucí ACTIVE slot → 201 a PENDING; obsazený slot nebo porušení limitu → 409.",
+              "Availability: ACTIVE budoucí slot bez aktivní rezervace → zobrazen; PENDING/CONFIRMED, minulý či zrušený slot → nezobrazen.",
+              "Approve: vlastník slotu schválí PENDING → CONFIRMED; cizí aktér → 403.",
+              "Cancel: oprávněný aktér nejméně 3 hodiny před začátkem → CANCELLED; kratší čas nebo neplatný stav → 4xx bez změny."
+            ]
+          },
+          {
+            "type": "code",
+            "language": "specification",
+            "content": "Evidence C02\nPřijatá baseline: v0.1 + změna v0.2 popsaná výše.\nNesoulad vyřešený při revizi: PENDING je explicitně blokující stav ve specifikaci, frontendu, API i databázovém indexu.\nZbývající známé omezení: zamítnutí a automatické vypršení žádosti nejsou součástí aktuální implementace.\nDrivery pro C03: transakční ochrana exkluzivity slotu, stavový model a audit změn.\nCommit/tag: doplní tým při odevzdání."
+          }
+        ]
+      }
+    ]
+  },
+  "c03": {
+    "title": "C03 — Implementace",
+    "sections": [
+      {
+        "id": "c03-1",
+        "title": "Připravujeme",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Do této části budeme postupně přidávat výstupy pro C03."
+          }
+        ]
+      }
+    ]
+  }
+}

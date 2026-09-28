@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api } from '../../api/client'
 import type { Language, TFunction } from '../../i18n'
 import { localeFor } from '../../i18n'
-import type { ConsultationSlot, Session, Teacher, Toast } from '../../types/api'
+import type { ConsultationSlot, Reservation, Session, Teacher, Toast } from '../../types/api'
 
 const timeZone = 'Europe/Prague'
 const weekdays = {
@@ -63,6 +63,8 @@ export default function BookingPage({
     [locale],
   )
   const [slots, setSlots] = useState<ConsultationSlot[]>([])
+  const [teacherSlots, setTeacherSlots] = useState<ConsultationSlot[]>([])
+  const [reservations, setReservations] = useState<Reservation[]>([])
   const [teacherUsers, setTeacherUsers] = useState<Teacher[]>([])
   const [teacherId, setTeacherId] = useState('')
   const [teacherQuery, setTeacherQuery] = useState('')
@@ -72,16 +74,20 @@ export default function BookingPage({
   const [reasonTitle, setReasonTitle] = useState('')
   const [reasonDescription, setReasonDescription] = useState('')
   const [loading, setLoading] = useState(true)
+  const [now, setNow] = useState(() => Date.now())
 
   async function loadSlots() {
     try {
       setLoading(true)
-      const [data, users] = await Promise.all([
+      const [data, users, reservationData] = await Promise.all([
         api.getSlots(session.token),
         api.getTeachers(session.token),
+        api.getReservations(session.token, session.userId),
       ])
       setSlots(data)
       setTeacherUsers(users)
+      setReservations(reservationData.filter((item) => item.studentId === session.userId))
+      setNow(Date.now())
     } catch (error) {
       onToast({
         type: 'error',
@@ -143,13 +149,46 @@ export default function BookingPage({
       ),
     [slots, teacherId],
   )
+  const teacherSlotDays = useMemo(
+    () =>
+      new Set(
+        teacherSlots
+          .filter((slot) => slot.status === 'ACTIVE')
+          .map((slot) => slotDateKey(slot.startsAt)),
+      ),
+    [teacherSlots],
+  )
   const visibleSlots = useMemo(
     () =>
-      slots.filter(
-        (slot) => slot.teacherId === teacherId && slotDateKey(slot.startsAt) === selectedDate,
+      teacherSlots.filter(
+        (slot) =>
+          slot.status === 'ACTIVE' &&
+          slot.teacherId === teacherId &&
+          slotDateKey(slot.startsAt) === selectedDate,
       ),
-    [slots, teacherId, selectedDate],
+    [teacherSlots, teacherId, selectedDate],
   )
+  const availableSlotIds = useMemo(() => new Set(slots.map((slot) => slot.id)), [slots])
+  const freeVisibleSlots = useMemo(
+    () => visibleSlots.filter((slot) => availableSlotIds.has(slot.id)),
+    [availableSlotIds, visibleSlots],
+  )
+  const upcomingReservations = useMemo(() => {
+    return reservations.filter((reservation) => {
+      const startsAt = new Date(reservation.startsAt).getTime()
+      return (
+        reservation.status !== 'CANCELLED' &&
+        startsAt >= now &&
+        startsAt - now <= 3 * 60 * 60 * 1000
+      )
+    })
+  }, [now, reservations])
+  const cancelledReservations = useMemo(() => {
+    return reservations.filter(
+      (reservation) =>
+        reservation.status === 'CANCELLED' && new Date(reservation.startsAt).getTime() >= now,
+    )
+  }, [now, reservations])
 
   function updateTeacherQuery(value: string) {
     setTeacherQuery(value)
@@ -158,13 +197,21 @@ export default function BookingPage({
     setSlotId('')
   }
   function selectTeacher(id: string) {
-    const first = slots.find((slot) => slot.teacherId === id)
+    const first = slots
+      .filter((slot) => slot.teacherId === id)
+      .sort(
+        (left, right) => new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime(),
+      )[0]
     const firstDate = first ? slotDateKey(first.startsAt) : ''
     setTeacherId(id)
     setTeacherQuery('')
     setSelectedDate(firstDate)
     setSlotId('')
     if (firstDate) setMonth(monthFor(firstDate))
+    void api
+      .getTeacherSlots(session.token, id)
+      .then(setTeacherSlots)
+      .catch(() => setTeacherSlots([]))
   }
   async function reserve(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -202,6 +249,33 @@ export default function BookingPage({
 
   return (
     <main>
+      {upcomingReservations.length > 0 && (
+        <section className="card upcoming-warning">
+          <h2>{t('upcomingConsultations')}</h2>
+          {upcomingReservations.map((reservation) => (
+            <p key={reservation.id}>
+              <strong>{reservation.teacherName}</strong> ·{' '}
+              {dateFormatter.format(new Date(reservation.startsAt))}{' '}
+              {timeFormatter.format(new Date(reservation.startsAt))}–
+              {timeFormatter.format(new Date(reservation.endsAt))}
+            </p>
+          ))}
+        </section>
+      )}
+      {cancelledReservations.length > 0 && (
+        <section className="card cancellation-warning">
+          <h2>{t('cancelledConsultations')}</h2>
+          {cancelledReservations.map((reservation) => (
+            <p key={reservation.id}>
+              <strong>{reservation.teacherName}</strong> ·{' '}
+              {dateFormatter.format(new Date(reservation.startsAt))}{' '}
+              {timeFormatter.format(new Date(reservation.startsAt))}–
+              {timeFormatter.format(new Date(reservation.endsAt))}
+              <span>{t('cancelledConsultationNotice')}</span>
+            </p>
+          ))}
+        </section>
+      )}
       <section className="teacher-panel">
         <div>
           <span className="label">{t('teacherSearch')}</span>
@@ -255,65 +329,74 @@ export default function BookingPage({
       {teacher ? (
         <div className="booking-grid">
           <section className="card">
-            <h2>{t('selectDate')}</h2>
-            <div className="calendar-header">
-              <button
-                type="button"
-                onClick={() =>
-                  setMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))
-                }
-                aria-label={t('previousMonth')}
-              >
-                ‹
-              </button>
-              <strong>{monthFormatter.format(month)}</strong>
-              <button
-                type="button"
-                onClick={() =>
-                  setMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))
-                }
-                aria-label={t('nextMonth')}
-              >
-                ›
-              </button>
-            </div>
-            <div className="weekday-row">
-              {weekdays[language].map((day) => (
-                <span key={day}>{day}</span>
-              ))}
-            </div>
-            <div className="calendar-grid">
-              {calendarDays(month).map((day) => {
-                const key = dateKey(day)
-                const available = availableDays.has(key)
-                const selected = selectedDate === key
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    disabled={!available}
-                    onClick={() => {
-                      setSelectedDate(key)
-                      setSlotId('')
-                    }}
-                    className={`calendar-day ${available ? 'available' : ''} ${selected ? 'selected' : ''} ${day.getMonth() !== month.getMonth() ? 'other-month' : ''}`}
-                  >
-                    <span>{day.getDate()}</span>
-                  </button>
-                )
-              })}
+            <h2 className="calendar-title">{t('selectDate')}</h2>
+            <div className="calendar-content">
+              <div className="calendar-header">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMonth(
+                      (current) => new Date(current.getFullYear(), current.getMonth() - 1, 1),
+                    )
+                  }
+                  aria-label={t('previousMonth')}
+                >
+                  ‹
+                </button>
+                <strong>{monthFormatter.format(month)}</strong>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMonth(
+                      (current) => new Date(current.getFullYear(), current.getMonth() + 1, 1),
+                    )
+                  }
+                  aria-label={t('nextMonth')}
+                >
+                  ›
+                </button>
+              </div>
+              <div className="weekday-row">
+                {weekdays[language].map((day) => (
+                  <span key={day}>{day}</span>
+                ))}
+              </div>
+              <div className="calendar-grid">
+                {calendarDays(month).map((day) => {
+                  const key = dateKey(day)
+                  const otherMonth = day.getMonth() !== month.getMonth()
+                  const weekend = day.getDay() === 0 || day.getDay() === 6
+                  const available = availableDays.has(key)
+                  const occupied = teacherSlotDays.has(key) && !available
+                  const selected = selectedDate === key
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      disabled={otherMonth}
+                      onClick={() => {
+                        setSelectedDate(key)
+                        setSlotId('')
+                      }}
+                      className={`calendar-day ${available && !otherMonth ? 'available' : ''} ${occupied && !otherMonth ? 'occupied' : ''} ${selected ? 'selected' : ''} ${otherMonth ? 'other-month' : ''} ${weekend && !otherMonth ? 'weekend' : ''}`}
+                    >
+                      <span>{day.getDate()}</span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </section>
-          <section className="card">
+          <section className="card student-slot-card">
             <div className="section-title">
-              <div>
+              <div className="slot-heading">
                 <h2>{t('availableSlots')}</h2>
                 <p>
                   {selectedDate ? dateFormatter.format(new Date(`${selectedDate}T12:00:00`)) : ''}
                 </p>
               </div>
               <span className="count">
-                {visibleSlots.length} {t('free')}
+                {freeVisibleSlots.length} {t('free')}
               </span>
             </div>
             <div className="slot-list">
@@ -324,7 +407,8 @@ export default function BookingPage({
                   <button
                     key={slot.id}
                     type="button"
-                    className={slotId === slot.id ? 'slot selected' : 'slot'}
+                    disabled={!availableSlotIds.has(slot.id)}
+                    className={`${slotId === slot.id ? 'slot selected' : 'slot'} ${!availableSlotIds.has(slot.id) ? 'occupied' : ''}`}
                     onClick={() => setSlotId(slot.id)}
                   >
                     {timeFormatter.format(new Date(slot.startsAt))}–
@@ -360,12 +444,7 @@ export default function BookingPage({
             </form>
           </section>
         </div>
-      ) : (
-        <section className="card empty-selection">
-          <h2>{t('findTeacher')}</h2>
-          <p className="muted">{t('findTeacherHint')}</p>
-        </section>
-      )}
+      ) : null}
     </main>
   )
 }

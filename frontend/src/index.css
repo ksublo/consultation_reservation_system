@@ -67,11 +67,18 @@ main {
   @apply w-full sm:w-56;
 }
 input,
-textarea {
+textarea,
+select {
   @apply rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none focus:border-vsb focus:ring-2 focus:ring-teal-100;
 }
 .booking-grid {
   @apply grid gap-4 md:grid-cols-[.9fr_1.1fr];
+}
+.booking-grid > .card:first-child {
+  @apply flex flex-col;
+}
+.booking-grid > .card:first-child .calendar-content {
+  @apply flex flex-1 flex-col justify-center;
 }
 .card {
   @apply p-6;
@@ -81,6 +88,9 @@ textarea {
 }
 .calendar-header {
   @apply mb-4 flex items-center justify-between capitalize;
+}
+.calendar-title {
+  @apply text-center;
 }
 .calendar-header button {
   @apply grid h-9 w-9 place-items-center rounded-full bg-teal-50 text-xl font-bold text-vsb hover:bg-teal-100;
@@ -98,8 +108,19 @@ textarea {
 .calendar-day:disabled {
   @apply text-slate-500;
 }
+.calendar-day.other-month,
+.calendar-day.other-month:disabled {
+  @apply cursor-not-allowed text-slate-300 opacity-60;
+}
 .calendar-day.available {
   @apply bg-emerald-200 font-bold text-emerald-800 hover:bg-emerald-300 hover:ring-2 hover:ring-emerald-500;
+}
+.calendar-day.occupied {
+  @apply bg-slate-200 font-bold text-slate-600 hover:bg-slate-300 hover:ring-2 hover:ring-slate-400;
+}
+.calendar-day.weekend,
+.calendar-day.weekend:disabled {
+  @apply bg-amber-100 font-bold text-amber-800;
 }
 .calendar-day.selected {
   @apply bg-vsb text-black shadow-md;
@@ -114,9 +135,13 @@ textarea {
 .slot {
   @apply rounded-full border border-vsb px-4 py-2 text-sm font-bold text-vsb hover:bg-teal-50;
 }
+.slot.occupied,
+.slot.occupied:disabled {
+  @apply cursor-not-allowed border-slate-300 bg-slate-100 text-slate-400 opacity-100;
+}
 .slot.selected,
 .reserve-button {
-  @apply rounded-full bg-vsb px-5 py-3 font-bold text-black shadow-sm hover:bg-vsb-hover;
+  @apply rounded-full bg-vsb px-5 py-3 font-bold text-white shadow-sm hover:bg-vsb-hover;
 }
 .section-title {
   @apply flex items-start justify-between;
@@ -303,6 +328,24 @@ main.login-page {
 .section-title > div p {
   @apply whitespace-nowrap;
 }
+.student-slot-card .section-title {
+  @apply mb-6 items-start;
+}
+.student-slot-card .slot-heading {
+  @apply grid gap-1;
+}
+.student-slot-card .slot-list {
+  @apply mb-7 gap-3;
+}
+.student-slot-card form {
+  @apply mt-0 gap-3 pt-6;
+}
+.student-slot-card textarea {
+  @apply h-40 resize-none overflow-y-auto;
+}
+.student-slot-card .reserve-button {
+  @apply justify-self-center;
+}
 .teacher-panel {
   @apply sm:items-start;
 }
@@ -349,6 +392,31 @@ main.login-page {
 .teacher-grid {
   @apply grid gap-4 lg:grid-cols-2;
 }
+.teacher-grid > .card:first-child {
+  @apply flex flex-col;
+}
+.teacher-grid > .card:first-child > h2 {
+  @apply text-center;
+}
+.teacher-grid > .card:first-child .calendar-content {
+  @apply flex w-full flex-1 flex-col justify-center;
+}
+.teacher-grid > .card:nth-child(2) {
+  @apply self-center;
+}
+.teacher-slot-form {
+  @apply mt-4 w-full gap-4 border-t-0 pt-0 sm:grid-cols-2;
+}
+.slot-form-field {
+  @apply grid gap-2;
+}
+.slot-form-field input,
+.slot-form-field select {
+  @apply w-full;
+}
+.teacher-slot-form .reserve-button {
+  @apply justify-self-center px-4 py-2 sm:col-span-2;
+}
 .teacher-list {
   @apply mt-5 grid gap-3 border-t border-slate-100 pt-5;
 }
@@ -378,7 +446,7 @@ main.login-page {
   @apply flex gap-2;
 }
 .approve-button {
-  @apply rounded-full bg-vsb px-3 py-2 text-sm font-bold text-black hover:bg-vsb-hover;
+  @apply rounded-full bg-vsb px-3 py-2 text-sm font-bold text-white hover:bg-vsb-hover;
 }
 .text-button {
   @apply rounded-full border border-rose-200 bg-white px-3 py-2 text-sm font-bold text-rose-700 hover:bg-rose-50;
@@ -398,11 +466,20 @@ main.login-page {
 .calendar-day.available.selected {
   @apply bg-emerald-200 text-emerald-800 hover:bg-emerald-300;
 }
+.calendar-day.occupied.selected {
+  @apply bg-slate-200 text-slate-700 hover:bg-slate-300;
+}
+.calendar-day.weekend.selected {
+  @apply bg-amber-100 text-amber-800 hover:bg-amber-100;
+}
 .teacher-slots {
   @apply mt-4 min-h-10;
 }
+.selected-slot-date {
+  @apply mt-1 text-sm text-slate-500;
+}
 .add-slot-title {
-  @apply mt-6 border-t border-slate-100 pt-5;
+  @apply mt-6 pt-6 text-left;
 }
 .slot .remove-slot {
   @apply ml-2 text-lg font-extrabold text-rose-600;
@@ -486,10 +563,10 @@ main.login-page {
   @apply mt-4;
 }
 .history-toggle {
-  @apply flex items-center gap-2 text-sm font-semibold text-slate-600;
+  @apply grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-slate-600 hover:border-vsb hover:bg-teal-50 hover:text-vsb;
 }
-.history-toggle input {
-  @apply h-4 w-4 rounded border-slate-300 p-0;
+.history-toggle svg {
+  @apply h-5 w-5 fill-none stroke-current stroke-2;
 }
 .student-reservations {
   @apply mt-5 grid gap-3;
@@ -667,4 +744,173 @@ main.login-page {
 .site-navigation .primary-navigation,
 .site-navigation .menu-navigation {
   order: 0;
+}
+
+.documentation-link {
+  @apply rounded-full px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-teal-50 hover:text-vsb;
+}
+.docs-back-button {
+  @apply grid h-10 w-10 place-items-center rounded-full border border-teal-200 bg-teal-50 text-vsb transition hover:bg-teal-100;
+}
+.docs-back-button svg {
+  @apply h-5 w-5 fill-none stroke-current stroke-2;
+}
+.public-menu-navigation {
+  @apply grid border-y border-slate-100 py-3;
+}
+.public-menu-navigation button {
+  @apply rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-600 hover:bg-teal-50 hover:text-vsb;
+}
+.docs-page {
+  @apply flex min-h-[calc(100dvh-5rem)] w-full max-w-none items-start px-0 py-0;
+}
+.docs-card {
+  @apply w-full overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm;
+}
+.docs-tabs {
+  @apply flex overflow-x-auto border-b border-slate-100 bg-slate-50 p-2;
+}
+.docs-tabs button {
+  @apply shrink-0 rounded-2xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:bg-white hover:text-vsb;
+}
+.docs-tabs button.active {
+  @apply bg-white text-vsb shadow-sm;
+}
+.docs-content {
+  @apply w-full max-w-none p-6 sm:p-8 lg:p-10;
+}
+.docs-eyebrow {
+  @apply m-0 text-xs font-extrabold tracking-widest text-vsb;
+}
+.docs-content h1 {
+  @apply mt-2 text-3xl font-extrabold tracking-tight text-ink;
+}
+.docs-blocks {
+  @apply mt-8 grid gap-7;
+}
+.docs-block {
+  @apply relative pb-8 last:pb-0;
+}
+.docs-block:not(:last-child)::after {
+  content: '';
+  @apply absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-teal-200 via-slate-200 to-transparent;
+}
+.docs-block h2 {
+  @apply m-0 text-lg font-extrabold text-ink;
+}
+.docs-block p {
+  @apply mt-3 text-base leading-7 text-slate-600;
+}
+.docs-block ul {
+  @apply mt-3 grid list-disc gap-2 pl-5 text-base leading-7 text-slate-600;
+}
+.docs-command {
+  @apply mt-4 block w-fit max-w-full overflow-x-auto rounded-xl border border-slate-600 bg-slate-800 px-4 py-3 font-mono text-sm leading-6 text-slate-100 shadow-sm;
+}
+.docs-note {
+  @apply rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900;
+}
+
+/* Reservation status and information hierarchy */
+.status {
+  @apply inline-flex items-center justify-center whitespace-nowrap rounded-full border px-3 py-1 text-xs font-extrabold leading-5 tracking-tight;
+}
+.status.pending,
+.request-row .status.pending {
+  @apply border-amber-200 bg-amber-100 text-amber-900;
+}
+.status.confirmed,
+.request-row .status.confirmed {
+  @apply border-emerald-200 bg-emerald-100 text-emerald-900;
+}
+.status.cancelled,
+.request-row .status.cancelled {
+  @apply border-rose-200 bg-rose-100 text-rose-800;
+}
+.request-row {
+  @apply items-start py-5;
+}
+.request-row strong {
+  @apply font-extrabold text-slate-900;
+}
+.request-row small {
+  @apply mt-1 leading-5 text-slate-600;
+}
+.request-row p {
+  @apply leading-6 text-slate-700;
+}
+.student-reservation,
+.teacher-item,
+.request-item {
+  @apply border border-slate-200 bg-white;
+}
+.student-reservation strong,
+.student-reservation b {
+  @apply font-extrabold text-slate-900;
+}
+.student-reservation span:not(.status),
+.student-reservation p,
+.request-item p {
+  @apply leading-6 text-slate-700;
+}
+.reservation-status-actions {
+  @apply gap-3;
+}
+
+.docs-diagram {
+  @apply mt-0 max-w-full justify-self-start overflow-hidden rounded-2xl border border-slate-300 bg-slate-700 shadow-sm;
+}
+.docs-image-control-group {
+  @apply mt-5;
+}
+.docs-image-control {
+  @apply mb-2 flex w-full max-w-xs items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700;
+}
+.docs-image-control input[type='range'] {
+  @apply min-w-0 flex-1 accent-teal-600;
+}
+.docs-diagram img {
+  @apply block h-auto w-full max-w-full bg-white;
+}
+.docs-diagram figcaption {
+  @apply border-t border-slate-500 bg-slate-700 px-4 py-3 text-sm font-semibold text-slate-50;
+}
+.docs-checklist {
+  @apply mt-4 grid gap-2.5 p-0;
+}
+.docs-checklist li {
+  @apply flex items-start gap-3 rounded-xl border px-4 py-3 text-sm font-semibold leading-6;
+}
+.docs-checklist li span {
+  @apply mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full text-xs font-extrabold;
+}
+.docs-checklist li.done {
+  @apply border-emerald-200 bg-emerald-50 text-emerald-950;
+}
+.docs-checklist li.done span {
+  @apply bg-emerald-600 text-white;
+}
+.docs-checklist li.missing {
+  @apply border-amber-200 bg-amber-50 text-amber-950;
+}
+.docs-checklist li.missing span {
+  @apply border-2 border-amber-500 text-transparent;
+}
+
+.docs-specification {
+  @apply mt-4 w-full overflow-hidden whitespace-pre-wrap break-words rounded-2xl border border-slate-600 bg-slate-700 p-5 font-mono text-sm leading-7 text-slate-50 shadow-sm sm:p-6;
+}
+
+/* Structured documentation code panels */
+.docs-code {
+  @apply relative mt-4 w-full overflow-hidden rounded-2xl border border-slate-500 bg-slate-700 p-0 font-mono text-sm leading-7 text-slate-50 shadow-sm;
+}
+.docs-code > span {
+  @apply block border-b border-slate-500 bg-slate-600 px-5 py-2 text-xs font-bold uppercase tracking-wider text-slate-100;
+}
+.docs-code > code {
+  @apply block min-w-0 whitespace-pre-wrap break-words p-5 text-slate-50;
+}
+.docs-note.info {
+  @apply border-sky-200 bg-sky-50 text-sky-950;
 }
