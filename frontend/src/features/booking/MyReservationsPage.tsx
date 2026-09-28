@@ -56,12 +56,7 @@ function ReservationList({
     <div className="student-reservations">
       {reservations.map((reservation) => {
         const startsAt = new Date(reservation.startsAt).getTime()
-        const startsSoon =
-          reservation.status !== 'CANCELLED' &&
-          startsAt >= now &&
-          startsAt - now <= cancellationCutoffMs
-        const showCancel =
-          Boolean(onCancel) && reservation.status !== 'CANCELLED' && startsAt >= now
+        const showCancel = Boolean(onCancel) && reservation.status !== 'CANCELLED'
         const canCancel = startsAt - now >= cancellationCutoffMs
         return (
           <article className="student-reservation" key={reservation.id}>
@@ -71,7 +66,11 @@ function ReservationList({
                 {dateTimeFormatter.format(new Date(reservation.startsAt))}–
                 {timeFormatter.format(new Date(reservation.endsAt))}
               </span>
-              {startsSoon && <em className="soon-warning">{t('startsSoonWarning')}</em>}
+              {showCancel && (
+                <em className="soon-warning">
+                  {canCancel ? t('canCancelUntilStart') : t('cancelUnavailableStarted')}
+                </em>
+              )}
             </div>
             <div>
               <b>{reservation.reasonTitle}</b>

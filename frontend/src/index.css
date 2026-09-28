@@ -551,7 +551,7 @@ main.login-page {
   @apply h-8 w-8;
 }
 .soon-warning {
-  @apply mt-2 block rounded-lg bg-rose-100 px-3 py-2 text-sm font-bold not-italic text-rose-700;
+  @apply mt-1 block text-xs font-normal not-italic text-slate-500;
 }
 .upcoming-warning {
   @apply mb-4 border-rose-200 bg-rose-50;

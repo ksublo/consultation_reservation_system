@@ -423,7 +423,7 @@
               "Create Reservation: a student creates a reservation for an active future slot; its resulting state is PENDING.",
               "Check Availability: frontend and API show only active, available slots; PENDING and CONFIRMED block a slot.",
               "Confirm / Approve Reservation: the slot owner can change PENDING to CONFIRMED.",
-              "Cancel Reservation: a student or teacher can cancel an active reservation at least 3 hours before its start; the record remains in history.",
+              "Cancel Reservation: a student or teacher can cancel an active future reservation before its start; the record remains in history.",
               "Rules in code: weekdays 07:15–19:15, pending reservation limit, student overlap control and one active reservation per slot.",
               "The database treats PENDING and CONFIRMED reservations as blocking states and stores change history."
             ]

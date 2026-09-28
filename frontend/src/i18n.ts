@@ -76,6 +76,8 @@ const messages = {
     approve: 'Schválit',
     cancel: 'Stornovat',
     cancelTooLate: 'Stornování už není možné méně než 3 hodiny před začátkem.',
+    canCancelUntilStart: 'Stornování je možné nejpozději 3 hodiny před začátkem konzultace.',
+    cancelUnavailableStarted: 'Konzultaci už nelze stornovat méně než 3 hodiny před začátkem.',
     reservationCancelled: 'Rezervace byla stornována.',
     reservationCancelFailed: 'Rezervaci se nepodařilo stornovat.',
     cancellationNote: 'Stornováno uživatelem.',
@@ -186,6 +188,9 @@ const messages = {
     approve: 'Approve',
     cancel: 'Cancel',
     cancelTooLate: 'Cancellation is no longer available less than 3 hours before the start.',
+    canCancelUntilStart: 'Cancellation is available until 3 hours before the consultation starts.',
+    cancelUnavailableStarted:
+      'This consultation can no longer be cancelled less than 3 hours before the start.',
     reservationCancelled: 'Reservation was cancelled.',
     reservationCancelFailed: 'The reservation could not be cancelled.',
     cancellationNote: 'Cancelled by user.',

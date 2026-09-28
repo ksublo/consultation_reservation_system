@@ -100,6 +100,11 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
           (request.status === 'PENDING' || request.status === 'CONFIRMED'),
       )
     : undefined
+  const canCancelSelectedSlot =
+    reservationToCancel !== undefined
+      ? reservationToCancel.status !== 'CANCELLED' &&
+        new Date(reservationToCancel.startsAt).getTime() - now >= cancellationCutoffMs
+      : false
 
   async function add(event: FormEvent) {
     event.preventDefault()
@@ -376,6 +381,11 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
                 <span>{reservationToCancel.studentEmail}</span>
               </div>
             )}
+            {reservationToCancel && (
+              <p className="muted">
+                {canCancelSelectedSlot ? t('canCancelUntilStart') : t('cancelUnavailableStarted')}
+              </p>
+            )}
             <div className="modal-actions">
               <button type="button" className="text-button" onClick={() => setSlotToCancel(null)}>
                 {t('back')}
@@ -383,6 +393,8 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
               <button
                 type="button"
                 className="danger-button"
+                disabled={!canCancelSelectedSlot}
+                title={canCancelSelectedSlot ? t('cancel') : t('cancelTooLate')}
                 onClick={() => void confirmCancelOccupiedSlot()}
               >
                 {t('cancelOccupiedSlotConfirm')}
