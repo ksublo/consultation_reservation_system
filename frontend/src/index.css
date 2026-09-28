@@ -69,11 +69,18 @@ main {
   @apply w-full sm:w-56;
 }
 input,
-textarea {
+textarea,
+select {
   @apply rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none focus:border-vsb focus:ring-2 focus:ring-teal-100;
 }
 .booking-grid {
   @apply grid gap-4 md:grid-cols-[.9fr_1.1fr];
+}
+.booking-grid > .card:first-child {
+  @apply flex flex-col;
+}
+.booking-grid > .card:first-child .calendar-content {
+  @apply flex flex-1 flex-col justify-center;
 }
 .card {
   @apply p-6;
@@ -83,6 +90,9 @@ textarea {
 }
 .calendar-header {
   @apply mb-4 flex items-center justify-between capitalize;
+}
+.calendar-title {
+  @apply text-center;
 }
 .calendar-header button {
   @apply grid h-9 w-9 place-items-center rounded-full bg-teal-50 text-xl font-bold text-vsb hover:bg-teal-100;
@@ -100,8 +110,19 @@ textarea {
 .calendar-day:disabled {
   @apply text-slate-500;
 }
+.calendar-day.other-month,
+.calendar-day.other-month:disabled {
+  @apply cursor-not-allowed text-slate-300 opacity-60;
+}
 .calendar-day.available {
   @apply bg-emerald-200 font-bold text-emerald-800 hover:bg-emerald-300 hover:ring-2 hover:ring-emerald-500;
+}
+.calendar-day.occupied {
+  @apply bg-slate-200 font-bold text-slate-600 hover:bg-slate-300 hover:ring-2 hover:ring-slate-400;
+}
+.calendar-day.weekend,
+.calendar-day.weekend:disabled {
+  @apply bg-amber-100 font-bold text-amber-800;
 }
 .calendar-day.selected {
   @apply bg-vsb text-black shadow-md;
@@ -116,9 +137,13 @@ textarea {
 .slot {
   @apply rounded-full border border-vsb px-4 py-2 text-sm font-bold text-vsb hover:bg-teal-50;
 }
+.slot.occupied,
+.slot.occupied:disabled {
+  @apply cursor-not-allowed border-slate-300 bg-slate-100 text-slate-400 opacity-100;
+}
 .slot.selected,
 .reserve-button {
-  @apply rounded-full bg-vsb px-5 py-3 font-bold text-black shadow-sm hover:bg-vsb-hover;
+  @apply rounded-full bg-vsb px-5 py-3 font-bold text-white shadow-sm hover:bg-vsb-hover;
 }
 .section-title {
   @apply flex items-start justify-between;
@@ -263,6 +288,24 @@ main.login-page {
 .section-title > div p {
   @apply whitespace-nowrap;
 }
+.student-slot-card .section-title {
+  @apply mb-6 items-start;
+}
+.student-slot-card .slot-heading {
+  @apply grid gap-1;
+}
+.student-slot-card .slot-list {
+  @apply mb-7 gap-3;
+}
+.student-slot-card form {
+  @apply mt-0 gap-3 pt-6;
+}
+.student-slot-card textarea {
+  @apply h-40 resize-none overflow-y-auto;
+}
+.student-slot-card .reserve-button {
+  @apply justify-self-center;
+}
 .teacher-panel {
   @apply sm:items-start;
 }
@@ -309,6 +352,31 @@ main.login-page {
 .teacher-grid {
   @apply grid gap-4 lg:grid-cols-2;
 }
+.teacher-grid > .card:first-child {
+  @apply flex flex-col;
+}
+.teacher-grid > .card:first-child > h2 {
+  @apply text-center;
+}
+.teacher-grid > .card:first-child .calendar-content {
+  @apply flex w-full flex-1 flex-col justify-center;
+}
+.teacher-grid > .card:nth-child(2) {
+  @apply self-center;
+}
+.teacher-slot-form {
+  @apply mt-4 w-full gap-4 border-t-0 pt-0 sm:grid-cols-2;
+}
+.slot-form-field {
+  @apply grid gap-2;
+}
+.slot-form-field input,
+.slot-form-field select {
+  @apply w-full;
+}
+.teacher-slot-form .reserve-button {
+  @apply justify-self-center px-4 py-2 sm:col-span-2;
+}
 .teacher-list {
   @apply mt-5 grid gap-3 border-t border-slate-100 pt-5;
 }
@@ -338,7 +406,7 @@ main.login-page {
   @apply flex gap-2;
 }
 .approve-button {
-  @apply rounded-full bg-vsb px-3 py-2 text-sm font-bold text-black hover:bg-vsb-hover;
+  @apply rounded-full bg-vsb px-3 py-2 text-sm font-bold text-white hover:bg-vsb-hover;
 }
 .text-button {
   @apply rounded-full border border-rose-200 bg-white px-3 py-2 text-sm font-bold text-rose-700 hover:bg-rose-50;
@@ -358,11 +426,20 @@ main.login-page {
 .calendar-day.available.selected {
   @apply bg-emerald-200 text-emerald-800 hover:bg-emerald-300;
 }
+.calendar-day.occupied.selected {
+  @apply bg-slate-200 text-slate-700 hover:bg-slate-300;
+}
+.calendar-day.weekend.selected {
+  @apply bg-amber-100 text-amber-800 hover:bg-amber-100;
+}
 .teacher-slots {
   @apply mt-4 min-h-10;
 }
+.selected-slot-date {
+  @apply mt-1 text-sm text-slate-500;
+}
 .add-slot-title {
-  @apply mt-6 border-t border-slate-100 pt-5;
+  @apply mt-6 pt-6 text-left;
 }
 .slot .remove-slot {
   @apply ml-2 text-lg font-extrabold text-rose-600;
@@ -446,10 +523,10 @@ main.login-page {
   @apply mt-4;
 }
 .history-toggle {
-  @apply flex items-center gap-2 text-sm font-semibold text-slate-600;
+  @apply grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-slate-600 hover:border-vsb hover:bg-teal-50 hover:text-vsb;
 }
-.history-toggle input {
-  @apply h-4 w-4 rounded border-slate-300 p-0;
+.history-toggle svg {
+  @apply h-5 w-5 fill-none stroke-current stroke-2;
 }
 .student-reservations {
   @apply mt-5 grid gap-3;

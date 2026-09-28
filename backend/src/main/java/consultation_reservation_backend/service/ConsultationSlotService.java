@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,6 +21,7 @@ import java.util.UUID;
 public class ConsultationSlotService {
     private static final LocalTime WORKDAY_START = LocalTime.of(7, 15);
     private static final LocalTime WORKDAY_END = LocalTime.of(19, 15);
+    private static final ZoneId CONSULTATION_TIME_ZONE = ZoneId.of("Europe/Prague");
     private static final List<Long> ALLOWED_DURATIONS = List.of(15L, 30L, 45L, 60L, 90L);
     private final ConsultationSlotRepository slots;
     private final UserService users;
@@ -37,7 +39,7 @@ public class ConsultationSlotService {
         catch (DataIntegrityViolationException exception) { throw new ApiException(HttpStatus.CONFLICT, "This slot overlaps another active slot of the teacher."); }
     }
     @Transactional(readOnly = true)
-    public List<SlotResponse> forTeacher(UUID teacherId) { return slots.findByTeacher_IdOrderByStartsAt(teacherId).stream().map(SlotResponse::from).toList(); }
+    public List<SlotResponse> forTeacher(UUID teacherId) { return slots.findByTeacher_IdAndStartsAtGreaterThanEqualOrderByStartsAt(teacherId, OffsetDateTime.now()).stream().map(SlotResponse::from).toList(); }
 
     public List<SlotResponse> available(OffsetDateTime from) {
         return slots.findAvailable(SlotStatus.ACTIVE, from == null ? OffsetDateTime.now() : from, List.of(ReservationStatus.PENDING, ReservationStatus.CONFIRMED)).stream().map(SlotResponse::from).toList();
@@ -69,9 +71,11 @@ public class ConsultationSlotService {
     }
 
     private void validateWorkingHours(CreateSlotRequest request) {
-        if (request.startsAt().getDayOfWeek().getValue() > 5 || request.endsAt().getDayOfWeek().getValue() > 5) throw new ApiException(HttpStatus.BAD_REQUEST, "Consultations can be created only Monday to Friday.");
-        LocalTime start = request.startsAt().toLocalTime();
-        LocalTime end = request.endsAt().toLocalTime();
+        var startsAt = request.startsAt().atZoneSameInstant(CONSULTATION_TIME_ZONE);
+        var endsAt = request.endsAt().atZoneSameInstant(CONSULTATION_TIME_ZONE);
+        if (startsAt.getDayOfWeek().getValue() > 5 || endsAt.getDayOfWeek().getValue() > 5) throw new ApiException(HttpStatus.BAD_REQUEST, "Consultations can be created only Monday to Friday.");
+        LocalTime start = startsAt.toLocalTime();
+        LocalTime end = endsAt.toLocalTime();
         if (start.isBefore(WORKDAY_START) || end.isAfter(WORKDAY_END)) throw new ApiException(HttpStatus.BAD_REQUEST, "Consultations must be within working hours 07:15-19:15.");
     }
 }

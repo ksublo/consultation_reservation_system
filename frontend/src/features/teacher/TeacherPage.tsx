@@ -44,6 +44,16 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
     () => new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }),
     [locale],
   )
+  const dateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        timeZone: 'Europe/Prague',
+      }),
+    [locale],
+  )
   const monthFormatter = useMemo(
     () => new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }),
     [locale],
@@ -100,11 +110,10 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
         return
       }
       const end = new Date(new Date(start).getTime() + Number(duration) * 60000).toISOString()
-      const startsAt = new Date(start)
-      const endsAt = new Date(end)
-      const weekday = startsAt.getDay()
-      const startsMinutes = startsAt.getHours() * 60 + startsAt.getMinutes()
-      const endsMinutes = endsAt.getHours() * 60 + endsAt.getMinutes()
+      const [hours, minutes] = startTime.split(':').map(Number)
+      const startsMinutes = hours * 60 + minutes
+      const endsMinutes = startsMinutes + Number(duration)
+      const weekday = new Date(`${date}T12:00:00`).getDay()
 
       if (
         weekday === 0 ||
@@ -242,53 +251,59 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
       <div className="teacher-grid">
         <section className="card">
           <h2>{t('slotsCalendar')}</h2>
-          <div className="calendar-header">
-            <button
-              type="button"
-              onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
-            >
-              ‹
-            </button>
-            <strong>{monthFormatter.format(month)}</strong>
-            <button
-              type="button"
-              onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
-            >
-              ›
-            </button>
-          </div>
-          <div className="weekday-row">
-            {weekdays[language].map((day) => (
-              <span key={day}>{day}</span>
-            ))}
-          </div>
-          <div className="calendar-grid">
-            {buildDays(month).map((day) => {
-              const dayKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(
-                2,
-                '0',
-              )}-${String(day.getDate()).padStart(2, '0')}`
-              const hasActiveSlot = slots.some(
-                (slot) => slot.status === 'ACTIVE' && key(slot.startsAt) === dayKey,
-              )
+          <div className="calendar-content">
+            <div className="calendar-header">
+              <button
+                type="button"
+                onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
+                aria-label={t('previousMonth')}
+              >
+                ‹
+              </button>
+              <strong>{monthFormatter.format(month)}</strong>
+              <button
+                type="button"
+                onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
+                aria-label={t('nextMonth')}
+              >
+                ›
+              </button>
+            </div>
+            <div className="weekday-row">
+              {weekdays[language].map((day) => (
+                <span key={day}>{day}</span>
+              ))}
+            </div>
+            <div className="calendar-grid">
+              {buildDays(month).map((day) => {
+                const dayKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(
+                  2,
+                  '0',
+                )}-${String(day.getDate()).padStart(2, '0')}`
+                const otherMonth = day.getMonth() !== month.getMonth()
+                const weekend = day.getDay() === 0 || day.getDay() === 6
+                const hasActiveSlot = slots.some(
+                  (slot) => slot.status === 'ACTIVE' && key(slot.startsAt) === dayKey,
+                )
 
-              return (
-                <button
-                  key={dayKey}
-                  className={`calendar-day ${hasActiveSlot ? 'available' : ''} ${
-                    date === dayKey ? 'selected' : ''
-                  }`}
-                  onClick={() => setDate(dayKey)}
-                >
-                  {day.getDate()}
-                </button>
-              )
-            })}
+                return (
+                  <button
+                    key={dayKey}
+                    className={`calendar-day ${hasActiveSlot && !otherMonth ? 'available' : ''} ${date === dayKey ? 'selected' : ''} ${otherMonth ? 'other-month' : ''} ${weekend && !otherMonth ? 'weekend' : ''}`}
+                    disabled={otherMonth || weekend}
+                    onClick={() => setDate(dayKey)}
+                  >
+                    {day.getDate()}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </section>
 
         <section className="card">
           <h2>{t('mySlots')}</h2>
+          <p className="selected-slot-date">{dateFormatter.format(new Date(`${date}T12:00:00`))}</p>
           <div className="slot-list teacher-slots">
             {daySlots.map((slot) => {
               const occupied = requests.some(
@@ -313,21 +328,30 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
             {!daySlots.length && <p className="muted">{t('noTeacherSlotsForDay')}</p>}
           </div>
           <h2 className="add-slot-title">{t('addSlot')}</h2>
-          <form onSubmit={add}>
-            <label>{t('start')}</label>
-            <input
-              type="time"
-              value={startTime}
-              onChange={(event) => setStartTime(event.target.value)}
-            />
-            <label>{t('consultationLength')}</label>
-            <select value={duration} onChange={(event) => setDuration(event.target.value)}>
-              <option value="15">15 {t('minutes')}</option>
-              <option value="30">30 {t('minutes')}</option>
-              <option value="45">45 {t('minutes')}</option>
-              <option value="60">60 {t('minutes')}</option>
-              <option value="90">90 {t('minutes')}</option>
-            </select>
+          <form className="teacher-slot-form" onSubmit={add}>
+            <div className="slot-form-field">
+              <label htmlFor="slot-start">{t('start')}</label>
+              <input
+                id="slot-start"
+                type="time"
+                value={startTime}
+                onChange={(event) => setStartTime(event.target.value)}
+              />
+            </div>
+            <div className="slot-form-field">
+              <label htmlFor="slot-duration">{t('consultationLength')}</label>
+              <select
+                id="slot-duration"
+                value={duration}
+                onChange={(event) => setDuration(event.target.value)}
+              >
+                <option value="15">15 {t('minutes')}</option>
+                <option value="30">30 {t('minutes')}</option>
+                <option value="45">45 {t('minutes')}</option>
+                <option value="60">60 {t('minutes')}</option>
+                <option value="90">90 {t('minutes')}</option>
+              </select>
+            </div>
             <button className="reserve-button">{t('addSlot')}</button>
           </form>
         </section>
