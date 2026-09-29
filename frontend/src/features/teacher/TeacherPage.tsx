@@ -210,6 +210,11 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
                   <small>{request.studentEmail}</small>
                   <div>
                     <b>{request.reasonTitle}</b>
+                    <small>
+                      {dateFormatter.format(new Date(request.startsAt))} ·{' '}
+                      {time.format(new Date(request.startsAt))}–
+                      {time.format(new Date(request.endsAt))}
+                    </small>
                     <p>{request.reasonDescription}</p>
                   </div>
                   <span className={`status ${request.status.toLowerCase()}`}>
