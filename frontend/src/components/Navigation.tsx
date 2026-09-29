@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import logo from '../assets/vsb-logo.png'
 import type { Language, TFunction } from '../i18n'
-import type { UserRole } from '../types/api'
+import type { Notification, UserRole } from '../types/api'
 
 type TeacherView = 'slots' | 'requests'
 type StudentView = 'booking' | 'reservations'
@@ -21,6 +21,8 @@ interface NavigationProps {
   language: Language
   onLanguageChange: (language: Language) => void
   t: TFunction
+  notifications?: Notification[]
+  onNotificationRead?: (notificationId: string) => void
 }
 
 function RefreshIcon() {
@@ -37,6 +39,29 @@ function LogoutIcon() {
       <path d="M10 17l5-5-5-5M15 12H3M14 4h5v16h-5" />
     </svg>
   )
+}
+function BellIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+    </svg>
+  )
+}
+function notificationSlot(notification: Notification, language: Language) {
+  if (!notification.startsAt || !notification.endsAt) return null
+  const locale = language === 'cs' ? 'cs-CZ' : 'en-GB'
+  const date = new Intl.DateTimeFormat(locale, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'Europe/Prague',
+  }).format(new Date(notification.startsAt))
+  const time = new Intl.DateTimeFormat(locale, {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Prague',
+  })
+  return `${date} · ${time.format(new Date(notification.startsAt))}–${time.format(new Date(notification.endsAt))}`
 }
 
 function MenuIcon() {
@@ -72,11 +97,18 @@ export default function Navigation({
   language,
   onLanguageChange,
   t,
+  notifications = [],
+  onNotificationRead,
 }: NavigationProps) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const hasSession = Boolean(activeRole && userLogin)
   const roleLabel = activeRole === 'STUDENT' ? t('student') : t('teacher')
+  const unreadCount = notifications.filter((notification) => !notification.readAt).length
+  function openNotifications() {
+    setNotificationsOpen(true)
+  }
 
   useEffect(() => {
     function closeOnEscape(event: KeyboardEvent) {
@@ -86,6 +118,9 @@ export default function Navigation({
     window.addEventListener('keydown', closeOnEscape)
     return () => window.removeEventListener('keydown', closeOnEscape)
   }, [])
+  useEffect(() => {
+    if (!hasSession) setNotificationsOpen(false)
+  }, [hasSession])
 
   function closeMenu() {
     setMenuOpen(false)
@@ -201,6 +236,17 @@ export default function Navigation({
                 <RefreshIcon />
               </button>
             )}
+            {hasSession && (
+              <button
+                className="icon-button notification-button"
+                type="button"
+                aria-label="Notifikace"
+                onClick={openNotifications}
+              >
+                <BellIcon />
+                {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
+              </button>
+            )}
             {onLogout && (
               <button
                 className="icon-button logout-button"
@@ -212,6 +258,17 @@ export default function Navigation({
               </button>
             )}
           </div>
+          {hasSession && (
+            <button
+              className="icon-button mobile-notification-button"
+              type="button"
+              aria-label="Notifikace"
+              onClick={openNotifications}
+            >
+              <BellIcon />
+              {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
+            </button>
+          )}
           {onDocumentation && isDocumentation && (
             <button
               className="docs-back-button"
@@ -316,6 +373,55 @@ export default function Navigation({
               </div>
             </div>
           </>
+        )}
+        {notificationsOpen && (
+          <div
+            className="notification-modal-backdrop"
+            role="presentation"
+            onClick={() => setNotificationsOpen(false)}
+          >
+            <section
+              className="notification-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Notifikace"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="notification-modal-header">
+                <h2>Notifikace</h2>
+                <button
+                  type="button"
+                  aria-label="Zavřít"
+                  onClick={() => setNotificationsOpen(false)}
+                >
+                  ×
+                </button>
+              </div>
+              {notifications.length === 0 ? (
+                <p className="notification-empty">Nemáte žádné notifikace.</p>
+              ) : (
+                <ul className="notification-list">
+                  {notifications.map((notification) => (
+                    <li key={notification.id} className="unread">
+                      <button
+                        className="notification-read"
+                        type="button"
+                        aria-label="Označit jako přečtené"
+                        onClick={() => onNotificationRead?.(notification.id)}
+                      >
+                        ×
+                      </button>
+                      <strong>{notification.title}</strong>
+                      <span>{notification.message}</span>
+                      {notificationSlot(notification, language) && (
+                        <small>{notificationSlot(notification, language)}</small>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
         )}
       </div>
     </header>

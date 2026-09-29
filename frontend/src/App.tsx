@@ -8,7 +8,7 @@ import Login from './features/auth/Login'
 import BookingPage from './features/booking/BookingPage'
 import MyReservationsPage from './features/booking/MyReservationsPage'
 import TeacherPage from './features/teacher/TeacherPage'
-import type { Session, Toast, UserRole } from './types/api'
+import type { Notification, Session, Toast, UserRole } from './types/api'
 import { createTranslator, type Language } from './i18n'
 import './index.css'
 
@@ -32,6 +32,7 @@ export default function App() {
   const [language, setLanguageState] = useState<Language>(storedLanguage)
   const [online, setOnline] = useState(() => navigator.onLine)
   const [loginRole, setLoginRole] = useState<UserRole | null>(null)
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const [publicView, setPublicView] = useState<'home' | 'docs'>('home')
   const [toast, setToast] = useState<Toast | null>(null)
   const [refreshSignal, setRefreshSignal] = useState(0)
@@ -51,11 +52,34 @@ export default function App() {
       window.removeEventListener('offline', updateOnline)
     }
   }, [])
+  async function loadNotifications(currentSession = session) {
+    if (!currentSession) return
+    try {
+      setNotifications(await api.getNotifications(currentSession.token, currentSession.userId))
+    } catch {
+      setNotifications([])
+    }
+  }
+  useEffect(() => {
+    void loadNotifications()
+    const interval = window.setInterval(() => void loadNotifications(), 30000)
+    return () => window.clearInterval(interval)
+  }, [session])
   useEffect(() => {
     if (!toast) return
-    const timeout = window.setTimeout(() => setToast(null), 5000)
+    const timeout = window.setTimeout(() => setToast(null), 3500)
     return () => window.clearTimeout(timeout)
   }, [toast])
+  function refreshNotifications() {
+    void loadNotifications()
+  }
+  async function markNotificationRead(notificationId: string) {
+    if (!session) return
+    await api
+      .markNotificationRead(session.token, session.userId, notificationId)
+      .catch(() => undefined)
+    setNotifications((items) => items.filter((item) => item.id !== notificationId))
+  }
   function setLanguage(nextLanguage: Language) {
     sessionStorage.setItem('language', nextLanguage)
     setLanguageState(nextLanguage)
@@ -150,6 +174,8 @@ export default function App() {
       onStudentViewChange={setStudentView}
       language={language}
       onLanguageChange={setLanguage}
+      notifications={notifications}
+      onNotificationRead={(notificationId) => void markNotificationRead(notificationId)}
       t={t}
     />
   )
@@ -178,16 +204,10 @@ export default function App() {
     <ErrorBoundary language={language} onLanguageChange={setLanguage} t={t}>
       <div className="app-shell">
         {navigation}
-        {toast && (
-          <div className={`toast ${toast.type}`}>
-            {toast.type === 'success' && '✓ '}
-            {toast.message}
-          </div>
-        )}
         {studentView === 'booking' ? (
           <BookingPage
             session={session}
-            onToast={setToast}
+            onToast={refreshNotifications}
             refreshSignal={refreshSignal}
             language={language}
             t={t}
@@ -195,7 +215,7 @@ export default function App() {
         ) : (
           <MyReservationsPage
             session={session}
-            onToast={setToast}
+            onToast={refreshNotifications}
             refreshSignal={refreshSignal}
             language={language}
             t={t}

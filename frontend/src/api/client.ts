@@ -1,6 +1,7 @@
 import type {
   ApiError,
   ConsultationSlot,
+  Notification,
   Reservation,
   Session,
   Teacher,
@@ -219,6 +220,22 @@ export const api = {
     readJson<Reservation[]>(
       await fetch(`${API_ROOT}/reservations?userId=${userId}`, { headers: authorization(token) }),
     ),
+  getNotifications: async (token: string, userId: string): Promise<Notification[]> =>
+    readJson<Notification[]>(
+      await fetch(`${API_ROOT}/notifications?userId=${userId}`, { headers: authorization(token) }),
+    ),
+  markNotificationRead: async (
+    token: string,
+    userId: string,
+    notificationId: string,
+  ): Promise<void> => {
+    await readJson<void>(
+      await fetch(`${API_ROOT}/notifications/${notificationId}/read?userId=${userId}`, {
+        method: 'POST',
+        headers: authorization(token),
+      }),
+    )
+  },
   approveReservation: async (token: string, id: string, actorUserId: string): Promise<void> => {
     await readJson<void>(
       await fetch(`${API_ROOT}/reservations/${id}/approve`, {

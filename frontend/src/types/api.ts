@@ -34,6 +34,17 @@ export interface Toast {
   type: 'success' | 'error'
   message: string
 }
+export interface Notification {
+  id: string
+  reservationId: string | null
+  type: string
+  title: string
+  message: string
+  startsAt: string | null
+  endsAt: string | null
+  createdAt: string
+  readAt: string | null
+}
 
 export type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED'
 export interface Reservation {
