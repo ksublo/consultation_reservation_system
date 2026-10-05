@@ -405,27 +405,15 @@
         "blocks": [
           {
             "type": "table",
-            "headers": [
-              "Položka",
-              "Hodnota"
-            ],
+            "headers": ["Položka", "Hodnota"],
             "rows": [
-              [
-                "Scénář / operace",
-                "OP-05 — Schválení rezervace (Docs → C02, část 12)"
-              ],
-              [
-                "Požadavky",
-                "REQ-05, související REQ-03"
-              ],
+              ["Scénář / operace", "OP-05 — Schválení rezervace (Docs → C02, část 12)"],
+              ["Požadavky", "REQ-05, související REQ-03"],
               [
                 "Pravidla / invarianty",
                 "BR-02 — Jeden termín může mít nejvýše jednu aktivní rezervaci."
               ],
-              [
-                "Baseline",
-                "v0.2"
-              ]
+              ["Baseline", "v0.2"]
             ]
           }
         ]
@@ -436,11 +424,7 @@
         "blocks": [
           {
             "type": "table",
-            "headers": [
-              "Krok scénáře",
-              "Jak je realizován",
-              "Doklad"
-            ],
+            "headers": ["Krok scénáře", "Jak je realizován", "Doklad"],
             "rows": [
               [
                 "Pedagog vybere čekající žádost.",
@@ -503,11 +487,7 @@
           },
           {
             "type": "table",
-            "headers": [
-              "Specifikace",
-              "Současná implementace",
-              "Doklad"
-            ],
+            "headers": ["Specifikace", "Současná implementace", "Doklad"],
             "rows": [
               [
                 "Schvalovat může pouze vlastník termínu.",
@@ -524,12 +504,7 @@
         "blocks": [
           {
             "type": "table",
-            "headers": [
-              "Část",
-              "Typ / obsah",
-              "Role ve scénáři",
-              "Doklad"
-            ],
+            "headers": ["Část", "Typ / obsah", "Role ve scénáři", "Doklad"],
             "rows": [
               [
                 "Přihlášení",
@@ -571,11 +546,7 @@
         "blocks": [
           {
             "type": "table",
-            "headers": [
-              "Otázka",
-              "Odpověď",
-              "Doklad"
-            ],
+            "headers": ["Otázka", "Odpověď", "Doklad"],
             "rows": [
               [
                 "Kde je stav rezervace uložen?",
@@ -595,11 +566,7 @@
           },
           {
             "type": "table",
-            "headers": [
-              "Otázka",
-              "Odpověď",
-              "Doklad"
-            ],
+            "headers": ["Otázka", "Odpověď", "Doklad"],
             "rows": [
               [
                 "Kde se zjistí podmínka?",
@@ -685,10 +652,7 @@
         "blocks": [
           {
             "type": "table",
-            "headers": [
-              "Položka",
-              "Obsah"
-            ],
+            "headers": ["Položka", "Obsah"],
             "rows": [
               [
                 "Otázka",
@@ -698,10 +662,7 @@
                 "Doklad",
                 "Kontrola nyní používá ID zaslané klientem. Obejití této kontroly potvrdil test uvedený v A3."
               ],
-              [
-                "Proč je důležitá",
-                "Pouze vlastník termínu smí rozhodovat o jeho rezervaci."
-              ]
+              ["Proč je důležitá", "Pouze vlastník termínu smí rozhodovat o jeho rezervaci."]
             ]
           }
         ]
@@ -716,10 +677,7 @@
           },
           {
             "type": "table",
-            "headers": [
-              "Co jsme testovali",
-              "Výsledek"
-            ],
+            "headers": ["Co jsme testovali", "Výsledek"],
             "rows": [
               [
                 "Vlastník schvaluje čekající rezervaci.",

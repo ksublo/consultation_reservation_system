@@ -37,7 +37,12 @@ function Diagram({ src, alt, caption, fullWidth }: Extract<Block, { type: 'image
   if (fullWidth) {
     return (
       <figure className="docs-flow-figure">
-        <div className="docs-flow-scroll" role="region" aria-label="Diagram schválení rezervace" tabIndex={0}>
+        <div
+          className="docs-flow-scroll"
+          role="region"
+          aria-label="Diagram schválení rezervace"
+          tabIndex={0}
+        >
           <img src={imageUrl(src)} alt={alt} />
         </div>
         <figcaption>{caption ?? 'Na menší obrazovce lze diagram posunout do stran.'}</figcaption>
@@ -67,14 +72,29 @@ function ContentBlock({ block }: { block: Block }) {
   switch (block.type) {
     case 'table':
       return (
-        <div className="docs-table-scroll" role="region" aria-label={block.headers.join(' / ')} tabIndex={0}>
+        <div
+          className="docs-table-scroll"
+          role="region"
+          aria-label={block.headers.join(' / ')}
+          tabIndex={0}
+        >
           <table className="docs-table">
             <thead>
-              <tr>{block.headers.map((header) => <th key={header} scope="col">{header}</th>)}</tr>
+              <tr>
+                {block.headers.map((header) => (
+                  <th key={header} scope="col">
+                    {header}
+                  </th>
+                ))}
+              </tr>
             </thead>
             <tbody>
               {block.rows.map((row, rowIndex) => (
-                <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>
+                <tr key={rowIndex}>
+                  {row.map((cell, cellIndex) => (
+                    <td key={cellIndex}>{cell}</td>
+                  ))}
+                </tr>
               ))}
             </tbody>
           </table>
