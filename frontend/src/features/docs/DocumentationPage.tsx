@@ -32,7 +32,13 @@ function imageUrl(src: string) {
   return bundledImages['../../assets/docs/' + src] ?? src
 }
 
-function Diagram({ src, alt, caption, fullWidth }: Extract<Block, { type: 'image' }>) {
+function Diagram({
+  src,
+  alt,
+  caption,
+  fullWidth,
+  language,
+}: Extract<Block, { type: 'image' }> & { language: Language }) {
   const [size, setSize] = useState(20)
   if (fullWidth) {
     return (
@@ -40,19 +46,26 @@ function Diagram({ src, alt, caption, fullWidth }: Extract<Block, { type: 'image
         <div
           className="docs-flow-scroll"
           role="region"
-          aria-label="Diagram schválení rezervace"
+          aria-label={
+            language === 'cs' ? 'Diagram schválení rezervace' : 'Reservation approval diagram'
+          }
           tabIndex={0}
         >
           <img src={imageUrl(src)} alt={alt} />
         </div>
-        <figcaption>{caption ?? 'Na menší obrazovce lze diagram posunout do stran.'}</figcaption>
+        <figcaption>
+          {caption ??
+            (language === 'cs'
+              ? 'Na menší obrazovce lze diagram posunout do stran.'
+              : 'On smaller screens, scroll horizontally to view the diagram.')}
+        </figcaption>
       </figure>
     )
   }
   return (
     <div className="docs-image-control-group">
       <label className="docs-image-control">
-        <span>Velikost obrázku</span>
+        <span>{language === 'cs' ? 'Velikost obrázku' : 'Image size'}</span>
         <input
           type="range"
           min="20"
@@ -68,7 +81,7 @@ function Diagram({ src, alt, caption, fullWidth }: Extract<Block, { type: 'image
     </div>
   )
 }
-function ContentBlock({ block }: { block: Block }) {
+function ContentBlock({ block, language }: { block: Block; language: Language }) {
   switch (block.type) {
     case 'table':
       return (
@@ -120,7 +133,7 @@ function ContentBlock({ block }: { block: Block }) {
     case 'note':
       return <aside className={`docs-note ${block.variant}`}>{block.content}</aside>
     case 'image':
-      return <Diagram {...block} />
+      return <Diagram {...block} language={language} />
     case 'checklist':
       return (
         <ul className="docs-checklist">
@@ -165,7 +178,11 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
                 <section key={section.id} className="docs-block">
                   <h2>{section.title}</h2>
                   {section.blocks.map((block, index) => (
-                    <ContentBlock key={`${section.id}-${index}`} block={block} />
+                    <ContentBlock
+                      key={`${section.id}-${index}`}
+                      block={block}
+                      language={language}
+                    />
                   ))}
                 </section>
               ))}
