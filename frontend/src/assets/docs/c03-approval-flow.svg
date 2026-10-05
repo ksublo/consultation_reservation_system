@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="940" viewBox="0 0 1040 940" role="img" aria-labelledby="title desc">
+<title id="title">Schválení rezervace — současné uspořádání</title>
+<desc id="desc">Uvnitř aplikace přihlášení předává požadavek rezervačnímu API, API zpracování rezervace a to oznámením. Přihlášení, zpracování a oznámení používají ukládání dat. Ukládání dat čte a zapisuje do PostgreSQL mimo aplikaci.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#527486"/></marker></defs>
+<style>text{font-family:Arial,sans-serif;fill:#173348}.title{font-size:22px;font-weight:700}.role{font-size:18px;fill:#456174}.label{font-size:17px;fill:#38566b}.badge{font-size:14px;fill:#487369;font-weight:700;letter-spacing:1px}.edge{fill:none;stroke:#527486;stroke-width:2.5;marker-end:url(#arrow)}.node{fill:white;stroke:#afc5d1;stroke-width:1.5}</style>
+<rect width="1040" height="940" fill="#fff"/>
+<rect x="20" y="20" width="1000" height="750" rx="20" fill="#f5f9fc" stroke="#c4d4df" stroke-width="2"/>
+<text x="48" y="58" class="badge">APPLICATION CODE · MODULY BACKENDU</text>
+<!-- Main request path -->
+<path class="edge" d="M210 190 V250"/><text x="232" y="225" class="label">předá požadavek</text>
+<path class="edge" d="M210 360 V420"/><text x="232" y="395" class="label">požádá o schválení</text>
+<path class="edge" d="M210 530 V590"/><text x="232" y="565" class="label">vytvoří oznámení</text>
+<!-- Dependencies converge on storage -->
+<path class="edge" d="M370 135 H620 V450 H680"/><text x="402" y="120" class="label">načte relaci</text>
+<path class="edge" d="M370 475 H680"/><text x="400" y="460" class="label">načte / uloží data</text>
+<path class="edge" d="M370 645 H620 V500 H680"/><text x="402" y="630" class="label">uloží oznámení</text>
+<path class="edge" d="M835 530 V825"/><rect x="748" y="698" width="174" height="34" rx="8" fill="#f5f9fc"/><text x="835" y="721" class="label" text-anchor="middle">čtení / zápis</text>
+<!-- Application modules -->
+<rect class="node" x="50" y="80" width="320" height="110" rx="14"/><text class="title" x="74" y="122">Přihlášení</text><text class="role" x="74" y="154">Ověří přihlášeného uživatele.</text>
+<rect class="node" x="50" y="250" width="320" height="110" rx="14"/><text class="title" x="74" y="292">Rezervační API</text><text class="role" x="74" y="324">Přijme žádost o schválení.</text>
+<rect class="node" x="50" y="420" width="320" height="110" rx="14"/><text class="title" x="74" y="462">Zpracování rezervace</text><text class="role" x="74" y="494">Ověří podmínky a potvrdí.</text>
+<rect class="node" x="50" y="590" width="320" height="110" rx="14"/><text class="title" x="74" y="632">Oznámení</text><text class="role" x="74" y="664">Připraví zprávu studentovi.</text>
+<rect class="node" x="680" y="420" width="310" height="110" rx="14"/><text class="title" x="704" y="462">Ukládání dat</text><text class="role" x="704" y="494">Načte a uloží záznamy.</text>
+<!-- Database lies outside application boundary -->
+<rect x="680" y="825" width="310" height="95" rx="14" fill="#eaf0fa" stroke="#90a8ca" stroke-width="2"/><text class="title" x="835" y="865" text-anchor="middle">PostgreSQL</text><text class="role" x="835" y="894" text-anchor="middle">Databáze mimo kód aplikace</text>
+</svg>

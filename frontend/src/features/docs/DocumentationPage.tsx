@@ -6,10 +6,11 @@ import enDocumentation from './en.json'
 type DocsSection = 'c01' | 'c02' | 'c03'
 type Block =
   | { type: 'paragraph'; content: string }
+  | { type: 'table'; headers: string[]; rows: string[][] }
   | { type: 'list'; items: string[] }
   | { type: 'code'; language?: string; content: string }
   | { type: 'note'; variant: 'info' | 'warning'; content: string }
-  | { type: 'image'; src: string; alt: string; caption?: string }
+  | { type: 'image'; src: string; alt: string; caption?: string; fullWidth?: boolean }
   | { type: 'checklist'; items: { label: string; done: boolean }[] }
 type DocSection = { id: string; title: string; blocks: Block[] }
 type Document = { title: string; sections: DocSection[] }
@@ -31,8 +32,23 @@ function imageUrl(src: string) {
   return bundledImages['../../assets/docs/' + src] ?? src
 }
 
-function Diagram({ src, alt, caption }: Extract<Block, { type: 'image' }>) {
+function Diagram({ src, alt, caption, fullWidth }: Extract<Block, { type: 'image' }>) {
   const [size, setSize] = useState(20)
+  if (fullWidth) {
+    return (
+      <figure className="docs-flow-figure">
+        <div
+          className="docs-flow-scroll"
+          role="region"
+          aria-label="Diagram schválení rezervace"
+          tabIndex={0}
+        >
+          <img src={imageUrl(src)} alt={alt} />
+        </div>
+        <figcaption>{caption ?? 'Na menší obrazovce lze diagram posunout do stran.'}</figcaption>
+      </figure>
+    )
+  }
   return (
     <div className="docs-image-control-group">
       <label className="docs-image-control">
@@ -54,6 +70,36 @@ function Diagram({ src, alt, caption }: Extract<Block, { type: 'image' }>) {
 }
 function ContentBlock({ block }: { block: Block }) {
   switch (block.type) {
+    case 'table':
+      return (
+        <div
+          className="docs-table-scroll"
+          role="region"
+          aria-label={block.headers.join(' / ')}
+          tabIndex={0}
+        >
+          <table className="docs-table">
+            <thead>
+              <tr>
+                {block.headers.map((header) => (
+                  <th key={header} scope="col">
+                    {header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {block.rows.map((row, rowIndex) => (
+                <tr key={rowIndex}>
+                  {row.map((cell, cellIndex) => (
+                    <td key={cellIndex}>{cell}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
     case 'paragraph':
       return <p>{block.content}</p>
     case 'list':
