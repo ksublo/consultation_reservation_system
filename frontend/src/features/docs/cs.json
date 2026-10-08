@@ -404,6 +404,10 @@
         "title": "A1. Sledovaný scénář",
         "blocks": [
           {
+            "type": "paragraph",
+            "content": "Část A zachycuje historický stav před opravou identity (commit 45bf7bd). Následnou opravu a výsledky regresních testů popisuje závěrečná sekce níže."
+          },
+          {
             "type": "table",
             "headers": ["Položka", "Hodnota"],
             "rows": [
@@ -708,6 +712,24 @@
           {
             "type": "paragraph",
             "content": "Testovali jsme na dočasných účtech a rezervacích, které jsme potom odstranili. Chyba oprávnění je zaznamenaná v A3 a zatím není opravena."
+          }
+        ]
+      },
+      {
+        "id": "c03-identity-fix",
+        "title": "Oprava oproti původní verzi — identita aktéra",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Původně approve/cancel důvěřovaly actorUserId z těla požadavku. Nyní controller předává identitu z ověřené relace a služba rezervací ověřuje aktivní roli, vlastnictví a povolený stav. Podstrčené ID se ignoruje. Frontend při těchto akcích odesílá jen token a případnou poznámku."
+          },
+          {
+            "type": "paragraph",
+            "content": "Ověření: všech 10 regresních testů prošlo. Cizí pedagog ani student neuspějí s podstrčeným ID (403, bez změny rezervace, historie a oznámení). Vlastník schválí čekající rezervaci, oprávněný student i pedagog ji mohou zrušit. Neplatné schválení CONFIRMED/CANCELLED vrací 409; požadavek bez přihlášení je odmítnut."
+          },
+          {
+            "type": "paragraph",
+            "content": "Testy používají skutečnou cestu filtr → API → služba s náhradami databáze a ověření relace. Nejde o nové ověření persistence či souběhu. ADR-01, srovnání původní a opravené verze a podrobnosti jsou v docs/architecture-and-decisions.md a docs/evidence-and-evolution.md. Rozsah opravy je schválení a rušení rezervací; ostatní endpointy vyžadují samostatnou kontrolu."
           }
         ]
       }

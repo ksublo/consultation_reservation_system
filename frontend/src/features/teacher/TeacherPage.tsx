@@ -137,7 +137,7 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
 
   async function cancelReservation(request: Reservation) {
     try {
-      await api.cancelReservation(session.token, request.id, session.userId, t('cancellationNote'))
+      await api.cancelReservation(session.token, request.id, t('cancellationNote'))
       onToast({ type: 'success', message: t('reservationCancelled') })
       await load()
     } catch (error) {
@@ -226,9 +226,7 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
                       title={t('approve')}
                       disabled={request.status !== 'PENDING'}
                       onClick={() =>
-                        void api
-                          .approveReservation(session.token, request.id, session.userId)
-                          .then(load)
+                        void api.approveReservation(session.token, request.id).then(load)
                       }
                     >
                       ✓

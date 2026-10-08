@@ -236,26 +236,25 @@ export const api = {
       }),
     )
   },
-  approveReservation: async (token: string, id: string, actorUserId: string): Promise<void> => {
+  approveReservation: async (token: string, id: string): Promise<void> => {
     await readJson<void>(
       await fetch(`${API_ROOT}/reservations/${id}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authorization(token) },
-        body: JSON.stringify({ actorUserId }),
+        body: JSON.stringify({}),
       }),
     )
   },
   cancelReservation: async (
     token: string,
     id: string,
-    actorUserId: string,
     note = 'Cancelled by user.',
   ): Promise<void> => {
     await readJson<void>(
       await fetch(`${API_ROOT}/reservations/${id}/cancel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authorization(token) },
-        body: JSON.stringify({ actorUserId, note }),
+        body: JSON.stringify({ note }),
       }),
     )
   },

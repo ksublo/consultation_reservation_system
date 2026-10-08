@@ -2,6 +2,8 @@ package consultation_reservation_backend.api;
 
 import consultation_reservation_backend.service.ReservationService;
 import jakarta.validation.Valid;
+import consultation_reservation_backend.security.AuthenticatedUser;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -15,8 +17,8 @@ public class ReservationController {
     @PostMapping @ResponseStatus(HttpStatus.CREATED)
     public ReservationResponse create(@Valid @RequestBody CreateReservationRequest request) { return reservations.create(request); }
     @PostMapping("/{reservationId}/approve")
-    public ReservationResponse approve(@PathVariable UUID reservationId, @Valid @RequestBody ActorRequest request) { return reservations.approve(reservationId, request); }
+    public ReservationResponse approve(@PathVariable UUID reservationId, @AuthenticationPrincipal AuthenticatedUser actor, @Valid @RequestBody ReservationTransitionRequest request) { return reservations.approve(reservationId, actor, request); }
     @PostMapping("/{reservationId}/cancel")
-    public ReservationResponse cancel(@PathVariable UUID reservationId, @Valid @RequestBody ActorRequest request) { return reservations.cancel(reservationId, request); }
+    public ReservationResponse cancel(@PathVariable UUID reservationId, @AuthenticationPrincipal AuthenticatedUser actor, @Valid @RequestBody ReservationTransitionRequest request) { return reservations.cancel(reservationId, actor, request); }
     @GetMapping public List<ReservationResponse> mine(@RequestParam UUID userId) { return reservations.forUser(userId); }
 }
