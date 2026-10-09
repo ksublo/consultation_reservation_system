@@ -1,0 +1,255 @@
+{
+  "title": "C02 — Basic behaviour specification",
+  "sections": [
+    {
+      "id": "c02-1",
+      "title": "1. Baseline v0.1 — minimal system",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "The application already supports creating reservations, displaying available slots, teacher approval and reservation cancellation. Below is an overview of the completed code and the documentation we still need to finish."
+        }
+      ]
+    },
+    {
+      "id": "c02-2",
+      "title": "2. Complete operation specifications",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Shared rules are defined in the Domain rules section below. Individual operations only reference them."
+        }
+      ]
+    },
+    {
+      "id": "c02-3",
+      "title": "OP-01 — Create Reservation",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "A student selects an available teacher slot, enters the consultation title and description, and submits a request. The system creates a PENDING reservation, blocking the slot for other students before the teacher confirms it."
+        },
+        {
+          "type": "code",
+          "language": "text",
+          "content": "Goal / user value:\nA student requests a consultation for a specific teacher slot.\n\nTrigger:\nA signed-in student submits the selected consultation slot, title and description.\n\nObservable requirement:\nREQ-01: The system creates one PENDING Reservation for an existing active future slot if the domain rules are satisfied.\n\nPreconditions:\n- The student exists and is allowed to create a reservation.\n- The slot exists, is ACTIVE and starts in the future.\n\nSuccessful outcome:\n- One new Reservation exists.\n- Reservation.status = PENDING.\n- A CREATED record is stored in reservation_history.\n\nState transition:\n[none] → PENDING\n\nDomain rules / invariants:\nBR-02 Slot exclusivity; BR-04 Slot and student rules.\n\nMain success scenario:\n1. The student submits the slot, title and description.\n2. The system checks the student, slot and relevant rules.\n3. The system stores a PENDING Reservation.\n4. The system stores CREATED history and returns 201 Created with the identifier and status.\n\nAlternative / failure outcomes:\n- Unknown student or slot → rejected; no reservation is created.\n- Inactive, past or already blocked slot → rejected; no reservation is created.\n- PENDING limit exceeded or overlapping student slots → rejected; no reservation is created.\n\nVerification examples:\n- Active future slot + valid student → one PENDING reservation.\n- Already blocked slot → rejected.\n- Student with an overlapping active reservation → rejected.\n\nRationale / source:\nThe student expresses interest in a consultation; the teacher then decides whether to confirm or cancel it."
+        }
+      ]
+    },
+    {
+      "id": "c02-4",
+      "title": "OP-02 — Check Availability",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "The calendar and API show only active future slots without a pending or confirmed reservation. This operation only reads data and makes no changes."
+        },
+        {
+          "type": "code",
+          "language": "text",
+          "content": "Goal / user value:\nStudents and teachers can see which consultation slots are available to reserve.\n\nTrigger:\nA user opens the calendar or requests available slots through the API.\n\nObservable requirement:\nREQ-02: The system returns an ACTIVE future slot as available only if it has no PENDING or CONFIRMED Reservation.\n\nPreconditions:\n- The request works with existing consultation slots.\n\nSuccessful outcome:\n- A list of available slots is returned.\n- Neither Reservation nor ConsultationSlot is changed.\n\nState transition:\nNone.\n\nDomain rules / invariants:\nBR-01 Interval semantics; BR-02 Slot exclusivity.\n\nMain success scenario:\n1. The user requests available slots.\n2. The system selects ACTIVE future slots.\n3. The system excludes slots blocked by PENDING or CONFIRMED reservations.\n4. The system returns the remaining available slots.\n\nAlternative / failure outcomes:\n- Past slot → not returned as available.\n- CANCELLED slot → not returned as available.\n- PENDING or CONFIRMED reservation → slot is not returned as available.\n\nVerification examples:\n- ACTIVE future slot without a reservation → available.\n- Slot with a PENDING reservation → unavailable.\n- Slot with a CONFIRMED reservation → unavailable.\n\nRationale / source:\nUsers need to select only slots that cannot result in a reservation conflict."
+        }
+      ]
+    },
+    {
+      "id": "c02-5",
+      "title": "OP-03 — Confirm Reservation",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "A teacher confirms a pending reservation for their own slot in the request list. Only the slot owner may change PENDING to CONFIRMED."
+        },
+        {
+          "type": "code",
+          "language": "text",
+          "content": "Goal / user value:\nA teacher accepts a pending request as a confirmed consultation.\n\nTrigger:\nA teacher chooses to confirm a specific PENDING reservation for their own slot.\n\nObservable requirement:\nREQ-03: The system changes a Reservation from PENDING to CONFIRMED only when the action is performed by the teacher who owns the consultation slot.\n\nPreconditions:\n- The Reservation exists.\n- Reservation.status = PENDING.\n- The actor is the TEACHER who owns the slot.\n\nSuccessful outcome:\n- Reservation.status = CONFIRMED.\n- The slot remains blocked.\n- A CONFIRMED record is stored in reservation_history.\n\nState transition:\nPENDING → CONFIRMED\n\nDomain rules / invariants:\nBR-02 Slot exclusivity.\n\nMain success scenario:\n1. The teacher selects a pending request.\n2. The system checks that the reservation exists, its status and slot ownership.\n3. The system changes the status to CONFIRMED.\n4. The system stores CONFIRMED history and returns the confirmed reservation.\n\nAlternative / failure outcomes:\n- Nonexistent reservation → rejected.\n- Student or another teacher → 403 Forbidden.\n- CONFIRMED or CANCELLED reservation → rejected; the status does not change.\n\nVerification examples:\n- Slot owner + PENDING → CONFIRMED.\n- Another teacher + PENDING → 403.\n- CANCELLED → rejected without changes.\n\nRationale / source:\nTeachers must control which requests for their slots they confirm."
+        }
+      ]
+    },
+    {
+      "id": "c02-6",
+      "title": "OP-04 — Cancel Reservation",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "A student cancels their own reservation; a teacher may cancel a reservation for their own slot. Cancellation is allowed at least three hours before the start and changes the status to CANCELLED while preserving history."
+        },
+        {
+          "type": "code",
+          "language": "text",
+          "content": "Goal / user value:\nAn authorized student or teacher cancels an active future consultation.\n\nTrigger:\nA student cancels their own reservation or a teacher cancels a reservation for their slot.\n\nObservable requirement:\nREQ-04: The system changes a PENDING or CONFIRMED reservation to CANCELLED if an authorized actor cancels it at least three hours before the start.\n\nPreconditions:\n- The Reservation exists.\n- Reservation.status is PENDING or CONFIRMED.\n- The actor is the reservation's student or the teacher who owns the slot.\n- currentTime is at least three hours before startsAt.\n\nSuccessful outcome:\n- Reservation.status = CANCELLED.\n- The actor, cancellation note and cancelledAt are stored.\n- A CANCELLED record is stored in reservation_history.\n- The slot is no longer blocked.\n\nState transition:\nPENDING → CANCELLED or CONFIRMED → CANCELLED\n\nDomain rules / invariants:\nBR-03 Cancellation policy; BR-02 Slot exclusivity.\n\nMain success scenario:\n1. An authorized actor submits a cancellation request.\n2. The system checks the status, authorization and time limit.\n3. The system changes the status to CANCELLED and stores cancellation details.\n4. The system stores CANCELLED history and returns the cancelled reservation.\n\nAlternative / failure outcomes:\n- Nonexistent reservation → rejected.\n- Unauthorized actor → 403 Forbidden.\n- Already CANCELLED → rejected without changes.\n- Less than three hours before the start → rejected without changes.\n\nVerification examples:\n- Student cancels PENDING 4 hours before the start → CANCELLED.\n- Teacher cancels CONFIRMED 3 hours before the start → CANCELLED.\n- Cancellation 2 hours before the start → rejected.\n\nRationale / source:\nCancellation must release the slot and preserve a traceable history of the change."
+        }
+      ]
+    },
+    {
+      "id": "c02-8",
+      "title": "8. Shared domain rules and invariants",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Our consultation slot is an exclusive resource: a specific time slot can belong to only one active reservation at a time. These rules apply across Create, Check Availability, Confirm and Cancel and are not repeated within individual operations."
+        },
+        {
+          "type": "code",
+          "language": "text",
+          "content": "BR-01 — Interval semantics\nConsultation slots use half-open intervals [start, end). One slot may therefore end exactly when the next begins without an overlap.\n\nBR-02 — Exclusive Resource invariant\nThere must be no more than one active Reservation per consultation slot. In our system, both PENDING and CONFIRMED are active states that block the slot.\n\nReason: a student cannot obtain a slot that is already awaiting a teacher's decision or has been confirmed. The database protects this invariant with the one_active_reservation_per_slot unique index.\n\nBR-03 — Cancellation policy\nA PENDING or CONFIRMED Reservation may be cancelled by the student who created it or the teacher who owns the consultation slot. Cancellation is allowed if currentTime is at least three hours before startsAt.\n\nCancellation changes the status to CANCELLED; the Reservation is not physically deleted. cancelledAt, actor, an optional cancellation note and a reservation_history record are stored. A CANCELLED Reservation no longer blocks the slot.\n\nBR-04 — Domain-specific rule from C01\nA teacher may create a consultation slot only on weekdays between 07:15 and 19:15. A student may have at most five PENDING reservations and must not have a time overlap with another active reservation.\n\nReason: this rule reflects normal university consultation hours and protects teachers and students from scheduling conflicts."
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "The team confirmed for the final v0.2 baseline that PENDING remains a blocking state. Automated tests for adjacent [start, end) intervals have been added."
+        }
+      ]
+    },
+    {
+      "id": "c02-12",
+      "title": "9. Visual views of the system",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "The diagrams below describe the entire minimal system and match the current PENDING, CONFIRMED and CANCELLED states."
+        }
+      ]
+    },
+    {
+      "id": "c02-13",
+      "title": "9a. Use-case diagram",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Students and teachers and their four basic goals within the reservation system boundary."
+        },
+        {
+          "type": "image",
+          "src": "c02-use-cases.png",
+          "alt": "Use-case diagram of the reservation system",
+          "caption": "Use-case diagram — C02"
+        }
+      ]
+    },
+    {
+      "id": "c02-14",
+      "title": "9b. Reservation state diagram",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Reservation lifecycle: PENDING → CONFIRMED or CANCELLED; an active reservation can be cancelled under the accepted rule."
+        },
+        {
+          "type": "image",
+          "src": "c02-reservation-state.png",
+          "alt": "State diagram of the reservation lifecycle",
+          "caption": "Reservation lifecycle — C02"
+        }
+      ]
+    },
+    {
+      "id": "c02-15",
+      "title": "9c. Activity diagram",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "The flow of checking availability, creating, confirming and cancelling a reservation."
+        },
+        {
+          "type": "image",
+          "src": "c02-activity-diagram.png",
+          "alt": "Activity diagram of the four reservation operations",
+          "caption": "Activity diagram — C02"
+        }
+      ]
+    },
+    {
+      "id": "c02-review",
+      "title": "10. Consistency review and acceptance of baseline v0.1",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "The team jointly reviewed REQ-01 through REQ-04. The review focuses on observable behaviour rather than the choice of database or another technical solution."
+        },
+        {
+          "type": "list",
+          "items": [
+            "Meaning: ACTIVE, PENDING, CONFIRMED, CANCELLED, future slots and the three-hour limit have the same meaning in the specification, API and UI.",
+            "Rationale: each requirement protects a specific value for a student or teacher; none merely prescribes an implementation.",
+            "Verifiability: each REQ has a success example and a rejection or boundary example with the expected status and HTTP outcome.",
+            "Concurrency: two parallel attempts to reserve the same slot must result in at most one active reservation.",
+            "Consistency: Create blocks a slot with PENDING, Approve only changes its status to CONFIRMED, and Cancel releases it again.",
+            "Uncertainty: notifications are outside the baseline, so they are neither a claim nor a condition of the operations."
+          ]
+        },
+        {
+          "type": "code",
+          "language": "specification",
+          "content": "Specification Baseline v0.1\nScope: Create Reservation, Check Availability, Confirm Reservation, Cancel Reservation.\nApproval: to be completed by the team during the joint review (date, names and commit/tag).\nVerification sources: API response, stored Reservation status and reservation_history."
+        }
+      ]
+    },
+    {
+      "id": "c02-change",
+      "title": "11. C02 change impact — approval process",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Baseline v0.2 adds an explicit teacher approval step. The application already implements this step through the Approve Reservation endpoint; PENDING represents a request awaiting the teacher's decision."
+        },
+        {
+          "type": "code",
+          "language": "specification",
+          "content": "Changed condition:\nA Reservation does not become CONFIRMED automatically after creation; the teacher must approve the request.\n\nAffected parts:\nCreate produces PENDING; Availability treats PENDING as blocking; Confirm is implemented as Approve in the UI/API; the state and use-case views include the teacher's decision.\n\nUnaffected parts:\nIntervals [start,end), slot ownership, the cancellation rule and history remain unchanged because the change does not alter time semantics or the requirement to record changes.\n\nDecision for the current v0.2:\nAll consultation slots require teacher approval. PENDING blocks the slot to prevent concurrent requests. Rejection and expiration are not implemented in this version and are explicitly a topic for the next change, rather than hidden behaviour."
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Architectural driver for C03: the teacher's state-changing operation, history records and concurrency protection must remain consistent across the API and persistence."
+        }
+      ]
+    },
+    {
+      "id": "c02-approve",
+      "title": "12. OP-05 — Approve Reservation (baseline v0.2)",
+      "blocks": [
+        {
+          "type": "code",
+          "language": "specification",
+          "content": "Goal / user value:\nA teacher decides whether to accept a pending request for their slot as a confirmed consultation.\n\nTrigger:\nA teacher chooses to approve a PENDING Reservation for their own consultation slot.\n\nObservable requirement:\nREQ-05: The system changes a PENDING Reservation to CONFIRMED only for the teacher who owns the slot.\n\nPreconditions:\n- The Reservation exists and has status PENDING.\n- The actor is the TEACHER who owns the slot.\n\nSuccessful outcome:\n- Reservation.status = CONFIRMED.\n- A CONFIRMED record is created in reservation_history.\n- The slot remains blocked.\n\nState transition:\nPENDING → CONFIRMED\n\nMain scenario:\n1. The teacher selects a pending request.\n2. The system checks ownership and the initial status.\n3. The system stores CONFIRMED and the history record.\n4. The API returns the updated reservation.\n\nFailure outcomes:\n- Another teacher or a student → 403.\n- Nonexistent, CONFIRMED or CANCELLED reservation → no changes, 4xx.\n\nVerification examples:\n- Owner + PENDING → CONFIRMED.\n- Another teacher + PENDING → 403.\n- CANCELLED → rejected."
+        }
+      ]
+    },
+    {
+      "id": "c02-evidence",
+      "title": "13. C02 evidence → running application",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "The running application demonstrates request creation, available-slot filtering, teacher approval and cancellation by an authorized actor. The status is verified through both the API response and PostgreSQL data."
+        },
+        {
+          "type": "list",
+          "items": [
+            "Create: valid student and future ACTIVE slot → 201 and PENDING; occupied slot or limit violation → 409.",
+            "Availability: ACTIVE future slot without an active reservation → displayed; PENDING/CONFIRMED, past or cancelled slot → not displayed.",
+            "Approve: slot owner approves PENDING → CONFIRMED; unauthorized actor → 403.",
+            "Cancel: authorized actor at least 3 hours before the start → CANCELLED; less time or invalid status → 4xx without changes."
+          ]
+        },
+        {
+          "type": "code",
+          "language": "specification",
+          "content": "C02 evidence\nAccepted baseline: v0.1 + the v0.2 change described above.\nMismatch resolved during review: PENDING is explicitly blocking in the specification, frontend, API and database index.\nRemaining known limitation: rejection and automatic request expiration are not part of the current implementation.\nDrivers for C03: transactional protection of slot exclusivity, the state model and change history.\nCommit/tag: to be completed by the team on submission."
+        }
+      ]
+    },
+    {
+      "id": "c02-pressure",
+      "title": "14. C01 pressure and its C02 implementation",
+      "blocks": [
+        {
+          "type": "code",
+          "language": "Selected future pressure",
+          "content": "Category: C — Changeability\nPressure selected in C01: a slot request must wait for a separate teacher decision instead of being confirmed automatically when created.\n\nWhat changed in C02: baseline v0.2 specified that creation leads to PENDING and the slot owner can approve the request to CONFIRMED.\n\nWhat is implemented now: ReservationService.create() creates PENDING; ReservationService.approve() verifies the signed-in teacher, slot ownership and pending state; Reservation.confirm() performs the transition; history and an internal notification are recorded. Both PENDING and CONFIRMED block the slot.\n\nCode evidence: backend/src/main/java/consultation_reservation_backend/service/ReservationService.java; backend/src/main/java/consultation_reservation_backend/domain/Reservation.java; backend/src/main/resources/db/migration/V1__create_reservation_schema.sql. This pressure is no longer open future work — C02 introduced it and the current implementation contains it."
+        }
+      ]
+    }
+  ]
+}

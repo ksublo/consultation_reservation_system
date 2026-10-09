@@ -1,0 +1,153 @@
+{
+  "title": "C01 — Project foundation",
+  "sections": [
+    {
+      "id": "c01-1",
+      "title": "1. Team and repository",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Team: Consultify"
+        },
+        {
+          "type": "paragraph",
+          "content": "Members: Fatima, Kseniia"
+        },
+        {
+          "type": "paragraph",
+          "content": "Repository: https://github.com/ksublo/consultation_reservation_system"
+        },
+        {
+          "type": "paragraph",
+          "content": "The repository is currently private."
+        }
+      ]
+    },
+    {
+      "id": "c01-2",
+      "title": "2. Reservation domain",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "Domain: university teacher consultation slot reservations.",
+            "Resource: a specific consultation slot.",
+            "Reservation: student, selected slot, title and description of the reason, and status.",
+            "User: a student creates a reservation; a teacher creates slots and approves or cancels reservations.",
+            "States: PENDING, CONFIRMED, CANCELLED.",
+            "Operations: create a slot and reservation, approve, cancel, and check availability.",
+            "Common rule: two active reservations cannot exist for the same slot; both PENDING and CONFIRMED block the slot.",
+            "Domain rule: a slot can only be created on weekdays between 07:15 and 19:15. A student can have at most five pending reservations.",
+            "System boundary: Notification Service (still in development)."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c01-3",
+      "title": "3. Repository and stack",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "Monorepo with frontend/ and backend/ folders.",
+            "Frontend: React, TypeScript and Vite.",
+            "Backend: Java 21, Spring Boot and Maven.",
+            "Persistence: PostgreSQL and Flyway migrations.",
+            "README and documentation in docs/ exist; the repository is ready for shared work."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c01-4",
+      "title": "4. Project Frame",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "The complete Project Frame is filled in docs/intent-and-change.md. It describes the system purpose, roles, concepts, persistent state, operations, reservation state transitions, business rules, Notification Service, assumption and an open question."
+        }
+      ]
+    },
+    {
+      "id": "c01-5",
+      "title": "5. Selected future pressure",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Category: C — Changeability."
+        },
+        {
+          "type": "paragraph",
+          "content": "Concrete future pressure at the time of C01: after a request is submitted, the teacher must make a separate decision; the reservation must not be confirmed automatically on creation."
+        },
+        {
+          "type": "paragraph",
+          "content": "Why it is relevant: this requirement changes the reservation lifecycle, availability rules, teacher authorization, audit history and user interface. It was future pressure in C01; C02 adopted baseline v0.2, and the current system implements it with PENDING and teacher approval to CONFIRMED."
+        }
+      ]
+    },
+    {
+      "id": "c01-6",
+      "title": "6. Change and review loop",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Tasks follow the team workflow. One team member implements a change in their own branch, another member reviews it in a pull request, and the change is merged into main after approval. The review verifies functionality, readability, project rules and conflicts."
+        }
+      ]
+    },
+    {
+      "id": "c01-7",
+      "title": "7. Engineering spike — Persistence",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "We verified real reservation persistence in PostgreSQL. Docker Compose runs the database, backend and frontend; Flyway creates the schema and demo data at startup. The backend reads slots through the REST API and data can be verified in the database."
+        },
+        {
+          "type": "list",
+          "items": [
+            "Evidence: compose.yaml, DOCKER.md and Flyway migrations in backend/src/main/resources/db/migration/.",
+            "Result: availability is protected by both the backend and database constraints, so two active reservations cannot exist for the same slot."
+          ]
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "content": "docker compose up --build"
+        }
+      ]
+    },
+    {
+      "id": "c01-8",
+      "title": "8. Evidence and decision",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Evidence is documented in docs/evidence-and-evolution.md: the question verified PostgreSQL reads and writes; Docker Compose was used for the run; Flyway migrations and visible demo slots were observed. Decision: PostgreSQL, Flyway and Docker Compose remain the standard for local startup and database schema management."
+        }
+      ]
+    },
+    {
+      "id": "c01-9",
+      "title": "9. CP1 walking skeleton",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "POST /api/reservations → validation → persist to PostgreSQL → 201 Created with reservation ID → automated integration check. The definition is in README.md."
+        }
+      ]
+    },
+    {
+      "id": "c01-10",
+      "title": "10. Status before C02",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "The reservation domain, Resource / Reservation / User model, states, operations, rules, system boundary, Project Frame, selected future pressure, review workflow, engineering spike, evidence and CP1 skeleton are described and evidenced."
+        }
+      ]
+    }
+  ]
+}

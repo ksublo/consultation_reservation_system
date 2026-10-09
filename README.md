@@ -15,6 +15,24 @@ Configure PostgreSQL using `backend/.env.example`, then start the backend with
 `./mvnw spring-boot:run --spring.profiles.active=local` (or
 `mvnw.cmd spring-boot:run --spring.profiles.active=local` on Windows).
 
+## Code formatting
+
+The frontend uses Prettier:
+
+```sh
+cd frontend
+npm run format
+npm run format:check
+```
+
+The backend uses Google Java Format through the Spotify Maven plugin:
+
+```sh
+cd backend
+mvn fmt:format
+mvn fmt:check
+```
+
 ## CP1 walking skeleton
 
 **End-to-end cesta:**

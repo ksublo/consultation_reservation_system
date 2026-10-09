@@ -49,6 +49,8 @@ const messages = {
     chooseSlotFirst: 'Nejdřív vyberte volný čas konzultace.',
     reservationCreated: 'Žádost o rezervaci byla odeslána pedagogovi ke schválení.',
     reservationFailed: 'Rezervaci se nepodařilo vytvořit.',
+    slotReservedByAnotherStudent:
+      'Tento termín právě rezervoval jiný student. Dostupnost byla obnovena a termín je označený jako obsazený.',
     loadSlotsFailed: 'Nepodařilo se načíst dostupné termíny.',
     findTeacher: 'Vyhledejte pedagoga',
     findTeacherHint: 'Po výběru konkrétního pedagoga se zobrazí jeho volná místa v kalendáři.',
@@ -158,6 +160,8 @@ const messages = {
     chooseSlotFirst: 'Select an available consultation time first.',
     reservationCreated: 'The reservation request was sent to the teacher for approval.',
     reservationFailed: 'The reservation could not be created.',
+    slotReservedByAnotherStudent:
+      'Another student just reserved this slot. Availability has been refreshed and the slot is marked as occupied.',
     loadSlotsFailed: 'Could not load available slots.',
     findTeacher: 'Find a teacher',
     findTeacherHint:

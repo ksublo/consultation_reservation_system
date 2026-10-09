@@ -33,6 +33,7 @@ export interface ApiError {
 export interface Toast {
   type: 'success' | 'error'
   message: string
+  durationMs?: number
 }
 export interface Notification {
   id: string

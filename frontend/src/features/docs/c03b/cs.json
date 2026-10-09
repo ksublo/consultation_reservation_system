@@ -1,0 +1,841 @@
+{
+  "title": "C03B — Přijatá architektura krok za krokem",
+  "sections": [
+    {
+      "id": "c03b-b-drivers",
+      "title": "B. Zpřesnění architektonických driverů",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Driver je požadavek, omezení nebo riziko, které ovlivňuje návrh architektury. Driver popisuje, co systém musí zvládnout a proč; sám o sobě ještě neurčuje technické řešení. Z C02 a části C03A jsme vybrali čtyři drivery."
+        },
+        {
+          "type": "table",
+          "headers": ["Driver a jeho zdroj", "Proč ovlivňuje architekturu", "Otázka pro návrh"],
+          "rows": [
+            [
+              "BR-02 — Exkluzivita konzultačního termínu: jeden slot smí mít nejvýše jednu aktivní rezervaci PENDING nebo CONFIRMED. Zdroj: C02, REQ-01 — Vytvoření rezervace, REQ-02 — Zobrazení dostupnosti, REQ-03 — Potvrzení rezervace a databázová migrace V1.",
+              "Dva požadavky mohou přijít téměř současně. Samotná kontrola v aplikaci nemusí zabránit tomu, aby oba požadavky prošly.",
+              "Která vrstva je poslední autoritou, která odmítne druhou aktivní rezervaci stejného termínu?"
+            ],
+            [
+              "REQ-05 — Schválení rezervace: pouze pedagog, který vlastní termín, smí změnit PENDING na CONFIRMED. Zdroj: C02 a ověřené scénáře C03A.",
+              "Rozhodnutí závisí na roli přihlášeného uživatele a na vlastnictví termínu. Identita musí pocházet z ověřené relace.",
+              "Kde se ověří role, vlastnictví termínu a povolený zdrojový stav?"
+            ],
+            [
+              "REQ-04 — Zrušení rezervace a historie změn: student ruší vlastní rezervaci, pedagog rezervaci svého termínu; změna se zaznamená. Zdroj: C02, ReservationHistory.",
+              "Změna stavu bez odpovídající historie by znemožnila vysvětlit, kdo a proč rezervaci změnil.",
+              "Kde se změna stavu koordinuje se zápisem historie, aby se neuložil jen jeden z těchto kroků?"
+            ],
+            [
+              "Interní oznámení po změně rezervace. Zdroj: existující NotificationService a migrace V11.",
+              "Stav rezervace a oznámení se ukládají do stejné databáze. Chyba při ukládání oznámení nesmí zanechat nejasný částečný výsledek.",
+              "Kde se vytvoření oznámení spojí s transakcí změny rezervace a co je přijatelné při selhání?"
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Příklady driverů jsou požadavky a rizika uvedené výše. ReservationService, transakce, databázový index a NotificationService jsou zvolená řešení — nejsou to samotné drivery."
+        }
+      ]
+    },
+    {
+      "id": "c03b-c1-domain",
+      "title": "C1. Doménový model — pojmy a vztahy",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Doménový model popisuje pojmy z rezervační oblasti, ne technické komponenty. Pro náš scénář potřebujeme studenty, pedagogy, termíny, rezervace, historii a interní oznámení."
+        },
+        {
+          "type": "code",
+          "language": "Doménové pojmy",
+          "content": "Student / Teacher\n  jsou role uživatele\n\nTeacher 1 ─── 0..* ConsultationSlot\n  pedagog vytváří a vlastní své konzultační termíny\n\nConsultationSlot 1 ─── 0..* Reservation\n  termín může mít historii rezervací, ale nejvýše jednu aktivní\n  Reservation se stavem PENDING nebo CONFIRMED\n\nStudent 1 ─── 0..* Reservation\n  student je žadatelem o konzultaci\n\nReservation 1 ─── 0..* ReservationHistory\n  historie zaznamenává akce, předchozí a nový stav, aktéra a poznámku\n\nReservation 1 ─── 0..* Notification\n  změna rezervace může vytvořit interní oznámení příjemci\n\nReservation.status:\n  PENDING | CONFIRMED | CANCELLED"
+        },
+        {
+          "type": "paragraph",
+          "content": "Důležitý invariant: PENDING i CONFIRMED blokují ConsultationSlot; CANCELLED ho uvolní. Intervaly termínů používají hranice [start, end), takže konec jednoho termínu může být začátkem dalšího."
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Controller, Repository, HTTP klient a Spring jsou technické prvky. Do doménového modelu patří až v návrhovém třídním diagramu, ne do tohoto modelu pojmů."
+        }
+      ]
+    },
+    {
+      "id": "c03b-c2-responsibilities",
+      "title": "C2. Odpovědnosti — co systém musí umět",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Nejprve zapisujeme odpovědnosti bez názvů tříd a komponent. Každá odpovědnost říká, co se musí rozhodnout nebo zachovat. Konkrétní technický vlastník se určí až v G2."
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Zdroj a úplný požadavek",
+            "Odpovědnost systému",
+            "Co musí rozhodnout nebo zachovat",
+            "Jeden jasný vlastník?",
+            "Proč"
+          ],
+          "rows": [
+            [
+              "REQ-01 — Vytvoření rezervace; BR-02 — Exkluzivita termínu.",
+              "Vytvořit žádost o rezervaci.",
+              "Ověřit studenta, budoucí aktivní termín, časovou hranici, limit žádostí a kolize.",
+              "Ano.",
+              "Dvě části systému nesmějí přijmout odlišné rozhodnutí o stejném termínu."
+            ],
+            [
+              "REQ-02 — Zobrazení dostupnosti; BR-01 — Intervalová sémantika; BR-02 — Exkluzivita termínu.",
+              "Určit, které termíny se zobrazí jako volné.",
+              "Vrátit jen aktivní budoucí termíny bez PENDING nebo CONFIRMED rezervace.",
+              "Ano pro definici pravidla; čtení může být oddělené od zápisu.",
+              "Student musí vidět termíny podle stejného pravidla, které chrání vytvoření rezervace."
+            ],
+            [
+              "REQ-03 — Potvrzení rezervace a REQ-05 — Schválení rezervace.",
+              "Rozhodnout, zda je schválení povolené.",
+              "Ověřit přihlášeného pedagoga, vlastníka termínu a stav PENDING; potom změnit stav.",
+              "Ano.",
+              "Jiný aktér nesmí potvrdit rezervaci a dvě vrstvy nesmějí povolit různé přechody."
+            ],
+            [
+              "REQ-04 — Zrušení rezervace; BR-03 — Pravidlo zrušení.",
+              "Rozhodnout, zda lze rezervaci zrušit.",
+              "Ověřit vztah aktéra k rezervaci, stav a tříhodinovou hranici; u CONFIRMED vyžadovat důvod.",
+              "Ano.",
+              "Pravidla storna musí být stejná pro studenty i pedagogy a zachovat auditní údaje."
+            ],
+            [
+              "ReservationHistory — Audit přechodů.",
+              "Zaznamenat změnu rezervace.",
+              "Uložit předchozí a nový stav, aktéra, čas a případnou poznámku.",
+              "Ano pro koordinaci s přechodem stavu.",
+              "Změna stavu nesmí zůstat bez vysvětlení v historii."
+            ],
+            [
+              "Interní oznámení — Notification.",
+              "Vytvořit oznámení pro druhou stranu.",
+              "Uložit zprávu pro studenta nebo pedagoga a spojit ji se změnou rezervace.",
+              "Má mít jasného vlastníka; může mít jinou odpovědnost než rozhodování o rezervaci.",
+              "Oznámení je samostatná funkce a její případná externí doručovací cesta by měla jinou hranici selhání."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Odpovědnosti, které sdílejí stav rezervace nebo invariant exkluzivity, musí být koordinované. Uživatelské rozhraní, HTTP mapování a přístup k databázi mají jiné důvody ke změně, proto se od rozhodování doménových pravidel oddělují."
+        }
+      ]
+    },
+    {
+      "id": "c03b-d-question",
+      "title": "D. Jedna hlavní rozhodovací otázka",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Rozhodovací otázka propojuje nejdůležitější drivery s návrhem. Musí mít nejméně dvě reálné architektonické odpovědi."
+        },
+        {
+          "type": "code",
+          "language": "Rozhodovací otázka",
+          "content": "Kde má být autoritativně vlastněno rozhodnutí o životním cyklu rezervace, aby se oprávnění aktéra, stav rezervace, historie, interní oznámení a databázová ochrana exkluzivity chovaly konzistentně?"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Vychází z BR-02 — Exkluzivity termínu, REQ-05 — Schválení rezervace, REQ-04 — Zrušení rezervace a povinnosti zachovat historii.",
+            "Ovlivňuje strukturu backendu, transakční hranici, bezpečnostní ověřování i umístění databázových omezení.",
+            "Je zodpověditelná variantou aplikační orchestrace nebo variantou, ve které hlavní workflow vlastní databáze."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c03b-e1-alternatives",
+      "title": "E1. Dvě materiálně odlišné alternativy",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Obě varianty odpovídají na stejnou otázku. Liší se tím, která část systému vlastní pravidla a koordinuje změnu rezervace."
+        },
+        {
+          "type": "table",
+          "headers": ["Varianta", "Jak funguje", "Co vlastní"],
+          "rows": [
+            [
+              "A — Transakční aplikační služba.",
+              "Jeden backendový use case načte rezervaci, ověří aktéra a pravidla, změní doménový objekt, uloží historii a vytvoří interní oznámení v jedné databázové transakci. Databázový unikátní index zůstává poslední ochranou slotu.",
+              "Aplikační služba vlastní rozhodnutí a pořadí kroků; doménový objekt mění stav; databáze vynucuje omezení dat."
+            ],
+            [
+              "B — Databázově vlastněný workflow.",
+              "Databázová funkce nebo procedura rozhoduje o přechodu stavu a v databázi zapisuje rezervaci, historii i oznámení. Backend předává požadavek a mapuje výsledek na HTTP odpověď.",
+              "Databázová vrstva vlastní hlavní workflow; aplikační vrstva předává parametry a převádí chyby."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Controller nebo frontend by také mohl skládat kroky, ale nebyl vybrán jako plnohodnotná alternativa: pravidla by se rozptýlila a klient nemůže být autoritou pro oprávnění ani souběh."
+        }
+      ]
+    },
+    {
+      "id": "c03b-e2-comparison",
+      "title": "E2. Porovnání alternativ podle driverů",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Kritéria níže jsou přímo odvozená z driverů v části B. Tabulka uvádí konkrétní důsledky, ne bodové známky bez vysvětlení."
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Driver / kritérium",
+            "A — Aplikační služba",
+            "B — Databázově vlastněný workflow"
+          ],
+          "rows": [
+            [
+              "BR-02 — Exkluzivita termínu a souběh.",
+              "Aplikační kontrola vysvětlí běžný konflikt; unikátní index one_active_reservation_per_slot odmítne druhý zápis při souběhu a služba vrátí HTTP 409.",
+              "Databázová procedura může konflikt kontrolovat blízko dat; stále je nutný unikátní index nebo ekvivalentní databázové omezení."
+            ],
+            [
+              "REQ-05 — Oprávnění a rozhodnutí o schválení.",
+              "Služba dostane AuthenticatedUser z ověřené relace a ověří aktivní roli i vlastnictví slotu před přechodem.",
+              "Databázový workflow musí dostat důvěryhodný identifikátor aktéra. Samotná databázová procedura neověří bearer relaci aplikace."
+            ],
+            [
+              "REQ-04 — Stav a auditní historie.",
+              "Jedna metoda služby koordinuje doménový přechod a zápis ReservationHistory v transakci.",
+              "Přechod a historie mohou být atomické v databázi, ale pravidla a jejich důvody jsou ukryté v procedurách nebo triggerech."
+            ],
+            [
+              "Interní oznámení a hranice selhání.",
+              "NotificationService ukládá oznámení synchronně do stejné databáze; selhání v transakci zruší celou operaci.",
+              "Databáze může vložit i oznámení, ale rozšiřuje její workflow o další aplikační pravidla."
+            ],
+            [
+              "Změna pravidel a provozní složitost.",
+              "Java/Spring monolit má jedno čitelné místo pro pravidla; odpovídá aktuálnímu nasazení.",
+              "Je nutné spravovat a ladit business workflow v SQL a mapování databázových chyb; pro tento monolit jde o větší složitost."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c03b-e3-scenario",
+      "title": "E3. Průchod obou alternativ stejným scénářem",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Používáme scénář C02 a C03A: pedagog schvaluje čekající rezervaci. Komplikace: současně dorazí další žádost o stejný termín. PENDING už termín blokuje, takže druhá žádost nesmí vytvořit další aktivní rezervaci."
+        },
+        {
+          "type": "table",
+          "headers": ["Krok scénáře", "A — Aplikační služba", "B — Databázově vlastněný workflow"],
+          "rows": [
+            [
+              "1. Začátek schválení.",
+              "Služba načte rezervaci a ověří přihlášeného pedagoga, jeho vlastnictví termínu a stav PENDING.",
+              "Backend předá databázovému workflow ID rezervace a identitu ověřenou aplikační bezpečnostní vrstvou; databáze načte stav a vlastníka."
+            ],
+            [
+              "2. Souběžná druhá žádost.",
+              "Vytvoření zkontroluje aktivní rezervaci; i kdyby se aplikační kontroly překrývaly, unikátní index odmítne druhý aktivní zápis.",
+              "Databázové workflow a unikátní omezení odmítnou druhou aktivní rezervaci přímo v databázi."
+            ],
+            [
+              "3. Schválení.",
+              "Doménový objekt přejde z PENDING na CONFIRMED. Termín zůstává nepřetržitě blokovaný, protože oba stavy jsou aktivní.",
+              "Procedura změní stav PENDING na CONFIRMED v databázi; omezení musí zůstat zachováno během přechodu."
+            ],
+            [
+              "4. Historie a oznámení.",
+              "Služba uloží historii a interní oznámení ve stejné transakci jako změnu stavu.",
+              "Databázový workflow musí zapsat historii i oznámení v téže transakci, jinak vznikne částečný výsledek."
+            ],
+            [
+              "5. Odpověď.",
+              "Úspěch se vrátí jako potvrzená rezervace; konflikt druhé žádosti jako HTTP 409.",
+              "Backend převede výsledek procedury nebo databázovou chybu na odpovídající HTTP odpověď."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Obě varianty mohou zachovat invariant, pokud správně použijí databázové omezení. Varianta A byla zvolena proto, že pravidla zůstávají čitelná v aplikaci a odpovídají existujícímu Spring Boot monolitu."
+        }
+      ]
+    },
+    {
+      "id": "c03b-f-adr",
+      "title": "F. ADR-01 — rozhodnutí o vlastnictví životního cyklu rezervace",
+      "blocks": [
+        {
+          "type": "code",
+          "language": "ADR-01",
+          "content": "Kontext:\n  Rezervace přechází z PENDING na CONFIRMED nebo CANCELLED.\n  Změna musí ověřit aktéra, zachovat exkluzivitu slotu,\n  zapsat historii a vytvořit interní oznámení.\n\nDrivery:\n  BR-02 — Exkluzivita termínu; REQ-05 — Schválení vlastníkem slotu;\n  REQ-04 — Oprávněné zrušení a historie; interní oznámení.\n\nZvažované alternativy:\n  A — transakční aplikační služba koordinuje pravidla a zápisy.\n  B — databázová funkce/procedura vlastní hlavní workflow.\n\nRozhodnutí:\n  Přijímáme variantu A. ReservationService koordinuje create/approve/cancel\n  v transakci; Reservation provádí doménový přechod; PostgreSQL vynucuje\n  unikátní aktivní rezervaci na termín.\n\nDůvod:\n  Návrh odpovídá monolitické aplikaci Spring Boot a ponechává business\n  pravidla v čitelném a testovatelném aplikačním kódu. Databáze zůstává\n  autoritou pro integritu a souběh.\n\nPřijatý negativní důsledek:\n  Interní oznámení se ukládá synchronně v téže databázové transakci.\n  Neexistuje externí doručení, fronta ani automatický retry.\n\nRozhodnutí znovu otevřeme, když:\n  oznámení začne být doručováno přes externí službu nebo bude požadováno\n  spolehlivé opakování doručení, případně když databázový invariant přestane\n  stačit pro nový provozní model."
+        }
+      ]
+    },
+    {
+      "id": "c03b-g1-context",
+      "title": "G1. Kontext systému — kdo komunikuje přes hranici",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "V kontextovém diagramu je celý rezervační systém jeden blok. Uvnitř tohoto pohledu neukazujeme Controller, služby ani databázi. Zobrazujeme jen skutečné aktéry a jejich komunikaci se systémem."
+        },
+        {
+          "type": "image",
+          "src": "c03b-context-use-cases.png",
+          "alt": "Kontextový diagram studentů, pedagogů a rezervačního systému",
+          "caption": "Student vybírá termín, vytváří a ruší rezervaci; pedagog spravuje termíny, schvaluje a ruší rezervace. Posuvník mění velikost diagramu."
+        },
+        {
+          "type": "table",
+          "headers": ["Aktér", "Co do systému posílá", "Co ze systému získá"],
+          "rows": [
+            [
+              "Student.",
+              "Požadavek na termín, vytvoření rezervace nebo zrušení vlastní rezervace.",
+              "Dostupné termíny, stav vlastní rezervace a interní oznámení."
+            ],
+            [
+              "Pedagog.",
+              "Nové termíny, schválení nebo zrušení rezervace svého termínu.",
+              "Přehled žádostí, stav rezervací a interní oznámení."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "V projektu nejsou pro tento scénář externí poskytovatel přihlášení ani e-mailová služba. Ověření relace a interní oznámení jsou součástí systému."
+        }
+      ]
+    },
+    {
+      "id": "c03b-g2-static",
+      "title": "G2. TO-BE statická architektura — logické části a jejich vlastníci",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "TO-BE znamená cílové uspořádání, ke kterému návrh míří. Diagram ukazuje logické odpovědnosti; neznamená to, že každá krabička běží jako samostatný proces."
+        },
+        {
+          "type": "image",
+          "src": "c03b-static-architecture.png",
+          "alt": "Statická architektura rezervačního systému TO-BE",
+          "caption": "Cílové komponenty, jejich odpovědnosti a vztahy. Diagram lze zvětšit posuvníkem."
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Logický prvek",
+            "Hlavní odpovědnost",
+            "Stav nebo pravidlo, které vlastní",
+            "Důležité vazby"
+          ],
+          "rows": [
+            [
+              "React uživatelské rozhraní: BookingPage a TeacherPage.",
+              "Formuláře, přehledy a zobrazení výsledků.",
+              "Nevlastní autoritativní doménový stav; backend musí každé pravidlo znovu ověřit.",
+              "Posílá HTTPS/JSON požadavky do API."
+            ],
+            [
+              "Autentizační a bezpečnostní hranice: BearerTokenFilter a AuthService.",
+              "Ověří bearer token a vytvoří AuthenticatedUser v Security Contextu.",
+              "Vlastní ověřenou identitu a aktivní roli přihlášeného uživatele.",
+              "Předává identitu controllerům, které ji potřebují."
+            ],
+            [
+              "Rezervační API: ReservationController.",
+              "Přijímá HTTP požadavky, validuje jejich tvar a mapuje výsledek na odpověď.",
+              "Nevlastní business rozhodnutí o přechodu rezervace.",
+              "Deleguje operace na aplikační služby."
+            ],
+            [
+              "Správa rezervací: ReservationService a Reservation.",
+              "Ověří pravidla rezervace a rozhodne o povolených změnách životního cyklu.",
+              "Vlastní aplikační rozhodnutí o stavech a koordinaci auditu.",
+              "Používá doménové objekty, repository a NotificationService."
+            ],
+            [
+              "Správa konzultačních termínů: ConsultationSlotService a ConsultationSlot.",
+              "Vytváří, načítá a ruší termíny a vyhodnocuje jejich dostupnost.",
+              "Vlastní životní cyklus slotu a časová pravidla.",
+              "Používá repository a stav rezervací při kontrole dostupnosti."
+            ],
+            [
+              "Interní oznámení: NotificationService.",
+              "Vytvoří a načte uložené zprávy pro uživatele.",
+              "Vlastní záznam oznámení a stav přečtení; nezajišťuje externí e-mail.",
+              "Rezervační služba ji volá při změně rezervace."
+            ],
+            [
+              "Perzistence: Spring Data repository, PostgreSQL a Flyway.",
+              "Ukládá trvalá data a aplikuje databázové migrace.",
+              "Autoritativně vynucuje nejvýše jednu aktivní rezervaci na termín.",
+              "Aplikační služby přistupují přes repository."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Cílový diagram označuje vlastníka rozhodnutí pro create/approve/cancel jako práci s ověřenou identitou. Aktuální controller approve/cancel předává AuthenticatedUser; create dnes načítá studenta podle studentId v požadavku. Tento rozdíl je třeba držet jako delta v části J, ne zaměňovat diagram TO-BE za popis dnešní implementace."
+        }
+      ]
+    },
+    {
+      "id": "c03b-g3-state-ownership",
+      "title": "G3. Kdo rozhoduje o přechodech stavů",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Tato tabulka doplňuje stavový diagram z C02. „Kdo žádá“ není totéž jako „kdo rozhoduje“: uživatel spouští operaci, ale backend ověřuje pravidla a povolí nebo odmítne přechod."
+        },
+        {
+          "type": "image",
+          "src": "c02-reservation-state.png",
+          "alt": "Stavový diagram Reservation: PENDING, CONFIRMED a CANCELLED",
+          "caption": "Stavy a povolené přechody rezervace převzaté z C02. Diagram lze zvětšit posuvníkem."
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Přechod a význam",
+            "Vlastník rozhodnutí",
+            "Kdo může změnu vyžádat",
+            "Co kód ověřuje"
+          ],
+          "rows": [
+            [
+              "Žádná rezervace → PENDING — student odešle žádost.",
+              "ReservationService.create() vytvoří PENDING.",
+              "Student.",
+              "Existenci a roli studenta, aktivní budoucí slot, tříhodinovou hranici, limit pěti PENDING a kolize."
+            ],
+            [
+              "PENDING → CONFIRMED — pedagog žádost schválí.",
+              "ReservationService.approve() rozhodne; Reservation.confirm() zapíše nový stav.",
+              "Pouze pedagog, který vlastní slot.",
+              "Přihlášenou identitu, aktivní roli TEACHER, vlastnictví slotu a dosavadní stav PENDING."
+            ],
+            [
+              "PENDING → CANCELLED — čekající žádost se zruší nebo zamítne.",
+              "ReservationService.cancel() rozhodne; Reservation.cancel() změní stav.",
+              "Student vlastnící žádost nebo pedagog vlastnící slot.",
+              "Vztah aktéra, dosavadní stav a nejméně tři hodiny do začátku. Pedagogovo zrušení PENDING se v oznámení popíše jako zamítnutí; stav REJECTED neexistuje."
+            ],
+            [
+              "CONFIRMED → CANCELLED — potvrzená konzultace se zruší.",
+              "ReservationService.cancel() rozhodne; Reservation.cancel() změní stav.",
+              "Student vlastnící rezervaci nebo pedagog vlastnící slot.",
+              "Vztah aktéra, časovou hranici a povinný důvod storna."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Vedlejší endpoint ConsultationSlotService.cancelWithActiveReservation() umí zrušit slot s aktivní rezervací jinou cestou. Je potřeba jej posuzovat odděleně od standardní operace ReservationController.cancel()."
+        }
+      ]
+    },
+    {
+      "id": "c03b-g4-runtime",
+      "title": "G4. Runtime a deployment — kde části skutečně běží",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Runtime diagram mapuje logické prvky G2 na skutečné procesy a kontejnery. Backendové služby nejsou samostatné mikroservisy; běží společně v jednom procesu Spring Boot."
+        },
+        {
+          "type": "image",
+          "src": "c03b-runtime-deployment.png",
+          "alt": "Runtime a deployment Docker Compose pro frontend, backend a PostgreSQL",
+          "caption": "Prohlížeč, Nginx frontend, backend Spring Boot, PostgreSQL a trvalý databázový volume. Diagram lze zvětšit posuvníkem."
+        },
+        {
+          "type": "table",
+          "headers": ["Runtime prvek", "Běží kde", "Port / spojení", "Co obsahuje"],
+          "rows": [
+            [
+              "Webový prohlížeč.",
+              "Počítač studenta nebo pedagoga.",
+              "HTTP na host port 5173.",
+              "React aplikaci a API klienta."
+            ],
+            [
+              "Frontend kontejner.",
+              "Docker Compose, uvnitř Nginx.",
+              "Host port 5173 se mapuje na kontejnerový port 80; Nginx předává /api backendu.",
+              "Statické soubory sestavené React aplikace."
+            ],
+            [
+              "Backend kontejner.",
+              "Jeden proces Spring Boot / Java 21.",
+              "Port 8080.",
+              "Security filter, controllery, aplikační služby, doménové objekty a repository."
+            ],
+            [
+              "Databázový kontejner.",
+              "PostgreSQL 17.",
+              "Port 5432; backend se připojuje přes JDBC.",
+              "Uživatele, termíny, rezervace, historii a interní oznámení. Data přetrvávají ve volume postgres-data."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c03b-h1-sequence",
+      "title": "H1. Návrhový sekvenční průchod — schválení rezervace",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "C03A mapovala právě schválení rezervace, proto je toto hlavní scénář H1. Ukazuje cílovou architekturu, významné volání, bezpečnostní kontrolu, změnu stavu a chybovou větev."
+        },
+        {
+          "type": "code",
+          "language": "Sekvenční diagram — schválení",
+          "content": "Pedagog → TeacherPage:\n  vybere žádost se stavem PENDING a zvolí Schválit\n\nTeacherPage → API klient:\n  approveReservation(token, reservationId)\n\nAPI klient → ReservationController:\n  POST /api/reservations/{reservationId}/approve\n  + bearer token + ReservationTransitionRequest\n\nBearerTokenFilter → AuthService:\n  ověří bearer token a vloží AuthenticatedUser do SecurityContextu\n\nReservationController → ReservationService:\n  approve(reservationId, AuthenticatedUser, request)\n\nReservationService → ReservationRepository:\n  načte rezervaci\n\nReservationService:\n  ověří přihlášení, aktivní roli TEACHER,\n  vlastnictví slotu a stav PENDING\n\nalt ověření selže\n  ReservationService → Controller:\n    ApiException 401 / 403 / 404 / 409\n  Stav, historie ani oznámení se nezmění\nelse ověření projde\n  ReservationService → Reservation:\n    confirm()\n  ReservationService → ReservationHistoryRepository:\n    uloží PENDING → CONFIRMED, aktéra a poznámku\n  ReservationService → NotificationService:\n    vytvoří interní oznámení pro studenta\n  ReservationService → Controller:\n    vrátí ReservationResponse\n  Controller → TeacherPage:\n    HTTP 200; přehled se obnoví\nend\n\nZápisy probíhají v transakci ReservationService."
+        },
+        {
+          "type": "paragraph",
+          "content": "Přiložený obrázek níže ukazuje detailní sekvenci Create Reservation. Je to doplňující scénář z C02; nenahrazuje výše uvedený H1 scénář schválení z C03A."
+        },
+        {
+          "type": "image",
+          "src": "c03b-create-reservation-sequence.png",
+          "alt": "Sekvenční diagram vytvoření rezervace přes frontend, Spring Security, controller, service a PostgreSQL",
+          "caption": "Doplňující sekvence Create Reservation: validace, PENDING, historie, oznámení a konflikt při souběhu. Diagram lze zvětšit posuvníkem."
+        }
+      ]
+    },
+    {
+      "id": "c03b-h2-class",
+      "title": "H2. Zaměřený návrhový třídní diagram — vlastnictví schválení",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Tento pohled soustředí třídy a rozhraní potřebná pro H1 schválení. Každá důležitá operace ze sekvence má jasného strukturálního vlastníka."
+        },
+        {
+          "type": "code",
+          "language": "Třídní diagram — schválení",
+          "content": "AuthenticatedUser\n  id, activeRole\n  vytvoří jej autentizační filtr z ověřené bearer relace\n\nReservationController\n  approve(reservationId, AuthenticatedUser, request)\n  přijme HTTP požadavek a deleguje\n\nReservationService <<transactional>>\n  approve(reservationId, AuthenticatedUser, request)\n  ověří aktéra, vlastníka slotu a stav PENDING\n  koordinuje změnu, historii a oznámení\n\nReservation\n  status: PENDING | CONFIRMED | CANCELLED\n  confirm()\n  nastaví CONFIRMED a confirmedAt\n\nReservationRepository\n  načte rezervaci podle ID\n\nReservationHistoryRepository\n  uloží akci, previousStatus, newStatus, actor a note\n\nNotificationService\n  create(student, reservation, type, title, message)\n  uloží interní oznámení\n\nVazby:\n  ReservationController → ReservationService\n  ReservationService → ReservationRepository\n  ReservationService → ReservationHistoryRepository\n  ReservationService → NotificationService\n  Reservation → ConsultationSlot\n  Reservation → Student"
+        },
+        {
+          "type": "image",
+          "src": "c03b-create-reservation-class.png",
+          "alt": "UML třídní diagram rezervačního API, služeb, repository a doménových tříd",
+          "caption": "Doplňující implementační třídní pohled dodaný pro Create Reservation; H2 výše zůstává zaměřený na schválení."
+        }
+      ]
+    },
+    {
+      "id": "c03b-i-cross-view",
+      "title": "I. Kontrola, zda si dokumentace a pohledy neodporují",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Kontrolu provádíme před změnou kódu. Když se dvě části rozcházejí, nejdřív opravíme požadavek, odpovědnost nebo diagram — nevybíráme tiše jednu verzi."
+        },
+        {
+          "type": "table",
+          "headers": ["Co porovnáváme", "Otázka pro kontrolu", "Očekávaná shoda v našem projektu"],
+          "rows": [
+            [
+              "C02 požadavky a G2 statická architektura.",
+              "Umí navržené prvky realizovat pravidla rezervace?",
+              "Správa rezervací ověřuje pravidla; PostgreSQL vynucuje unikátní aktivní rezervaci na termín."
+            ],
+            [
+              "C2 odpovědnosti a G2.",
+              "Má každá významná odpovědnost jednoho hlavního vlastníka?",
+              "Rozhodnutí o životním cyklu vlastní ReservationService; trvalou integritu dat chrání databáze."
+            ],
+            [
+              "G2 statická architektura a H1 sekvence.",
+              "Používá sekvence jen prvky a závislosti z architektonického pohledu?",
+              "Approve volá controller, službu, repository, doménový objekt a NotificationService; žádný nový runtime prvek není potřeba."
+            ],
+            [
+              "H1 sekvence a H2 třídní pohled.",
+              "Má každé významné volání operaci a strukturálního vlastníka?",
+              "approve vlastní ReservationService; confirm vlastní Reservation; historie a oznámení mají své repository/službu."
+            ],
+            [
+              "C02 statechart a G3/H1.",
+              "Rozhoduje povolený vlastník přechodu a je přechod možný ze správného stavu?",
+              "Jen vlastník slotu schvaluje PENDING; zrušit může oprávněný student nebo pedagog."
+            ],
+            [
+              "G2 a G4 runtime mapování.",
+              "Běží každý logický prvek v realistickém procesu?",
+              "Všechny backendové části jsou v jednom Spring Boot procesu; databáze je oddělený PostgreSQL kontejner."
+            ],
+            [
+              "ADR-01 a G2/G4.",
+              "Je přijaté rozhodnutí vidět ve statické architektuře i runtime?",
+              "ReservationService koordinuje workflow v backendu; databázový index zůstává poslední ochranou souběhu."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c03b-j-delta",
+      "title": "J. Rozdíl mezi skutečným kódem AS-IS a cílovým návrhem TO-BE",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "AS-IS znamená, jak aplikace skutečně funguje v aktuálním kódu. TO-BE znamená přijatý cílový návrh. Každý rozdíl dostane jasnou akci."
+        },
+        {
+          "type": "table",
+          "headers": ["Oblast a současný stav AS-IS", "Cílový stav TO-BE", "Akce a vysvětlení"],
+          "rows": [
+            [
+              "Schválení a standardní zrušení rezervace před opravou používaly identitu z request body; aktuální approve/cancel používají AuthenticatedUser z ověřené relace.",
+              "Aktér approve/cancel vždy pochází z ověřené identity; služba ověří roli, vlastnictví a stav.",
+              "KEEP + VERIFY — oprava je implementovaná a ověřená regresními testy; historický popis zůstává v C03A jako historie."
+            ],
+            [
+              "ReservationService koordinuje změnu stavu, historii a interní oznámení v transakci.",
+              "Stejný vlastník rozhodnutí a jedna databázová transakce.",
+              "KEEP + VERIFY — odpovídá ADR-01."
+            ],
+            [
+              "Aplikační kontroly dostupnosti doplňuje partial unique index one_active_reservation_per_slot.",
+              "Databáze zůstává poslední autoritou pro exkluzivitu při souběhu.",
+              "KEEP + VERIFY — ověřit běžné chování; automatizovaný souběžný databázový test v uvedené sadě není."
+            ],
+            [
+              "Interní oznámení se ukládá synchronně do PostgreSQL; externí e-mail ani retry mechanismus není.",
+              "Stejný rozsah, dokud nevznikne požadavek na externí doručování.",
+              "KEEP — přijatý negativní důsledek ADR-01."
+            ],
+            [
+              "Create načítá studenta podle studentId v CreateReservationRequest; create controller nepředává AuthenticatedUser do služby.",
+              "Pro úplné odvození aktéra z přihlášené identity by create muselo použít ověřenou relaci.",
+              "CHANGE / samostatný bezpečnostní úkol — toto je rozdíl v operaci Create, nikoli neopravená chyba approve/cancel."
+            ],
+            [
+              "Vedlejší ConsultationSlotService.cancelWithActiveReservation používá ActorRequest a nemá stejné oznámení jako standardní ReservationService.cancel.",
+              "Zrušení aktivní rezervace má používat stejnou ověřenou identitu, pravidla a oznamovací chování.",
+              "CHANGE / samostatný úkol — tato vedlejší cesta není totéž co OP-04 přes ReservationController."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Akce znamenají: CHANGE = změnit kód; KEEP = zachovat, protože už odpovídá návrhu; VERIFY = znovu ověřit důkazem. Změnu neprovádíme jen kvůli cvičení, pokud není schválená a její dopad není vyjasněný."
+        }
+      ]
+    },
+    {
+      "id": "c03b-k-implementation",
+      "title": "K. Implementace — co se změnilo a kde",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Změny implementace musí vycházet z řádků CHANGE v části J. V aktuální verzi je oprava identity standardního schválení a zrušení již součástí kódu."
+        },
+        {
+          "type": "table",
+          "headers": ["Změna nebo existující chování", "Kde to najdeme", "Stav"],
+          "rows": [
+            [
+              "Approve/cancel odvozují aktéra z ověřené relace, ne z actorUserId v těle.",
+              "ReservationController.java předává AuthenticatedUser; ReservationService.java kontroluje aktivní roli, vlastnictví slotu a povolený stav.",
+              "Hotovo pro standardní operace approve/cancel."
+            ],
+            [
+              "Doménový objekt mění stav a zaznamenává čas.",
+              "Reservation.java: confirm() a cancel(actor, note).",
+              "Hotovo."
+            ],
+            [
+              "Auditní historie a interní oznámení se koordinují s rezervací.",
+              "ReservationService.java: create(), approve() a cancel(); třída má @Transactional.",
+              "Hotovo jako synchronní zápis do stejné databáze."
+            ],
+            [
+              "Souběh při rezervaci slotu chrání databáze.",
+              "V1__create_reservation_schema.sql: partial unique index one_active_reservation_per_slot.",
+              "Hotovo jako databázové omezení; samostatný automatizovaný PostgreSQL concurrency test není v popsané sadě."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Přesné cesty: backend/src/main/java/consultation_reservation_backend/api/ReservationController.java; backend/src/main/java/consultation_reservation_backend/service/ReservationService.java; backend/src/main/java/consultation_reservation_backend/domain/Reservation.java; backend/src/main/resources/db/migration/V1__create_reservation_schema.sql."
+        }
+      ]
+    },
+    {
+      "id": "c03b-l1-behaviour",
+      "title": "L1. Ověření chování po změnách",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Výsledek uvádíme spolu s rozsahem testu. HTTP test s mockovanou repository ověřuje bezpečnostní průchod aplikací; sám o sobě neprokazuje chování skutečného PostgreSQL při souběhu."
+        },
+        {
+          "type": "table",
+          "headers": ["Ověřovaný případ", "Výsledek / očekávání", "Kde je důkaz a co pokrývá"],
+          "rows": [
+            [
+              "Vlastník slotu schválí PENDING rezervaci.",
+              "HTTP 200; stav CONFIRMED, čas potvrzení, historie a oznámení.",
+              "ReservationAuthorizationTests.ownerApprovesWithoutClientActorId; controller, filtr a služba, persistence je nahrazena mocky."
+            ],
+            [
+              "Jiný pedagog podvrhne ID vlastníka při schválení nebo zrušení.",
+              "HTTP 403; stav, historie a oznámení zůstanou beze změny.",
+              "ReservationAuthorizationTests.otherTeacherCannotSpoofOwnerWhenApproving a ReservationAuthorizationTests.otherTeacherCannotSpoofOwnerWhenCancelling."
+            ],
+            [
+              "Student se pokusí schválit nebo cizí student zrušit rezervaci.",
+              "HTTP 403; rezervace se nezmění.",
+              "ReservationAuthorizationTests.studentCannotApprove a otherStudentCannotSpoofReservationStudent."
+            ],
+            [
+              "Vlastník schvaluje rezervaci, která už je CONFIRMED nebo CANCELLED.",
+              "HTTP 409; další změna ani duplicitní historie/oznámení nevznikne.",
+              "ReservationAuthorizationTests.ownerCannotApproveTwice a ownerCannotApproveCancelledReservation."
+            ],
+            [
+              "Vlastník rezervace nebo vlastník slotu provede oprávněné zrušení.",
+              "HTTP 200; stav CANCELLED a zápis historie.",
+              "ReservationAuthorizationTests.studentCancelsOwnReservation a teacherCancelsOwnSlotReservation."
+            ],
+            [
+              "Požadavek na approve bez ověřené relace.",
+              "Odmítnutá 4xx odpověď; služba rezervaci nenačte ani nemění.",
+              "ReservationAuthorizationTests.unauthenticatedRequestIsRejected."
+            ],
+            [
+              "Student odešle formulář s platným budoucím termínem; frontend pak obnoví dostupnost.",
+              "Požadavek odejde se slotId, studentId a údaji konzultace; formulář se vyčistí.",
+              "BookingPage.test.tsx — test úspěšného odeslání; API je mockované."
+            ],
+            [
+              "Student odešle termín méně než tři hodiny před začátkem.",
+              "Frontend požadavek neodešle a ukáže chybu.",
+              "BookingPage.test.tsx — test časové hranice."
+            ],
+            [
+              "Termín zmizí z API dostupnosti po načtení.",
+              "Frontend tlačítko termínu deaktivuje.",
+              "BookingPage.test.tsx — test zastaralé dostupnosti."
+            ],
+            [
+              "Souběžný pokus o dvě aktivní rezervace stejného termínu.",
+              "Databázový index odmítne druhý aktivní zápis a služba jej mapuje na HTTP 409.",
+              "Doklad v migraci a ReservationService; uvedené testovací třídy tento souběh s reálným PostgreSQL netestují."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c03b-l2-rule",
+      "title": "L2. Jedno architektonické pravidlo a opakovatelná kontrola",
+      "blocks": [
+        {
+          "type": "code",
+          "language": "Pravidlo",
+          "content": "Pouze přihlášený a oprávněný vlastník smí schválit rezervaci.\nReservationService musí před změnou ověřit AuthenticatedUser, aktivní roli,\nvlastnictví slotu a zdrojový stav PENDING. Při odmítnutí se nesmí změnit stav,\nhistorie ani oznámení."
+        },
+        {
+          "type": "table",
+          "headers": ["Kontrola", "Jak ji zopakovat", "Výsledek a hranice"],
+          "rows": [
+            [
+              "ReservationAuthorizationTests.",
+              "Spustit backendové testy. Testy posílají požadavky přes BearerTokenFilter a ReservationController do ReservationService; mocky ověřují, že zakázaná cesta nemění stav ani nevytvoří historii nebo oznámení.",
+              "10 testovacích metod pokrývá schválení, zrušení, podvrženou identitu, roli, vlastníka, stav a nepřihlášený požadavek. Nejde o statický architektonický test ani test reálné databáze."
+            ],
+            [
+              "Kontrola kódu controller → service.",
+              "Ověřit @AuthenticationPrincipal v ReservationController a zdroj AuthenticatedUser v approve/cancel; zkontrolovat guardy služby před confirm()/cancel().",
+              "Potvrzuje vlastnictví rozhodnutí v aktuální implementaci; side endpoint ConsultationSlotService.cancelWithActiveReservation vyžaduje samostatné posouzení."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c03b-m-evidence",
+      "title": "M. Evidence — co předvést a co doplnit",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Evidence spojuje požadavky z C02, mapování současného stavu z C03A, architektonická rozhodnutí z C03B, implementaci a výsledky ověření. Při prezentaci postupujte v tomto pořadí."
+        },
+        {
+          "type": "table",
+          "headers": ["Krok prezentace", "Co ukázat", "Kde to najít"],
+          "rows": [
+            [
+              "1. Východisko.",
+              "C02 baseline v0.2 a scénář schválení PENDING rezervace.",
+              "Dokumentace C02, OP-05 — Approve Reservation."
+            ],
+            [
+              "2. Skutečný původní stav.",
+              "C03A mapování approve a nalezený historický rozdíl oprávnění.",
+              "Dokumentace C03A, části A1–A9; závěrečná část popisuje opravu."
+            ],
+            [
+              "3. Drivery a doménové pojmy.",
+              "Čtyři drivery a vztah uživatele, termínu, rezervace, historie a oznámení.",
+              "C03B, části B, C1 a C2 výše."
+            ],
+            [
+              "4. Rozhodnutí.",
+              "Otázku, dvě varianty, stejné scénářové srovnání a ADR-01 včetně přijaté nevýhody.",
+              "C03B, části D, E1–E3 a F."
+            ],
+            [
+              "5. Pohledy.",
+              "Kontext, TO-BE strukturu, vlastnictví stavových přechodů a runtime mapování.",
+              "C03B, části G1–G4 a diagramy."
+            ],
+            [
+              "6. Soulad.",
+              "Cross-view kontrolu, rozdíly AS-IS/TO-BE, změny a testy.",
+              "C03B, části I, J, K, L1 a L2."
+            ],
+            [
+              "7. Uzavření evidence.",
+              "Zbývající omezení, nejistoty a přesný commit/tag.",
+              "docs/evidence-and-evolution.md; commit/tag doplňte při odevzdání."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Známé rozsahové limity: frontendové BookingPage testy používají mockované API; backendové authorization testy používají náhrady persistence; reálný PostgreSQL concurrency scénář není součástí těchto testů. Create identita a vedlejší rušení slotu jsou oddělené řádky delta v části J, ne důkaz chyby standardního approve/cancel."
+        }
+      ]
+    }
+  ]
+}

@@ -209,13 +209,22 @@ main.login-page {
   @apply ml-auto flex items-center gap-3;
 }
 .toast {
-  @apply fixed right-4 top-24 z-50 w-fit max-w-sm rounded-xl px-4 py-3 text-sm font-semibold shadow-lg;
+  @apply fixed left-1/2 top-20 z-50 flex w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 items-center gap-3 rounded-2xl border px-5 py-4 text-sm font-semibold shadow-xl sm:top-24;
 }
 .toast.error {
-  @apply bg-rose-600 text-white;
+  @apply border-rose-200 bg-white text-rose-900;
 }
 .toast.success {
-  @apply bg-teal-600 text-white;
+  @apply border-teal-200 bg-white text-teal-900;
+}
+.toast-icon {
+  @apply grid size-7 shrink-0 place-items-center rounded-full bg-rose-100 text-base font-extrabold text-rose-700;
+}
+.toast.success .toast-icon {
+  @apply bg-teal-100 text-teal-700;
+}
+.slot-occupied-label {
+  @apply font-semibold text-slate-500;
 }
 .navigation-actions > span {
   @apply hidden text-sm font-semibold text-slate-500 sm:block;
@@ -255,7 +264,28 @@ main.login-page {
   @apply relative rounded-xl border border-slate-100 p-3 pr-10 text-sm text-slate-600;
 }
 .notification-list li.unread {
-  @apply border-teal-200 bg-teal-50;
+  @apply shadow-sm;
+}
+.notification-list li.notification-pending {
+  @apply border-amber-200 bg-amber-50;
+}
+.notification-list li.notification-confirmed {
+  @apply border-emerald-200 bg-emerald-50;
+}
+.notification-list li.notification-cancelled {
+  @apply border-rose-200 bg-rose-50;
+}
+.notification-list li.notification-pending strong,
+.notification-list li.notification-pending small {
+  @apply text-amber-900;
+}
+.notification-list li.notification-confirmed strong,
+.notification-list li.notification-confirmed small {
+  @apply text-emerald-900;
+}
+.notification-list li.notification-cancelled strong,
+.notification-list li.notification-cancelled small {
+  @apply text-rose-900;
 }
 .notification-list strong,
 .notification-list span,

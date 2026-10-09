@@ -1,0 +1,845 @@
+{
+  "title": "C03B — Accepted Architecture Step by Step",
+  "sections": [
+    {
+      "id": "c03b-b-drivers",
+      "title": "B. Refine the Architecture Drivers",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "A driver is a requirement, constraint, or risk that influences architecture. It explains what the system must handle and why; it does not prescribe the technical solution. We selected four drivers from C02 and the C03A investigation."
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Driver and source",
+            "Why it affects architecture",
+            "Question the design must answer"
+          ],
+          "rows": [
+            [
+              "BR-02 — Consultation slot exclusivity: one slot may have at most one active PENDING or CONFIRMED reservation. Sources: C02 REQ-01 — Create Reservation, REQ-02 — Check Availability, REQ-03 — Confirm Reservation, and database migration V1.",
+              "Two requests may arrive almost simultaneously. An application check alone may allow both requests to pass.",
+              "Which layer is the final authority that rejects a second active reservation for the same slot?"
+            ],
+            [
+              "REQ-05 — Approve Reservation: only the teacher who owns the slot may change PENDING to CONFIRMED. Sources: C02 and the verified C03A scenarios.",
+              "The decision depends on the signed-in user role and slot ownership. Identity must come from a verified session.",
+              "Where are the actor role, slot ownership, and permitted source state checked?"
+            ],
+            [
+              "REQ-04 — Cancel Reservation and transition history: a student cancels their own reservation; a teacher cancels a reservation for their slot; the change is recorded. Sources: C02 and ReservationHistory.",
+              "A state change without matching history would make it impossible to explain who changed a reservation and why.",
+              "Where are the state change and history write coordinated so one cannot be saved without the other?"
+            ],
+            [
+              "In-app notification after a reservation change. Sources: the existing NotificationService and migration V11.",
+              "Reservation state and notifications are stored in the same database. A notification write failure must not leave an ambiguous partial outcome.",
+              "Where is notification creation coupled to the reservation transaction, and what is the accepted failure behavior?"
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "The requirements and risks above are the drivers. ReservationService, transactions, the database index, and NotificationService are chosen solutions; they are not the drivers themselves."
+        }
+      ]
+    },
+    {
+      "id": "c03b-c1-domain",
+      "title": "C1. Domain Model — Concepts and Relationships",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "The domain model describes reservation concepts, not technical components. This scenario uses students, teachers, consultation slots, reservations, history, and internal notifications."
+        },
+        {
+          "type": "code",
+          "language": "Domain concepts",
+          "content": "Student / Teacher\n  are user roles\n\nTeacher 1 ─── 0..* ConsultationSlot\n  a teacher creates and owns their consultation slots\n\nConsultationSlot 1 ─── 0..* Reservation\n  a slot may have reservation history, but at most one active\n  Reservation with status PENDING or CONFIRMED\n\nStudent 1 ─── 0..* Reservation\n  the student is the consultation requester\n\nReservation 1 ─── 0..* ReservationHistory\n  history records actions, previous/new status, actor, and note\n\nReservation 1 ─── 0..* Notification\n  a reservation change may create an internal message for a recipient\n\nReservation.status:\n  PENDING | CONFIRMED | CANCELLED"
+        },
+        {
+          "type": "paragraph",
+          "content": "Key invariant: PENDING and CONFIRMED block a ConsultationSlot; CANCELLED releases it. Slot intervals use [start, end), so one slot may end exactly when the next begins."
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Controller, Repository, HTTP client, and Spring are technical elements. They belong in a design class diagram, not in this domain concept model."
+        }
+      ]
+    },
+    {
+      "id": "c03b-c2-responsibilities",
+      "title": "C2. Responsibilities — What the System Must Do",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "First, list responsibilities without naming classes or components. Each responsibility describes something the system must decide or preserve. The technical owner is assigned later in G2."
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Source and full requirement",
+            "System responsibility",
+            "What it must decide or preserve",
+            "One clear owner?",
+            "Why"
+          ],
+          "rows": [
+            [
+              "REQ-01 — Create Reservation; BR-02 — Consultation slot exclusivity.",
+              "Create a reservation request.",
+              "Check the student, future active slot, time cutoff, request limit, and conflicts.",
+              "Yes.",
+              "Two parts of the system must not make different decisions about the same slot."
+            ],
+            [
+              "REQ-02 — Check Availability; BR-01 — Interval semantics; BR-02 — Consultation slot exclusivity.",
+              "Determine which slots are shown as available.",
+              "Return only active future slots without a PENDING or CONFIRMED reservation.",
+              "Yes for the rule definition; reading can be a separate responsibility.",
+              "Students must see slots according to the same rule that protects creation."
+            ],
+            [
+              "REQ-03 — Confirm Reservation and REQ-05 — Approve Reservation.",
+              "Decide whether approval is allowed.",
+              "Verify the signed-in teacher, slot ownership, and PENDING state before changing status.",
+              "Yes.",
+              "Another actor must not confirm a request, and layers must not permit different transitions."
+            ],
+            [
+              "REQ-04 — Cancel Reservation; BR-03 — Cancellation policy.",
+              "Decide whether cancellation is allowed.",
+              "Verify the actor relationship, state, three-hour cutoff, and reason for cancelling CONFIRMED reservations.",
+              "Yes.",
+              "Cancellation rules must be consistent for students and teachers and preserve audit data."
+            ],
+            [
+              "ReservationHistory — transition audit.",
+              "Record a reservation change.",
+              "Store previous/new status, actor, time, and optional note.",
+              "Yes for coordination with the state change.",
+              "A state change must not be left without an explanation in history."
+            ],
+            [
+              "In-app notification — Notification.",
+              "Create a notification for the other party.",
+              "Store a message for the student or teacher and couple it to the reservation change.",
+              "It needs a clear owner; it may have a different responsibility from deciding reservation state.",
+              "Notification is a separate function; external delivery would have a different failure boundary."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Responsibilities that share reservation state or the exclusivity invariant must be coordinated. User interface, HTTP mapping, and database access have different reasons to change, so they are separated from business-rule decisions."
+        }
+      ]
+    },
+    {
+      "id": "c03b-d-question",
+      "title": "D. One Main Decision Question",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "The decision question connects the most important drivers to the design. It must have at least two realistic architectural answers."
+        },
+        {
+          "type": "code",
+          "language": "Decision question",
+          "content": "Where should the authoritative reservation lifecycle decision be owned so that actor authorization, reservation state, history, internal notification, and database exclusivity remain consistent?"
+        },
+        {
+          "type": "list",
+          "items": [
+            "It follows from BR-02 — Consultation slot exclusivity, REQ-05 — Approve Reservation, REQ-04 — Cancel Reservation, and the requirement to preserve history.",
+            "It affects backend structure, the transaction boundary, security checks, and the location of database constraints.",
+            "It can be answered by application-service orchestration or a database-owned workflow."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c03b-e1-alternatives",
+      "title": "E1. Two Materially Different Alternatives",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Both alternatives answer the same question. They differ in which part of the system owns the rules and coordinates a reservation change."
+        },
+        {
+          "type": "table",
+          "headers": ["Alternative", "How it works", "What it owns"],
+          "rows": [
+            [
+              "A — Transactional application service.",
+              "One backend use case loads the reservation, verifies the actor and rules, changes the domain object, writes history, and creates an internal notification in one database transaction. The database unique index remains the final slot guard.",
+              "The application service owns the decision and order of steps; the domain object changes state; the database enforces data constraints."
+            ],
+            [
+              "B — Database-owned workflow.",
+              "A database function or procedure decides the state transition and writes the reservation, history, and notification in the database. The backend passes the request and maps the result to an HTTP response.",
+              "The database layer owns the main workflow; the application layer supplies parameters and maps errors."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "A controller or frontend could also orchestrate the steps, but we did not select it as a full alternative: it would scatter rules, and a client cannot be authoritative for authorization or concurrency."
+        }
+      ]
+    },
+    {
+      "id": "c03b-e2-comparison",
+      "title": "E2. Compare Alternatives Against the Drivers",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "The criteria below come directly from the drivers in section B. The table gives concrete consequences rather than unexplained scores."
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Driver / criterion",
+            "A — Application service",
+            "B — Database-owned workflow"
+          ],
+          "rows": [
+            [
+              "BR-02 — Slot exclusivity and concurrency.",
+              "The application check explains ordinary conflicts; the one_active_reservation_per_slot unique index rejects a second write under concurrency and the service returns HTTP 409.",
+              "A database procedure can check close to the data; a unique index or equivalent database constraint is still required."
+            ],
+            [
+              "REQ-05 — Approval authorization and decision.",
+              "The service receives AuthenticatedUser from the verified session and checks the active role and slot ownership before the transition.",
+              "The database workflow must receive a trustworthy actor identifier. A database procedure alone cannot verify the application bearer session."
+            ],
+            [
+              "REQ-04 — State and audit history.",
+              "One service method coordinates the domain transition and ReservationHistory write in a transaction.",
+              "Transition and history can be atomic in the database, but rules and their rationale become hidden in procedures or triggers."
+            ],
+            [
+              "Internal notification and failure boundary.",
+              "NotificationService writes the notification synchronously to the same database; a failure in the transaction rolls back the operation.",
+              "The database can also insert the notification, but that adds more application workflow rules to the database."
+            ],
+            [
+              "Rule changes and operational complexity.",
+              "The Spring Boot monolith has one readable place for the rules; this matches current deployment.",
+              "Business workflow in SQL and database error mapping must be maintained; that adds complexity for this monolith."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c03b-e3-scenario",
+      "title": "E3. Walk Both Alternatives Through the Same Scenario",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "We use the C02 and C03A scenario: a teacher approves a pending reservation. Complication: another request for the same slot arrives at the same time. PENDING already blocks the slot, so the second request must not create another active reservation."
+        },
+        {
+          "type": "table",
+          "headers": ["Scenario step", "A — Application service", "B — Database-owned workflow"],
+          "rows": [
+            [
+              "1. Approval starts.",
+              "The service loads the reservation and verifies the signed-in teacher, slot ownership, and PENDING state.",
+              "The backend passes the reservation ID and the identity verified by the application security layer; the database loads the state and owner."
+            ],
+            [
+              "2. A second request arrives concurrently.",
+              "Create checks for an active reservation; even if application checks overlap, the unique index rejects the second active write.",
+              "The database workflow and unique constraint reject the second active reservation in the database."
+            ],
+            [
+              "3. Approval.",
+              "The domain object changes from PENDING to CONFIRMED. The slot remains continuously blocked because both states are active.",
+              "The procedure changes PENDING to CONFIRMED in the database; the constraint must remain valid throughout the transition."
+            ],
+            [
+              "4. History and notification.",
+              "The service writes history and the internal notification in the same transaction as the state change.",
+              "The database workflow must write history and notification in the same transaction or it can leave a partial outcome."
+            ],
+            [
+              "5. Response.",
+              "Approval returns a confirmed reservation; the second create request returns HTTP 409.",
+              "The backend maps the procedure result or database error to the matching HTTP response."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Both alternatives can preserve the invariant if they use the database constraint correctly. We selected A because the rules remain readable in the application and match the existing Spring Boot monolith."
+        }
+      ]
+    },
+    {
+      "id": "c03b-f-adr",
+      "title": "F. ADR-01 — Reservation Lifecycle Ownership Decision",
+      "blocks": [
+        {
+          "type": "code",
+          "language": "ADR-01",
+          "content": "Context:\n  A reservation transitions from PENDING to CONFIRMED or CANCELLED.\n  A change must verify the actor, preserve slot exclusivity,\n  write history, and create an internal notification.\n\nDrivers:\n  BR-02 — Slot exclusivity; REQ-05 — approval by slot owner;\n  REQ-04 — authorized cancellation and history; internal notification.\n\nAlternatives considered:\n  A — transactional application service coordinates rules and writes.\n  B — database function/procedure owns the main workflow.\n\nDecision:\n  Accept option A. ReservationService coordinates create/approve/cancel\n  in a transaction; Reservation performs the domain transition; PostgreSQL\n  enforces one active reservation per slot.\n\nReason:\n  This fits the Spring Boot monolith and keeps business rules in readable,\n  testable application code. The database remains authoritative for integrity\n  and concurrency.\n\nAccepted downside:\n  Internal notifications are written synchronously in the same database\n  transaction. There is no external delivery, queue, or automatic retry.\n\nReconsider this decision when:\n  notifications use an external delivery service or reliable retries are\n  required, or when the database invariant is insufficient for a new\n  operational model."
+        }
+      ]
+    },
+    {
+      "id": "c03b-g1-context",
+      "title": "G1. System Context — Who Communicates Across the Boundary",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "The context diagram represents the whole reservation application as one block. It does not show controllers, services, or the database inside that block. It shows only real actors and their communication with the system."
+        },
+        {
+          "type": "image",
+          "src": "c03b-context-use-cases.png",
+          "alt": "Context diagram of students, teachers, and the reservation system",
+          "caption": "Students search slots, create and cancel reservations; teachers manage slots, approve and cancel reservations. Use the slider to scale the diagram."
+        },
+        {
+          "type": "table",
+          "headers": ["Actor", "What they send to the system", "What they receive"],
+          "rows": [
+            [
+              "Student.",
+              "A slot request, reservation creation, or cancellation of their own reservation.",
+              "Available slots, their reservation status, and in-app notifications."
+            ],
+            [
+              "Teacher.",
+              "New slots, approval, or cancellation of a reservation for their slot.",
+              "Request overview, reservation status, and in-app notifications."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "This scenario uses no external identity provider or email service. Session verification and internal notifications are part of the system."
+        }
+      ]
+    },
+    {
+      "id": "c03b-g2-static",
+      "title": "G2. TO-BE Static Architecture — Logical Parts and Their Owners",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "TO-BE means the target arrangement the design is moving toward. The diagram shows logical responsibilities; it does not mean each box runs as a separate process."
+        },
+        {
+          "type": "image",
+          "src": "c03b-static-architecture.png",
+          "alt": "TO-BE static architecture of the reservation system",
+          "caption": "Target components, responsibilities, and relationships. Use the slider to scale the diagram."
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Logical element",
+            "Main responsibility",
+            "State or rule it owns",
+            "Important dependencies"
+          ],
+          "rows": [
+            [
+              "React user interface: BookingPage and TeacherPage.",
+              "Forms, overviews, and result display.",
+              "Does not own authoritative domain state; the backend rechecks every rule.",
+              "Sends HTTPS/JSON requests to the API."
+            ],
+            [
+              "Authentication and security boundary: BearerTokenFilter and AuthService.",
+              "Verifies the bearer token and creates AuthenticatedUser in the Security Context.",
+              "Owns the verified identity and active role of the signed-in user.",
+              "Passes the identity to controllers that need it."
+            ],
+            [
+              "Reservation API: ReservationController.",
+              "Accepts HTTP requests, validates their shape, and maps results to responses.",
+              "Does not own business decisions about reservation transitions.",
+              "Delegates operations to application services."
+            ],
+            [
+              "Reservation management: ReservationService and Reservation.",
+              "Verifies reservation rules and decides permitted lifecycle changes.",
+              "Owns application decisions about status and audit coordination.",
+              "Uses domain objects, repositories, and NotificationService."
+            ],
+            [
+              "Consultation slot management: ConsultationSlotService and ConsultationSlot.",
+              "Creates, reads, cancels, and checks availability of slots.",
+              "Owns slot lifecycle and scheduling rules.",
+              "Uses repositories and reservation statuses when checking availability."
+            ],
+            [
+              "Internal notifications: NotificationService.",
+              "Creates and reads stored messages for users.",
+              "Owns notification records and read status; it does not send external email.",
+              "Called by reservation service when a reservation changes."
+            ],
+            [
+              "Persistence: Spring Data repositories, PostgreSQL, and Flyway.",
+              "Stores durable data and applies database migrations.",
+              "Authoritatively enforces at most one active reservation per slot.",
+              "Application services access it through repositories."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "The target diagram assigns verified actor identity to create/approve/cancel. The current approve/cancel controller passes AuthenticatedUser; create currently loads the student by studentId in the request. Keep this difference as a delta in section J instead of treating the TO-BE diagram as a description of today’s implementation."
+        }
+      ]
+    },
+    {
+      "id": "c03b-g3-state-ownership",
+      "title": "G3. Who Decides Reservation State Transitions",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "This table adds ownership to the C02 statechart. “Who requests” is not the same as “who decides”: a user starts an operation, while the backend verifies the rules and allows or rejects the transition."
+        },
+        {
+          "type": "image",
+          "src": "c02-reservation-state.png",
+          "alt": "Reservation state diagram: PENDING, CONFIRMED, and CANCELLED",
+          "caption": "States and allowed reservation transitions from C02. Use the slider to scale the diagram."
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Transition and meaning",
+            "Decision owner",
+            "Who may request it",
+            "What the code verifies"
+          ],
+          "rows": [
+            [
+              "No reservation → PENDING — a student submits a request.",
+              "ReservationService.create() creates PENDING.",
+              "Student.",
+              "Student and role, active future slot, time cutoff, limit of five PENDING requests, and conflicts."
+            ],
+            [
+              "PENDING → CONFIRMED — teacher approves a request.",
+              "ReservationService.approve() decides; Reservation.confirm() writes the new state.",
+              "Only the teacher who owns the slot.",
+              "Authenticated identity, active TEACHER role, slot ownership, and current PENDING status."
+            ],
+            [
+              "PENDING → CANCELLED — a pending request is cancelled or declined.",
+              "ReservationService.cancel() decides; Reservation.cancel() changes the state.",
+              "The student who owns the request or the teacher who owns the slot.",
+              "Actor relationship, current state, and at least three hours before start. A teacher cancellation of PENDING is described as a decline in the notification; there is no REJECTED status."
+            ],
+            [
+              "CONFIRMED → CANCELLED — a confirmed consultation is cancelled.",
+              "ReservationService.cancel() decides; Reservation.cancel() changes the state.",
+              "The student who owns the reservation or the teacher who owns the slot.",
+              "Actor relationship, time cutoff, and required cancellation reason."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "A separate ConsultationSlotService.cancelWithActiveReservation() endpoint can cancel a slot with an active reservation through another path. Review it separately from the standard OP-04 operation at ReservationController.cancel()."
+        }
+      ]
+    },
+    {
+      "id": "c03b-g4-runtime",
+      "title": "G4. Runtime and Deployment — Where the Parts Actually Run",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "The runtime diagram maps the logical elements from G2 to actual processes and containers. Backend services are not separate microservices; they run together in one Spring Boot process."
+        },
+        {
+          "type": "image",
+          "src": "c03b-runtime-deployment.png",
+          "alt": "Docker Compose runtime and deployment for frontend, backend, and PostgreSQL",
+          "caption": "Browser, Nginx frontend, Spring Boot backend, PostgreSQL, and persistent database volume. Use the slider to scale the diagram."
+        },
+        {
+          "type": "table",
+          "headers": ["Runtime element", "Where it runs", "Port / connection", "What it contains"],
+          "rows": [
+            [
+              "Web browser.",
+              "Student or teacher computer.",
+              "HTTP to host port 5173.",
+              "React application and API client."
+            ],
+            [
+              "Frontend container.",
+              "Docker Compose, running Nginx.",
+              "Host port 5173 maps to container port 80; Nginx forwards /api to the backend.",
+              "Static files from the React build."
+            ],
+            [
+              "Backend container.",
+              "One Spring Boot / Java 21 process.",
+              "Port 8080.",
+              "Security filter, controllers, application services, domain objects, and repositories."
+            ],
+            [
+              "Database container.",
+              "PostgreSQL 17.",
+              "Port 5432; backend connects through JDBC.",
+              "Users, slots, reservations, history, and in-app notifications. Data persists in volume postgres-data."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c03b-h1-sequence",
+      "title": "H1. Design Sequence — Approving a Reservation",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "C03A mapped reservation approval, so this is the main H1 scenario. It shows the target architecture, significant calls, security checks, state change, and an error branch."
+        },
+        {
+          "type": "code",
+          "language": "Sequence diagram — approval",
+          "content": "Teacher → TeacherPage:\n  selects a PENDING request and chooses Approve\n\nTeacherPage → API client:\n  approveReservation(token, reservationId)\n\nAPI client → ReservationController:\n  POST /api/reservations/{reservationId}/approve\n  + bearer token + ReservationTransitionRequest\n\nBearerTokenFilter → AuthService:\n  verifies bearer token and places AuthenticatedUser in SecurityContext\n\nReservationController → ReservationService:\n  approve(reservationId, AuthenticatedUser, request)\n\nReservationService → ReservationRepository:\n  loads reservation\n\nReservationService:\n  verifies signed-in actor, active TEACHER role,\n  slot ownership, and PENDING state\n\nalt verification fails\n  ReservationService → Controller:\n    ApiException 401 / 403 / 404 / 409\n  State, history, and notification remain unchanged\nelse verification succeeds\n  ReservationService → Reservation:\n    confirm()\n  ReservationService → ReservationHistoryRepository:\n    saves PENDING → CONFIRMED, actor, and note\n  ReservationService → NotificationService:\n    creates internal notification for student\n  ReservationService → Controller:\n    returns ReservationResponse\n  Controller → TeacherPage:\n    HTTP 200; overview reloads\nend\n\nReservationService database writes run in a transaction."
+        },
+        {
+          "type": "paragraph",
+          "content": "The attached image below shows a detailed Create Reservation sequence. It is an additional C02 scenario; it does not replace the approval scenario from C03A required for H1."
+        },
+        {
+          "type": "image",
+          "src": "c03b-create-reservation-sequence.png",
+          "alt": "Sequence diagram of reservation creation through frontend, Spring Security, controller, service, and PostgreSQL",
+          "caption": "Additional Create Reservation sequence: validation, PENDING, history, notification, and concurrency conflict. Use the slider to scale the diagram."
+        }
+      ]
+    },
+    {
+      "id": "c03b-h2-class",
+      "title": "H2. Focused Design Class View — Approval Ownership",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "This view focuses on the classes and interfaces needed for H1 approval. Every important operation in the sequence has a clear structural owner."
+        },
+        {
+          "type": "code",
+          "language": "Class diagram — approval",
+          "content": "AuthenticatedUser\n  id, activeRole\n  created by the authentication filter from a verified bearer session\n\nReservationController\n  approve(reservationId, AuthenticatedUser, request)\n  accepts HTTP request and delegates\n\nReservationService <<transactional>>\n  approve(reservationId, AuthenticatedUser, request)\n  verifies actor, slot owner, and PENDING state\n  coordinates state change, history, and notification\n\nReservation\n  status: PENDING | CONFIRMED | CANCELLED\n  confirm()\n  sets CONFIRMED and confirmedAt\n\nReservationRepository\n  loads reservation by ID\n\nReservationHistoryRepository\n  saves action, previousStatus, newStatus, actor, and note\n\nNotificationService\n  create(student, reservation, type, title, message)\n  stores internal notification\n\nRelationships:\n  ReservationController → ReservationService\n  ReservationService → ReservationRepository\n  ReservationService → ReservationHistoryRepository\n  ReservationService → NotificationService\n  Reservation → ConsultationSlot\n  Reservation → Student"
+        },
+        {
+          "type": "image",
+          "src": "c03b-create-reservation-class.png",
+          "alt": "UML class diagram of reservation API, services, repositories, and domain classes",
+          "caption": "Additional implementation class view supplied for Create Reservation; the H2 model above remains focused on approval."
+        }
+      ]
+    },
+    {
+      "id": "c03b-i-cross-view",
+      "title": "I. Check That the Views Do Not Contradict Each Other",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Perform this check before changing code. If two parts disagree, first fix the requirement, responsibility, or diagram; do not silently choose one version."
+        },
+        {
+          "type": "table",
+          "headers": ["What we compare", "Question to ask", "Expected consistency in this project"],
+          "rows": [
+            [
+              "C02 requirements and G2 static architecture.",
+              "Can the proposed elements realize the required behavior and rules?",
+              "Reservation management verifies rules; PostgreSQL enforces one active reservation per slot."
+            ],
+            [
+              "C2 responsibilities and G2.",
+              "Does each significant responsibility have one main owner?",
+              "ReservationService owns lifecycle decisions; the database protects durable integrity."
+            ],
+            [
+              "G2 static architecture and H1 sequence.",
+              "Does the sequence use only elements and dependencies shown in the architecture?",
+              "Approval uses controller, service, repository, domain object, and NotificationService; no new runtime element is needed."
+            ],
+            [
+              "H1 sequence and H2 class view.",
+              "Does every significant call have an operation and a structural owner?",
+              "ReservationService owns approve; Reservation owns confirm; history and notification have their repository/service."
+            ],
+            [
+              "C02 statechart and G3/H1.",
+              "Does the correct owner decide a permitted transition from the correct state?",
+              "Only the slot owner approves PENDING; an authorized student or teacher can cancel."
+            ],
+            [
+              "G2 and G4 runtime mapping.",
+              "Does each logical element map to a realistic process?",
+              "All backend parts run in one Spring Boot process; PostgreSQL is a separate container."
+            ],
+            [
+              "ADR-01 and G2/G4.",
+              "Is the accepted decision visible in the static architecture and runtime?",
+              "ReservationService coordinates the workflow in the backend; the database index remains the final concurrency guard."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c03b-j-delta",
+      "title": "J. Difference Between Actual AS-IS Code and Target TO-BE Design",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "AS-IS means how the current code actually works. TO-BE means the accepted target design. Give each difference a clear action."
+        },
+        {
+          "type": "table",
+          "headers": ["Area and current AS-IS", "Target TO-BE", "Action and explanation"],
+          "rows": [
+            [
+              "Before the fix, reservation approval/cancellation used actor identity from the request body; current approve/cancel use AuthenticatedUser from the verified session.",
+              "Approve/cancel actor always comes from verified identity; the service checks role, slot ownership, and state.",
+              "KEEP + VERIFY — implemented and covered by regression tests; C03A retains the historical description."
+            ],
+            [
+              "ReservationService coordinates state changes, history, and in-app notifications in a transaction.",
+              "Same decision owner and one database transaction.",
+              "KEEP + VERIFY — matches ADR-01."
+            ],
+            [
+              "Application availability checks are backed by the one_active_reservation_per_slot partial unique index.",
+              "The database remains the final authority for exclusivity under concurrency.",
+              "KEEP + VERIFY — normal behavior is represented; the listed suite does not include an automated PostgreSQL concurrency test."
+            ],
+            [
+              "Internal notifications are written synchronously to PostgreSQL; no external email or retry mechanism exists.",
+              "Keep the same scope until external delivery is required.",
+              "KEEP — accepted downside in ADR-01."
+            ],
+            [
+              "Create loads the student using studentId in CreateReservationRequest; the create controller does not pass AuthenticatedUser to the service.",
+              "To derive the Create actor fully from the signed-in identity, Create would use the verified session.",
+              "CHANGE / separate security task — this is a difference in Create, not an unfixed approve/cancel defect."
+            ],
+            [
+              "The side endpoint ConsultationSlotService.cancelWithActiveReservation uses ActorRequest and does not create the same notification as ReservationService.cancel.",
+              "Active reservation cancellation should use the same verified identity, rules, and notification behavior.",
+              "CHANGE / separate task — this side path is not the same as OP-04 through ReservationController."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Actions mean: CHANGE = change code; KEEP = retain because it already matches the design; VERIFY = recheck with evidence. Do not change code just for the exercise if the change has not been approved and its impact is unclear."
+        }
+      ]
+    },
+    {
+      "id": "c03b-k-implementation",
+      "title": "K. Implementation — What Changed and Where",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Implementation changes must come from CHANGE rows in section J. The identity fix for standard reservation approval and cancellation is already present in the current code."
+        },
+        {
+          "type": "table",
+          "headers": ["Change or existing behavior", "Where to find it", "Status"],
+          "rows": [
+            [
+              "Approve/cancel derive the actor from the verified session, not actorUserId in the request body.",
+              "ReservationController.java passes AuthenticatedUser; ReservationService.java checks active role, slot ownership, and permitted state.",
+              "Complete for standard approve/cancel operations."
+            ],
+            [
+              "The domain object changes status and records the time.",
+              "Reservation.java: confirm() and cancel(actor, note).",
+              "Complete."
+            ],
+            [
+              "Audit history and in-app notification are coordinated with the reservation.",
+              "ReservationService.java: create(), approve(), and cancel(); the class is @Transactional.",
+              "Complete as synchronous writes to the same database."
+            ],
+            [
+              "The database protects one active reservation per slot.",
+              "V1__create_reservation_schema.sql: partial unique index one_active_reservation_per_slot.",
+              "Implemented as a database constraint; the described suite has no separate automated PostgreSQL concurrency test."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Exact paths: backend/src/main/java/consultation_reservation_backend/api/ReservationController.java; backend/src/main/java/consultation_reservation_backend/service/ReservationService.java; backend/src/main/java/consultation_reservation_backend/domain/Reservation.java; backend/src/main/resources/db/migration/V1__create_reservation_schema.sql."
+        }
+      ]
+    },
+    {
+      "id": "c03b-l1-behaviour",
+      "title": "L1. Verify Behavior After Changes",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Report the result together with test scope. An HTTP test with mocked repositories verifies the application security path; by itself, it does not prove real PostgreSQL behavior under concurrency."
+        },
+        {
+          "type": "table",
+          "headers": ["Case verified", "Result / expectation", "Evidence and scope"],
+          "rows": [
+            [
+              "Slot owner approves a PENDING reservation.",
+              "HTTP 200; CONFIRMED state, confirmation time, history, and notification.",
+              "ReservationAuthorizationTests.ownerApprovesWithoutClientActorId; controller, filter, and service, with persistence replaced by mocks."
+            ],
+            [
+              "Another teacher forges the owner ID while approving or cancelling.",
+              "HTTP 403; state, history, and notification remain unchanged.",
+              "ReservationAuthorizationTests.otherTeacherCannotSpoofOwnerWhenApproving and ReservationAuthorizationTests.otherTeacherCannotSpoofOwnerWhenCancelling."
+            ],
+            [
+              "A student tries to approve or another student cancels a reservation.",
+              "HTTP 403; reservation is unchanged.",
+              "ReservationAuthorizationTests.studentCannotApprove and otherStudentCannotSpoofReservationStudent."
+            ],
+            [
+              "Owner approves a reservation that is already CONFIRMED or CANCELLED.",
+              "HTTP 409; no extra state change, history, or notification.",
+              "ReservationAuthorizationTests.ownerCannotApproveTwice and ownerCannotApproveCancelledReservation."
+            ],
+            [
+              "Reservation owner or slot owner performs an allowed cancellation.",
+              "HTTP 200; CANCELLED state and history write.",
+              "ReservationAuthorizationTests.studentCancelsOwnReservation and teacherCancelsOwnSlotReservation."
+            ],
+            [
+              "Approve request has no verified session.",
+              "Rejected 4xx response; the service does not load or change the reservation.",
+              "ReservationAuthorizationTests.unauthenticatedRequestIsRejected."
+            ],
+            [
+              "Student submits the form for a valid future slot; frontend refreshes availability.",
+              "Request contains slotId, studentId, and consultation details; form is cleared.",
+              "BookingPage.test.tsx — successful submission test; API is mocked."
+            ],
+            [
+              "Student submits a slot less than three hours before its start.",
+              "Frontend does not submit the request and shows an error.",
+              "BookingPage.test.tsx — cutoff test."
+            ],
+            [
+              "A slot disappears from the availability response after loading.",
+              "Frontend disables the slot button.",
+              "BookingPage.test.tsx — stale availability test."
+            ],
+            [
+              "Concurrent attempts create two active reservations for the same slot.",
+              "Database index rejects the second active write and the service maps it to HTTP 409.",
+              "Evidence in the migration and ReservationService; listed test classes do not exercise this with real PostgreSQL."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c03b-l2-rule",
+      "title": "L2. One Architecture Rule and Repeatable Check",
+      "blocks": [
+        {
+          "type": "code",
+          "language": "Rule",
+          "content": "Only a signed-in, authorized slot owner may approve a reservation.\nReservationService must verify AuthenticatedUser, active role, slot ownership,\nand source state PENDING before changing state. On rejection, state, history,\nand notification must remain unchanged."
+        },
+        {
+          "type": "table",
+          "headers": ["Check", "How to repeat it", "Result and boundary"],
+          "rows": [
+            [
+              "ReservationAuthorizationTests.",
+              "Run the backend tests. Requests pass through BearerTokenFilter and ReservationController to ReservationService; mocks verify denied paths do not change state or create history/notifications.",
+              "10 test methods cover approval, cancellation, forged identity, role, ownership, state, and unauthenticated requests. This is not a static architecture test or a real database test."
+            ],
+            [
+              "Controller-to-service code review.",
+              "Verify @AuthenticationPrincipal in ReservationController and the AuthenticatedUser source in approve/cancel; verify service guards happen before confirm()/cancel().",
+              "Confirms current ownership of the decision; the side endpoint ConsultationSlotService.cancelWithActiveReservation needs separate review."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c03b-m-evidence",
+      "title": "M. Evidence — What to Present and What to Complete",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Evidence connects C02 requirements, the AS-IS mapping from C03A, architecture decisions in C03B, implementation, and verification results. Present it in this order."
+        },
+        {
+          "type": "table",
+          "headers": ["Presentation step", "What to show", "Where to find it"],
+          "rows": [
+            [
+              "1. Starting point.",
+              "C02 baseline v0.2 and the scenario of approving a PENDING reservation.",
+              "C02 documentation, OP-05 — Approve Reservation."
+            ],
+            [
+              "2. Actual earlier behavior.",
+              "C03A mapping of approval and the historical authorization discrepancy.",
+              "C03A documentation, sections A1–A9; its final section describes the fix."
+            ],
+            [
+              "3. Drivers and domain concepts.",
+              "Four drivers and relationships among users, slots, reservations, history, and notifications.",
+              "C03B sections B, C1, and C2."
+            ],
+            [
+              "4. Decision.",
+              "Question, two alternatives, same-scenario comparison, and ADR-01 with its accepted downside.",
+              "C03B sections D, E1–E3, and F."
+            ],
+            [
+              "5. Views.",
+              "Context, TO-BE structure, state-transition ownership, and runtime mapping.",
+              "C03B sections G1–G4 and diagrams."
+            ],
+            [
+              "6. Conformance.",
+              "Cross-view check, AS-IS/TO-BE differences, implementation, and tests.",
+              "C03B sections I, J, K, L1, and L2."
+            ],
+            [
+              "7. Close the evidence.",
+              "Remaining limitations, uncertainty, and exact commit/tag.",
+              "docs/evidence-and-evolution.md; the team fills the commit/tag at submission."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Known scope limits: frontend BookingPage tests use a mocked API; backend authorization tests use persistence substitutes; a real PostgreSQL concurrency scenario is not included in those tests. Create identity and the side slot-cancellation endpoint are separate delta items in section J, not evidence of an approve/cancel defect."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,335 @@
+{
+  "title": "C03 — Part A: AS-IS scenario mapping",
+  "sections": [
+    {
+      "id": "c03-1",
+      "title": "A1. Selected scenario",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Part A records the historical state before the identity fix (commit 45bf7bd). The final section below describes the subsequent fix and regression test results."
+        },
+        {
+          "type": "table",
+          "headers": ["Item", "Value"],
+          "rows": [
+            ["Scenario / operation", "OP-05 — Approve Reservation (Docs → C02, section 12)"],
+            ["Requirements", "REQ-05, related REQ-03"],
+            ["Rules / invariants", "BR-02 — A slot can have at most one active reservation."],
+            ["Baseline", "v0.2"]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c03-2",
+      "title": "A2. Main scenario flow",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Scenario step", "How it is implemented", "Evidence"],
+          "rows": [
+            [
+              "The teacher selects a pending request.",
+              "They choose approval in the list of their own requests.",
+              "TeacherPage.tsx; client.ts — approveReservation()"
+            ],
+            [
+              "The system receives the request.",
+              "The backend passes the selected reservation for processing.",
+              "ReservationController.approve()"
+            ],
+            [
+              "The system loads and checks the reservation.",
+              "It loads the reservation and the specified user, then checks slot ownership and pending status.",
+              "ReservationService.approve(); UserService.get()"
+            ],
+            [
+              "The system confirms the reservation.",
+              "It changes PENDING to CONFIRMED and records the confirmation time.",
+              "Reservation.confirm()"
+            ],
+            [
+              "The system saves the result.",
+              "It stores the updated reservation and a history record of who confirmed it and when.",
+              "ReservationService.approve(); ReservationHistory"
+            ],
+            [
+              "The student receives a notification.",
+              "An approval notification is created in the application. The API returns the confirmed reservation and the request list is refreshed.",
+              "NotificationService.create(); ReservationResponse.from(); TeacherPage.tsx"
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "The slot is already blocked by the pending reservation. Approval does not repeat the conflict check; the one_active_reservation_per_slot database index protects the limit of one active reservation per slot (migration V1)."
+        }
+      ]
+    },
+    {
+      "id": "c03-3",
+      "title": "A3. Failure branch and identified mismatch",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": [
+            "What v0.2 specifies",
+            "Where the condition is detected",
+            "Where the outcome is decided",
+            "What the caller receives"
+          ],
+          "rows": [
+            [
+              "Another teacher must not approve the reservation.",
+              "When the user specified in the request is compared with the slot owner.",
+              "ReservationService.approve() rejects the request.",
+              "HTTP 403 — approval is not allowed. The reservation remains unchanged."
+            ]
+          ]
+        },
+        {
+          "type": "table",
+          "headers": ["Specification", "Current implementation", "Evidence"],
+          "rows": [
+            [
+              "Only the slot owner may approve it.",
+              "The interface shows only the teacher's own requests. However, the backend trusts the user ID sent by the client. A test confirmed that another signed-in teacher can approve a reservation by sending a direct request with the owner's ID. The bug has not been fixed yet.",
+              "ReservationController.approve(); ReservationService.approve()"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c03-4",
+      "title": "A4. Main implementation parts",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Part", "Type / contents", "Role in this scenario", "Evidence"],
+          "rows": [
+            [
+              "Authentication",
+              "Module: BearerTokenFilter, AuthService, SecurityConfig",
+              "Verifies that the user is signed in.",
+              "AuthService.authenticate()"
+            ],
+            [
+              "Reservation API",
+              "Module: ReservationController",
+              "Receives the approval request.",
+              "ReservationController.approve()"
+            ],
+            [
+              "Reservation processing",
+              "Module: ReservationService, Reservation, UserService",
+              "Checks the conditions and confirms the reservation.",
+              "ReservationService.approve(); Reservation.confirm()"
+            ],
+            [
+              "Data storage",
+              "Module: ReservationRepository, ReservationHistoryRepository, AppUserRepository, AuthSessionRepository, NotificationRepository",
+              "Loads and stores the required data.",
+              "The listed repository interfaces"
+            ],
+            [
+              "Notifications",
+              "Module: NotificationService",
+              "Creates an approval message for the student.",
+              "NotificationService.create()"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c03-5",
+      "title": "A5. State and rule",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Question", "Answer", "Evidence"],
+          "rows": [
+            [
+              "Where is the reservation state stored?",
+              "In PostgreSQL, in the reservations table. Change history is stored in reservation_history.",
+              "Reservation; ReservationHistory; migration V1"
+            ],
+            [
+              "Who decides and changes the state?",
+              "The reservation service checks the conditions and then changes the reservation from pending to confirmed.",
+              "ReservationService.approve(); Reservation.confirm()"
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Rule REQ-05: only the slot owner may approve a pending reservation. The identity verification gap is recorded in A3."
+        },
+        {
+          "type": "table",
+          "headers": ["Question", "Answer", "Evidence"],
+          "rows": [
+            [
+              "Where is the condition detected?",
+              "The reservation service compares the owner with the specified user and checks pending status.",
+              "ReservationService.approve()"
+            ],
+            [
+              "Where is the decision made?",
+              "The same service allows approval or rejects the request.",
+              "ReservationService.approve()"
+            ],
+            [
+              "Where is the change performed?",
+              "The reservation object sets the confirmed status and confirmation time.",
+              "Reservation.confirm()"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c03-6",
+      "title": "A6. Dependencies",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": [
+            "Dependency",
+            "Connection to the application",
+            "Which part knows its technical API",
+            "Evidence"
+          ],
+          "rows": [
+            [
+              "PostgreSQL",
+              "Stores reservations, users, sessions, history and notifications.",
+              "Data storage — repositories and database entities.",
+              "Repositories from A4; migrations V1, V4 and V11"
+            ],
+            [
+              "Internal notifications",
+              "Reservation processing requests a notification for the student.",
+              "NotificationService and NotificationRepository.",
+              "NotificationService.create()"
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Notifications are part of the application and are stored in the same database. No external service or external identity provider is used here."
+        }
+      ]
+    },
+    {
+      "id": "c03-7",
+      "title": "A7. Current scenario structure",
+      "blocks": [
+        {
+          "type": "image",
+          "src": "c03-approval-flow-en.svg",
+          "alt": "Reservation approval: authentication → reservation API → reservation processing → notifications. Authentication, processing and notifications use data storage connected to PostgreSQL."
+        },
+        {
+          "type": "paragraph",
+          "content": "Concrete classes in each block:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Authentication: BearerTokenFilter, AuthService, SecurityConfig.",
+            "Reservation API: ReservationController.",
+            "Reservation processing: ReservationService, Reservation, UserService.",
+            "Data storage: ReservationRepository, ReservationHistoryRepository, AppUserRepository, AuthSessionRepository, NotificationRepository.",
+            "Notifications: NotificationService."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c03-8",
+      "title": "A8. Question for the next design stage",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Item", "Contents"],
+          "rows": [
+            [
+              "Question",
+              "How can we ensure that approval always uses the identity of the signed-in user?"
+            ],
+            [
+              "Evidence",
+              "The check currently uses the ID sent by the client. The test described in A3 confirmed that this check can be bypassed."
+            ],
+            ["Why it matters", "Only the slot owner may decide on its reservation."]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c03-9",
+      "title": "A9. AI and verification",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "AI helped locate the relevant code and prepare the diagram. We ran 9 API tests against the running application and also verified the results in the database:"
+        },
+        {
+          "type": "table",
+          "headers": ["What we tested", "Result"],
+          "rows": [
+            [
+              "The owner approves a pending reservation.",
+              "HTTP 200. The reservation changed to CONFIRMED; the confirmation time, a history record and a student notification were stored."
+            ],
+            [
+              "Another teacher and a student send their own IDs (2 tests).",
+              "HTTP 403. Reservations, history and notifications remained unchanged."
+            ],
+            [
+              "The owner approves an already confirmed or cancelled reservation (2 tests).",
+              "HTTP 409. Reservations, history and notifications remained unchanged."
+            ],
+            [
+              "A nonexistent reservation or user specified in the request (2 tests).",
+              "HTTP 404. The test data remained unchanged."
+            ],
+            [
+              "Another signed-in teacher sends the owner's ID when approving.",
+              "HTTP 200. Another teacher's reservation was confirmed — the authorization bug was reproduced."
+            ],
+            [
+              "Another signed-in teacher sends the owner's ID when cancelling a pending reservation.",
+              "HTTP 200. Another teacher's reservation was cancelled — the same bug was reproduced here as well."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "We used temporary accounts and reservations and removed them afterwards. The authorization bug is recorded in A3 and has not been fixed yet."
+        }
+      ]
+    },
+    {
+      "id": "c03-identity-fix",
+      "title": "Change from the original version — actor identity",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Previously, approve/cancel trusted actorUserId from the request body. The controller now passes the authenticated session identity, and the reservation service checks the active role, ownership and allowed state. A supplied actor ID is ignored. The frontend sends only the token and an optional note for these actions."
+        },
+        {
+          "type": "paragraph",
+          "content": "Verification: all 10 regression tests passed. Another teacher or student cannot act using a spoofed ID (403, with no reservation, history or notification changes). The owner can approve a pending reservation, and its student or teacher can cancel it. Approval of CONFIRMED/CANCELLED returns 409; unauthenticated requests are rejected."
+        },
+        {
+          "type": "paragraph",
+          "content": "Tests exercise the real filter → API → service path with mocked persistence and session validation. They do not re-verify persistence or concurrency. ADR-01, the before/after comparison and details are in docs/architecture-and-decisions.md and docs/evidence-and-evolution.md. This fix covers reservation approval and cancellation; other endpoints require separate review."
+        }
+      ]
+    }
+  ]
+}
