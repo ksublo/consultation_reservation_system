@@ -631,8 +631,7 @@
           {
             "type": "image",
             "src": "c03-approval-flow.svg",
-            "alt": "Schválení rezervace: přihlášení → rezervační API → zpracování rezervace → oznámení. Přihlášení, zpracování a oznámení používají ukládání dat napojené na PostgreSQL.",
-            "fullWidth": true
+            "alt": "Schválení rezervace: přihlášení → rezervační API → zpracování rezervace → oznámení. Přihlášení, zpracování a oznámení používají ukládání dat napojené na PostgreSQL."
           },
           {
             "type": "paragraph",
