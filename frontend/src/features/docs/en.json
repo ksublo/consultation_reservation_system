@@ -624,8 +624,7 @@
           {
             "type": "image",
             "src": "c03-approval-flow-en.svg",
-            "alt": "Reservation approval: authentication → reservation API → reservation processing → notifications. Authentication, processing and notifications use data storage connected to PostgreSQL.",
-            "fullWidth": true
+            "alt": "Reservation approval: authentication → reservation API → reservation processing → notifications. Authentication, processing and notifications use data storage connected to PostgreSQL."
           },
           {
             "type": "paragraph",

@@ -771,10 +771,10 @@ main.login-page {
   @apply rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-600 hover:bg-teal-50 hover:text-vsb;
 }
 .docs-page {
-  @apply flex min-h-[calc(100dvh-5rem)] w-full max-w-none items-start px-0 py-0;
+  @apply mx-auto flex min-h-[calc(100dvh-5rem)] w-full max-w-7xl items-start px-4 py-8 sm:px-6 lg:px-8 lg:py-12;
 }
 .docs-card {
-  @apply w-full overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm;
+  @apply min-w-0 w-full overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm;
 }
 .docs-tabs {
   @apply flex overflow-x-auto border-b border-slate-100 bg-slate-50 p-2;
@@ -786,7 +786,7 @@ main.login-page {
   @apply bg-white text-vsb shadow-sm;
 }
 .docs-content {
-  @apply w-full max-w-none p-6 sm:p-8 lg:p-10;
+  @apply min-w-0 w-full p-6 sm:p-8 lg:p-10;
 }
 .docs-eyebrow {
   @apply m-0 text-xs font-extrabold tracking-widest text-vsb;
@@ -867,10 +867,10 @@ main.login-page {
 }
 
 .docs-diagram {
-  @apply mt-0 max-w-full justify-self-start overflow-hidden rounded-2xl border border-slate-300 bg-slate-700 shadow-sm;
+  @apply mt-0 max-w-full justify-self-center overflow-hidden rounded-2xl border border-slate-300 bg-slate-700 shadow-sm;
 }
 .docs-image-control-group {
-  @apply mt-5;
+  @apply mt-5 grid min-w-0;
 }
 .docs-image-control {
   @apply mb-2 flex w-full max-w-xs items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700;

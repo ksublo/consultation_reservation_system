@@ -27,3 +27,21 @@
 **Architektonické drivery přenesené do C03:** Transakční ochrana exkluzivity termínu, konzistentní stavový model rezervace a auditní historie všech změn stavu.
 
 **Commit / tag aplikace:** Dokumentace C02 byla vytvořena v commitu `3afbab3`; baseline C02 je označena tagem `v0.2-c02`.
+
+## Evidence C03B: přijatá architektura → běžící implementace
+
+**Baseline:** v0.2 a AS-IS scénář schválení rezervace z C03A.
+
+**Přijaté rozhodnutí:** `ReservationService` je transakční owner změn lifecycle rezervace. V jedné Spring transakci koordinuje změnu `Reservation`, zápis `ReservationHistory` a vytvoření interní `Notification`; PostgreSQL zůstává poslední autoritou pro exkluzivitu aktivní rezervace.
+
+**Porovnané alternativy:** Orchestrace v controlleru/frontendu by rozptýlila pravidla a transakční hranici. Databázové procedury a triggery by ochránily data, ale přesunuly by workflow mimo čitelnou aplikační vrstvu. Pro současný monolit React + Spring Boot + PostgreSQL byla přijata služba aplikace.
+
+**Ověřená architektonická pravidla:** Controller pouze deleguje na službu; `Reservation` nemá veřejný setter stavu; přechody `PENDING → CONFIRMED` a `PENDING/CONFIRMED → CANCELLED` se rozhodují v `ReservationService`; databázový index `one_active_reservation_per_slot` chrání souběžné vytvoření aktivní rezervace.
+
+**Aktuální kontrola:** Frontend prošel `npm run lint`, `npm run typecheck` a `npm run build`. Backendové `mvnw.cmd test` prošlo bez chyb (2 testy, 0 failures, 0 errors).
+
+**Zbývající riziko / delta CHANGE:** Autentizace vytvoří `AuthenticatedUser` v `SecurityContextu`, ale approve/cancel stále přijímají `actorUserId` z těla požadavku. Pro plnou shodu s architekturou musí budoucí změna odvozovat aktéra pouze z přihlášené relace.
+
+**Artefakty:** Bilingvní C03A a C03B jsou dostupné v aplikaci v dokumentaci; zdroje C03B jsou oddělené ve složce `frontend/src/features/docs/c03-b/` a orientační materiály v `docs/c03-a/` a `docs/c03-b/`.
+
+**Commit / tag aplikace:** Doplní tým při odevzdání.

@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import type { Language, TFunction } from '../../i18n'
 import csDocumentation from './cs.json'
+import csC03B from './c03-b/cs.json'
 import enDocumentation from './en.json'
+import enC03B from './c03-b/en.json'
 
-type DocsSection = 'c01' | 'c02' | 'c03'
+type DocsSection = 'c01' | 'c02' | 'c03a' | 'c03b'
 type Block =
   | { type: 'paragraph'; content: string }
   | { type: 'table'; headers: string[]; rows: string[][] }
@@ -20,7 +22,7 @@ interface DocumentationPageProps {
   t: TFunction
 }
 
-const tabs: DocsSection[] = ['c01', 'c02', 'c03']
+const tabs: DocsSection[] = ['c01', 'c02', 'c03a', 'c03b']
 const bundledImages = import.meta.glob('../../assets/docs/*', {
   eager: true,
   query: '?url',
@@ -150,7 +152,10 @@ function ContentBlock({ block, language }: { block: Block; language: Language })
 
 export default function DocumentationPage({ language, t }: DocumentationPageProps) {
   const [tab, setTab] = useState<DocsSection>('c01')
-  const documents = language === 'cs' ? csDocumentation : enDocumentation
+  const documents =
+    language === 'cs'
+      ? { ...csDocumentation, c03a: csDocumentation.c03, c03b: csC03B }
+      : { ...enDocumentation, c03a: enDocumentation.c03, c03b: enC03B }
   const current = documents[tab] as Document
   return (
     <main className="docs-page">
