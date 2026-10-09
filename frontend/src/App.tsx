@@ -67,12 +67,9 @@ export default function App() {
   }, [session])
   useEffect(() => {
     if (!toast) return
-    const timeout = window.setTimeout(() => setToast(null), 3500)
+    const timeout = window.setTimeout(() => setToast(null), toast.durationMs ?? 3500)
     return () => window.clearTimeout(timeout)
   }, [toast])
-  function refreshNotifications() {
-    void loadNotifications()
-  }
   async function markNotificationRead(notificationId: string) {
     if (!session) return
     await api
@@ -185,8 +182,14 @@ export default function App() {
         <div className="app-shell">
           {navigation}
           {toast && (
-            <div className={`toast ${toast.type}`}>
-              {toast.type === 'success' && '✓ '}
+            <div
+              className={`toast ${toast.type}`}
+              role={toast.type === 'error' ? 'alert' : 'status'}
+              aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
+            >
+              <span className="toast-icon" aria-hidden="true">
+                {toast.type === 'success' ? '✓' : '!'}
+              </span>
               {toast.message}
             </div>
           )}
@@ -204,10 +207,22 @@ export default function App() {
     <ErrorBoundary language={language} onLanguageChange={setLanguage} t={t}>
       <div className="app-shell">
         {navigation}
+        {toast && (
+          <div
+            className={`toast ${toast.type}`}
+            role={toast.type === 'error' ? 'alert' : 'status'}
+            aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
+          >
+            <span className="toast-icon" aria-hidden="true">
+              {toast.type === 'success' ? '✓' : '!'}
+            </span>
+            {toast.message}
+          </div>
+        )}
         {studentView === 'booking' ? (
           <BookingPage
             session={session}
-            onToast={refreshNotifications}
+            onToast={setToast}
             refreshSignal={refreshSignal}
             language={language}
             t={t}
@@ -215,7 +230,7 @@ export default function App() {
         ) : (
           <MyReservationsPage
             session={session}
-            onToast={refreshNotifications}
+            onToast={setToast}
             refreshSignal={refreshSignal}
             language={language}
             t={t}

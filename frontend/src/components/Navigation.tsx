@@ -64,6 +64,14 @@ function notificationSlot(notification: Notification, language: Language) {
   return `${date} · ${time.format(new Date(notification.startsAt))}–${time.format(new Date(notification.endsAt))}`
 }
 
+function notificationStatusClass(type: string) {
+  const normalizedType = type.toUpperCase()
+  if (normalizedType.includes('CANCEL')) return 'cancelled'
+  if (normalizedType.includes('APPROV') || normalizedType.includes('CONFIRM')) return 'confirmed'
+  if (normalizedType.includes('CREAT') || normalizedType.includes('PENDING')) return 'pending'
+  return 'neutral'
+}
+
 function MenuIcon() {
   return (
     <span className="hamburger-icon" aria-hidden="true">
@@ -402,7 +410,10 @@ export default function Navigation({
               ) : (
                 <ul className="notification-list">
                   {notifications.map((notification) => (
-                    <li key={notification.id} className="unread">
+                    <li
+                      key={notification.id}
+                      className={`notification-${notificationStatusClass(notification.type)} ${notification.readAt ? 'read' : 'unread'}`}
+                    >
                       <button
                         className="notification-read"
                         type="button"

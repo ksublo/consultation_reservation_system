@@ -79,6 +79,6 @@
 
 **Zbývající riziko / delta CHANGE:** Autentizace vytvoří `AuthenticatedUser` v `SecurityContextu`, ale approve/cancel stále přijímají `actorUserId` z těla požadavku. Pro plnou shodu s architekturou musí budoucí změna odvozovat aktéra pouze z přihlášené relace.
 
-**Artefakty:** Bilingvní C03A a C03B jsou dostupné v aplikaci v dokumentaci; zdroje C03B jsou oddělené ve složce `frontend/src/features/docs/c03-b/` a orientační materiály v `docs/c03-a/` a `docs/c03-b/`.
+**Artefakty:** Bilingvní C03A a C03B jsou dostupné v aplikaci v dokumentaci; zdroje každé části a jazyka jsou samostatně ve složkách `frontend/src/features/docs/c03a/` a `frontend/src/features/docs/c03b/`. Orientační materiály jsou v `docs/c03-a/` a `docs/c03-b/`.
 
 **Commit / tag aplikace:** Doplní tým při odevzdání.

@@ -1,21 +1,20 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { Language, TFunction } from '../../i18n'
-import csDocumentation from './cs.json'
-import csC03B from './c03-b/cs.json'
-import enDocumentation from './en.json'
-import enC03B from './c03-b/en.json'
+import csC01 from './c01/cs.json'
+import csC02 from './c02/cs.json'
+import csC03A from './c03a/cs.json'
+import csC03B from './c03b/cs.json'
+import enC01 from './c01/en.json'
+import enC02 from './c02/en.json'
+import enC03A from './c03a/en.json'
+import enC03B from './c03b/en.json'
+import {
+  parseDocumentation,
+  type Documentation,
+  type DocumentationBlock,
+} from './documentation-model'
 
 type DocsSection = 'c01' | 'c02' | 'c03a' | 'c03b'
-type Block =
-  | { type: 'paragraph'; content: string }
-  | { type: 'table'; headers: string[]; rows: string[][] }
-  | { type: 'list'; items: string[] }
-  | { type: 'code'; language?: string; content: string }
-  | { type: 'note'; variant: 'info' | 'warning'; content: string }
-  | { type: 'image'; src: string; alt: string; caption?: string; fullWidth?: boolean }
-  | { type: 'checklist'; items: { label: string; done: boolean }[] }
-type DocSection = { id: string; title: string; blocks: Block[] }
-type Document = { title: string; sections: DocSection[] }
 
 interface DocumentationPageProps {
   language: Language
@@ -40,7 +39,7 @@ function Diagram({
   caption,
   fullWidth,
   language,
-}: Extract<Block, { type: 'image' }> & { language: Language }) {
+}: Extract<DocumentationBlock, { type: 'image' }> & { language: Language }) {
   const [size, setSize] = useState(20)
   if (fullWidth) {
     return (
@@ -83,7 +82,7 @@ function Diagram({
     </div>
   )
 }
-function ContentBlock({ block, language }: { block: Block; language: Language }) {
+function ContentBlock({ block, language }: { block: DocumentationBlock; language: Language }) {
   switch (block.type) {
     case 'table':
       return (
@@ -152,11 +151,24 @@ function ContentBlock({ block, language }: { block: Block; language: Language })
 
 export default function DocumentationPage({ language, t }: DocumentationPageProps) {
   const [tab, setTab] = useState<DocsSection>('c01')
-  const documents =
-    language === 'cs'
-      ? { ...csDocumentation, c03a: csDocumentation.c03, c03b: csC03B }
-      : { ...enDocumentation, c03a: enDocumentation.c03, c03b: enC03B }
-  const current = documents[tab] as Document
+  const documents = useMemo<Record<Language, Record<DocsSection, Documentation>>>(
+    () => ({
+      cs: {
+        c01: parseDocumentation(csC01, 'C01 / cs'),
+        c02: parseDocumentation(csC02, 'C02 / cs'),
+        c03a: parseDocumentation(csC03A, 'C03A / cs'),
+        c03b: parseDocumentation(csC03B, 'C03B / cs'),
+      },
+      en: {
+        c01: parseDocumentation(enC01, 'C01 / en'),
+        c02: parseDocumentation(enC02, 'C02 / en'),
+        c03a: parseDocumentation(enC03A, 'C03A / en'),
+        c03b: parseDocumentation(enC03B, 'C03B / en'),
+      },
+    }),
+    [],
+  )
+  const current = documents[language][tab]
   return (
     <main className="docs-page">
       <section className="docs-card">

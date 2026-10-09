@@ -1,0 +1,153 @@
+{
+  "title": "C01 — Založení projektu",
+  "sections": [
+    {
+      "id": "c01-1",
+      "title": "1. Tým a repozitář",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Tým: Consultify"
+        },
+        {
+          "type": "paragraph",
+          "content": "Členové: Fatima, Kseniia"
+        },
+        {
+          "type": "paragraph",
+          "content": "Repozitář: https://github.com/ksublo/consultation_reservation_system"
+        },
+        {
+          "type": "paragraph",
+          "content": "Repozitář je zatím soukromý."
+        }
+      ]
+    },
+    {
+      "id": "c01-2",
+      "title": "2. Rezervační doména",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "Doména: rezervace konzultačních termínů pedagogů na univerzitě.",
+            "Resource: konkrétní konzultační termín (consultation slot).",
+            "Reservation: student, vybraný termín, název a popis důvodu, stav.",
+            "User: student vytváří rezervaci; pedagog vytváří termíny a rezervaci schvaluje nebo ruší.",
+            "Stavy: PENDING, CONFIRMED, CANCELLED.",
+            "Operace: vytvoření termínu a rezervace, schválení, zrušení a kontrola dostupnosti.",
+            "Společné pravidlo: pro stejný termín nesmí existovat dvě aktivní rezervace; PENDING i CONFIRMED termín blokují.",
+            "Vlastní pravidlo: termín lze vytvořit pouze ve všední dny mezi 07:15 a 19:15. Student může mít nejvýše pět čekajících rezervací.",
+            "Systémová hranice: Notification Service (ještě ve vývoji)."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c01-3",
+      "title": "3. Repozitář a stack",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "Monorepo se složkami frontend/ a backend/.",
+            "Frontend: React, TypeScript a Vite.",
+            "Backend: Java 21, Spring Boot a Maven.",
+            "Persistence: PostgreSQL a Flyway migrace.",
+            "README a dokumentace v docs/ existují; repozitář je připravený pro společnou práci."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c01-4",
+      "title": "4. Project Frame",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Kompletní Project Frame je vyplněn v docs/intent-and-change.md. Popisuje účel systému, role, pojmy, persistentní stav, operace, přechody stavů, business pravidla, Notification Service, předpoklad i otevřenou otázku."
+        }
+      ]
+    },
+    {
+      "id": "c01-5",
+      "title": "5. Selected future pressure",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Kategorie: C — Changeability."
+        },
+        {
+          "type": "paragraph",
+          "content": "Konkrétní budoucí pressure v době C01: po odeslání žádosti má následovat samostatné rozhodnutí pedagoga; žádost tedy nesmí být automaticky potvrzena při vytvoření."
+        },
+        {
+          "type": "paragraph",
+          "content": "Proč je relevantní: tento požadavek mění lifecycle rezervace, pravidla dostupnosti, oprávnění pedagoga, auditní historii i uživatelské rozhraní. V C01 šlo o budoucí změnu; v C02 byla přijata baseline v0.2 a dnes je realizována stavem PENDING a akcí schválení pedagoga."
+        }
+      ]
+    },
+    {
+      "id": "c01-6",
+      "title": "6. Change + review smyčka",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Tasky vytváříme podle týmového workflow. Změnu provede člen týmu na vlastní větvi, jiný člen ji zkontroluje v pull requestu a po schválení se změna sloučí do main. Review ověřuje funkčnost, čitelnost, pravidla projektu i konflikty."
+        }
+      ]
+    },
+    {
+      "id": "c01-7",
+      "title": "7. Engineering spike — Persistence",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Ověřili jsme skutečnou perzistenci rezervací v PostgreSQL. Docker Compose spouští databázi, backend a frontend; Flyway při startu vytvoří schéma a ukázková data. Backend načítá termíny přes REST API a data lze ověřit v databázi."
+        },
+        {
+          "type": "list",
+          "items": [
+            "Evidence: compose.yaml, DOCKER.md a Flyway migrace v backend/src/main/resources/db/migration/.",
+            "Výsledek: dostupnost termínu chrání backend i databázová omezení, proto nevzniknou dvě aktivní rezervace stejného termínu."
+          ]
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "content": "docker compose up --build"
+        }
+      ]
+    },
+    {
+      "id": "c01-8",
+      "title": "8. Evidence a rozhodnutí",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Evidence je vyplněna v docs/evidence-and-evolution.md: otázka ověřovala čtení a zápis do PostgreSQL, provedeným krokem bylo spuštění přes Docker Compose, výsledkem byly aplikované Flyway migrace a viditelné ukázkové termíny. Rozhodnutí: PostgreSQL, Flyway a Docker Compose zůstávají standardem pro lokální spuštění a databázové schéma."
+        }
+      ]
+    },
+    {
+      "id": "c01-9",
+      "title": "9. CP1 walking skeleton",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "POST /api/reservations → validace → uložení do PostgreSQL → 201 Created s ID rezervace → automatická integrační kontrola. Definice je v README.md."
+        }
+      ]
+    },
+    {
+      "id": "c01-10",
+      "title": "10. Stav před C02",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Rezervační doména, model Resource / Reservation / User, stavy, operace, pravidla, systémová hranice, Project Frame, selected future pressure, review workflow, engineering spike, evidence a CP1 skeleton jsou popsané a doložené."
+        }
+      ]
+    }
+  ]
+}

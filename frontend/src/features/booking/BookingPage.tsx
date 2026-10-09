@@ -218,10 +218,29 @@ export default function BookingPage({
       setReasonDescription('')
       await loadSlots()
     } catch (error) {
+      const isSlotConflict =
+        error instanceof Error &&
+        (error.message ===
+          (language === 'cs'
+            ? 'Tento termín právě rezervoval jiný student.'
+            : 'This slot was just reserved by another student.') ||
+          error.message ===
+            (language === 'cs'
+              ? 'Tento termín je již rezervovaný.'
+              : 'This slot is already reserved.'))
+      if (isSlotConflict) {
+        setSlotId('')
+      }
       onToast({
         type: 'error',
-        message: error instanceof Error ? error.message : t('reservationFailed'),
+        message: isSlotConflict
+          ? t('slotReservedByAnotherStudent')
+          : error instanceof Error
+            ? error.message
+            : t('reservationFailed'),
+        durationMs: isSlotConflict ? 10000 : undefined,
       })
+      await loadSlots()
     }
   }
 
@@ -364,6 +383,9 @@ export default function BookingPage({
                   >
                     {timeFormatter.format(new Date(slot.startsAt))}–
                     {timeFormatter.format(new Date(slot.endsAt))}
+                    {!availableSlotIds.has(slot.id) && (
+                      <span className="slot-occupied-label"> · {t('occupied')}</span>
+                    )}
                   </button>
                 ))
               ) : (
