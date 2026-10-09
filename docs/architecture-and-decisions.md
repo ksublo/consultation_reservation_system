@@ -48,6 +48,8 @@ Po přihlášení backend vytvoří relaci. Frontend posílá token relace při 
 
 ## C03 — Část A: AS-IS mapování scénáře
 
+> Historický stav před opravou identity, výchozí commit `45bf7bd7fd9c4a9f284a7e8d5a5fd9bf125017b8`. Nálezy a výsledky části A ponecháváme jako původní evidenci. Následná oprava je popsána v ADR-01 níže.
+
 ### A1. Sledovaný scénář
 
 | Položka | Hodnota |
@@ -148,3 +150,37 @@ AI pomohla dohledat části kódu a připravit diagram. V běžící aplikaci js
 | Jiný přihlášený pedagog pošle ID vlastníka při zrušení čekající rezervace. | HTTP 200. Cizí rezervace byla zrušena — stejná chyba se potvrdila i zde. |
 
 Testovali jsme na dočasných účtech a rezervacích, které jsme potom odstranili. Chyba oprávnění je zaznamenaná v A3 a zatím není opravena.
+
+## ADR-01 — Odkud pochází identita při schválení a zrušení rezervace?
+
+**Stav:** přijato a implementováno 2026-10-08.
+
+**Kontext:** Část A3/A9 prokázala, že klient mohl v `actorUserId` podstrčit ID vlastníka. Kontrola vlastnictví tak porovnávala identitu dodanou klientem místo skutečně přihlášeného uživatele. Stejný problém se týkal rušení rezervace.
+
+**Drivery:** REQ-05/REQ-03 — schvaluje vlastník termínu; REQ-04/BR-03 — ruší oprávněný aktér; konzistentní stavové přechody a pravdivá identita v auditní historii. BR-02 a jeho databázová ochrana zůstávají zachované.
+
+**Alternativa A:** API načte ověřenou identitu a samo rozhodne o vlastnictví; služba provede změnu stavu. Vyžaduje zpřístupnění rezervace vstupní vrstvě a další vstup do služby by musel kontrolu oprávnění zopakovat.
+
+**Alternativa B:** API předá ověřenou identitu službě rezervací. Služba společně rozhodne o roli, vlastnictví a povoleném přechodu a uloží historii. Další vstupy musí rovněž dodat důvěryhodnou identitu, ale neopakují pravidla vlastnictví.
+
+**Scénář pro obě varianty:** Vlastník schválí PENDING rezervaci; cizí přihlášený pedagog odešle ID vlastníka. V A se cizí pedagog odmítne na vstupu API, v B ve službě rezervací. V obou variantách musí rozhodovat identita z přihlášení a při odmítnutí nesmí vzniknout změna stavu, historie ani oznámení.
+
+**Rozhodnutí a důvod:** B. `BearerTokenFilter` ověří relaci, `ReservationController` převezme `AuthenticatedUser` přes `@AuthenticationPrincipal` a předá jej `ReservationService`. Pravidla oprávnění a stavu mají společného vlastníka ve službě rezervací. Doménové objekty nečtou HTTP ani bezpečnostní kontext.
+
+**Přijaté negativní důsledky:** Služba závisí na interním typu `AuthenticatedUser`; případný nový vstup musí zajistit důvěryhodný původ tohoto objektu. Aktivní role relace rozhoduje, zda uživatel jedná jako student nebo pedagog. Starší pole `actorUserId` se u těchto dvou endpointů kvůli kompatibilitě ignoruje, takže starší klienti nejsou nuceni ihned přestat pole posílat.
+
+**Rozhodnutí znovu otevřeme, když:** přibude jiný vstup do schvalování (např. automatický proces), delegované schvalování nebo změna modelu rolí.
+
+### AS-IS → TO-BE: oprava identity
+
+| Oblast | Původní verze | Opravená verze | Akce |
+| --- | --- | --- | --- |
+| Identita při approve/cancel | `ActorRequest.actorUserId` z těla HTTP požadavku | `AuthenticatedUser` z ověřené relace | CHANGE |
+| Rozhodnutí o oprávnění | Vlastnictví porovnáno s ID od klienta | Služba ověřuje aktivní roli a vlastnictví skutečného aktéra | CHANGE |
+| Frontend | Odesílá ID aktéra | Odesílá token a případnou poznámku; tělo schválení je `{}` | CHANGE |
+| Audit změny | Aktér odvozen z těla požadavku | Aktér odvozen z ověřené relace | CHANGE |
+| Stav, historie a interní oznámení | Zpracování ve službě rezervací v transakci | Stejné uspořádání | KEEP |
+| Exkluzivita termínu | Databázový index pro PENDING/CONFIRMED | Stejné omezení | KEEP |
+| Odmítnutí podstrčeného ID | Zaznamenané obejití kontroly | Opakovatelné regresní testy API a služby | VERIFY |
+
+**Rozsah:** schválení a rušení rezervací. Vytváření rezervací, správa termínů a ostatní endpointy nejsou touto opravou revidované; další použití klientských ID vyžaduje samostatnou kontrolu. Tato dílčí oprava nepředstavuje dokončení všech bodů C03.

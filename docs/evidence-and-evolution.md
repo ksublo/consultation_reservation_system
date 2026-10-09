@@ -28,6 +28,43 @@
 
 **Commit / tag aplikace:** Dokumentace C02 byla vytvořena v commitu `3afbab3`; baseline C02 je označena tagem `v0.2-c02`.
 
+## C03 — Oprava identity při schválení a rušení (2026-10-08)
+
+**Baseline:** v0.2; OP-05/REQ-05, související OP-04/REQ-04 a BR-03.
+
+**Původní verze:** commit `45bf7bd7fd9c4a9f284a7e8d5a5fd9bf125017b8`. Část A3/A9 v `architecture-and-decisions.md` zaznamenává možnost podstrčit ID vlastníka při schválení i rušení. Část A zůstává historickou evidencí.
+
+**Co jsme opravili:** Controller předává identitu z ověřeného přihlášení. Služba rezervací podle ní ověřuje aktivní roli a vlastnictví a vybírá aktéra pro historii. Nový `ReservationTransitionRequest` obsahuje pouze poznámku; starší `actorUserId` se ignoruje. Frontend přestal ID aktéra pro schvalování a rušení rezervace odesílat.
+
+**Rozhodnutí a delta:** ADR-01 a tabulka AS-IS → TO-BE v `architecture-and-decisions.md`.
+
+### Ověření opravy
+
+`ReservationAuthorizationTests` obsahuje 10 automatických testů přes MockMvc, skutečný bezpečnostní filtr, controller a službu rezervací. Ověření tokenu, načítání uživatelů, repository a oznámení jsou nahrazené testovacími objekty. Jde o regresní ověření API a rozhodování, nikoliv o nové end-to-end ověření ukládání do PostgreSQL nebo souběhu.
+
+| Ověření | Výsledek |
+| --- | --- |
+| Cizí pedagog podstrčí ID vlastníka při schválení | 403; stav beze změny, žádný zápis historie ani oznámení |
+| Cizí pedagog podstrčí ID vlastníka při rušení | 403; bez změn |
+| Cizí student podstrčí ID studenta rezervace při rušení | 403; bez změn |
+| Student podstrčí ID pedagoga při schválení | 403; bez změn |
+| Vlastník schválí PENDING bez ID v těle | 200; CONFIRMED, vytvoření historie a oznámení |
+| Opakované schválení CONFIRMED | 409; bez další historie a oznámení |
+| Schválení CANCELLED | 409; bez změny stavu, historie a oznámení |
+| Student zruší vlastní rezervaci | 200; CANCELLED a vytvoření historie |
+| Pedagog zruší rezervaci vlastního termínu | 200; CANCELLED a vytvoření historie |
+| Schválení bez přihlášení | 4xx; požadavek se nedostane k načtení rezervace |
+
+**Opakování:** v `backend` spustit `mvn -Dtest=ReservationAuthorizationTests test`. Výsledek: 10 testů, 0 chyb. `mvn package` prošel se všemi 11 testy, včetně původního spuštění aplikačního kontextu s místní PostgreSQL. `npm run typecheck` ve frontendu prošel.
+
+**Doklad:** `backend/target/surefire-reports/consultation_reservation_backend.ReservationAuthorizationTests.txt` (generuje se při spuštění testů).
+
+**Zbývající rozsah:** Ostatní endpointy s klientskými ID nebyly touto opravou zabezpečené ani auditované. Zbývající diagramy, cross-view kontrola a samostatná kontrola architektonického pravidla C03 nejsou tímto záznamem prohlášeny za dokončené.
+
+**Spuštění opravené verze:** `docker compose up -d --build backend frontend` úspěšně sestavilo a restartovalo obě části aplikace. Backend dokončil start s PostgreSQL; frontend odpověděl HTTP 200.
+
+**Commit opravy:** změny zatím v pracovní kopii, bez nového commitu/tagu.
+
 ## Evidence C03B: přijatá architektura → běžící implementace
 
 **Baseline:** v0.2 a AS-IS scénář schválení rezervace z C03A.

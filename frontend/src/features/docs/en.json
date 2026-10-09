@@ -404,6 +404,10 @@
         "title": "A1. Selected scenario",
         "blocks": [
           {
+            "type": "paragraph",
+            "content": "Part A records the historical state before the identity fix (commit 45bf7bd). The final section below describes the subsequent fix and regression test results."
+          },
+          {
             "type": "table",
             "headers": ["Item", "Value"],
             "rows": [
@@ -704,6 +708,24 @@
           {
             "type": "paragraph",
             "content": "We used temporary accounts and reservations and removed them afterwards. The authorization bug is recorded in A3 and has not been fixed yet."
+          }
+        ]
+      },
+      {
+        "id": "c03-identity-fix",
+        "title": "Change from the original version — actor identity",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Previously, approve/cancel trusted actorUserId from the request body. The controller now passes the authenticated session identity, and the reservation service checks the active role, ownership and allowed state. A supplied actor ID is ignored. The frontend sends only the token and an optional note for these actions."
+          },
+          {
+            "type": "paragraph",
+            "content": "Verification: all 10 regression tests passed. Another teacher or student cannot act using a spoofed ID (403, with no reservation, history or notification changes). The owner can approve a pending reservation, and its student or teacher can cancel it. Approval of CONFIRMED/CANCELLED returns 409; unauthenticated requests are rejected."
+          },
+          {
+            "type": "paragraph",
+            "content": "Tests exercise the real filter → API → service path with mocked persistence and session validation. They do not re-verify persistence or concurrency. ADR-01, the before/after comparison and details are in docs/architecture-and-decisions.md and docs/evidence-and-evolution.md. This fix covers reservation approval and cancellation; other endpoints require separate review."
           }
         ]
       }

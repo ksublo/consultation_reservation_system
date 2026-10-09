@@ -135,12 +135,7 @@ export default function MyReservationsPage({
 
   async function cancelReservation(reservation: Reservation) {
     try {
-      await api.cancelReservation(
-        session.token,
-        reservation.id,
-        session.userId,
-        t('cancellationNote'),
-      )
+      await api.cancelReservation(session.token, reservation.id, t('cancellationNote'))
       onToast({ type: 'success', message: t('reservationCancelled') })
       await load()
     } catch (error) {

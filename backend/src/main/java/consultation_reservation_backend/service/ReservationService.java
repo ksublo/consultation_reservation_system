@@ -1,6 +1,7 @@
 package consultation_reservation_backend.service;
 
 import consultation_reservation_backend.api.*;
+import consultation_reservation_backend.security.AuthenticatedUser;
 import consultation_reservation_backend.domain.*;
 import consultation_reservation_backend.repository.*;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -40,9 +41,11 @@ public class ReservationService {
             return ReservationResponse.from(reservation);
         } catch (DataIntegrityViolationException exception) { throw new ApiException(HttpStatus.CONFLICT, "This slot was just reserved by another student."); }
     }
-    public ReservationResponse approve(UUID reservationId, ActorRequest request) {
+    public ReservationResponse approve(UUID reservationId, AuthenticatedUser authenticatedActor, ReservationTransitionRequest request) {
         Reservation reservation = get(reservationId);
-        AppUser teacher = users.get(request.actorUserId());
+        if (authenticatedActor == null) throw new ApiException(HttpStatus.UNAUTHORIZED, "Authentication is required.");
+        if (authenticatedActor.activeRole() != UserRole.TEACHER) throw new ApiException(HttpStatus.FORBIDDEN, "Only a teacher can approve a reservation.");
+        AppUser teacher = users.get(authenticatedActor.id());
         if (!reservation.getSlot().getTeacher().getId().equals(teacher.getId())) throw new ApiException(HttpStatus.FORBIDDEN, "Only the slot's teacher can approve it.");
         if (reservation.getStatus() != ReservationStatus.PENDING) throw new ApiException(HttpStatus.CONFLICT, "Only a pending reservation can be approved.");
         reservation.confirm();
@@ -50,11 +53,12 @@ public class ReservationService {
         notifications.create(reservation.getStudent(), reservation, "RESERVATION_APPROVED", "Rezervace byla schválena", "Pedagog " + teacher.getFirstName() + " " + teacher.getLastName() + " schválil vaši žádost o konzultaci.");
         return ReservationResponse.from(reservation);
     }
-    public ReservationResponse cancel(UUID reservationId, ActorRequest request) {
+    public ReservationResponse cancel(UUID reservationId, AuthenticatedUser authenticatedActor, ReservationTransitionRequest request) {
         Reservation reservation = get(reservationId);
-        AppUser actor = users.get(request.actorUserId());
-        boolean isStudent = reservation.getStudent().getId().equals(actor.getId());
-        boolean isTeacher = reservation.getSlot().getTeacher().getId().equals(actor.getId());
+        if (authenticatedActor == null) throw new ApiException(HttpStatus.UNAUTHORIZED, "Authentication is required.");
+        AppUser actor = users.get(authenticatedActor.id());
+        boolean isStudent = authenticatedActor.activeRole() == UserRole.STUDENT && reservation.getStudent().getId().equals(actor.getId());
+        boolean isTeacher = authenticatedActor.activeRole() == UserRole.TEACHER && reservation.getSlot().getTeacher().getId().equals(actor.getId());
         if (!isStudent && !isTeacher) throw new ApiException(HttpStatus.FORBIDDEN, "Only the student or the slot's teacher can cancel it.");
         if (reservation.getStatus() == ReservationStatus.CANCELLED) throw new ApiException(HttpStatus.CONFLICT, "Reservation is already cancelled.");
         if (reservation.getSlot().getStartsAt().isBefore(OffsetDateTime.now().plusHours(RESERVATION_CUTOFF_HOURS))) throw new ApiException(HttpStatus.CONFLICT, "Reservations cannot be cancelled less than 3 hours before the consultation starts.");
