@@ -48,12 +48,19 @@
       "blocks": [
         {
           "type": "paragraph",
-          "content": "Doménový model popisuje pojmy z rezervační oblasti, ne technické komponenty. Pro náš scénář potřebujeme studenty, pedagogy, termíny, rezervace, historii a interní oznámení."
+          "content": "Doménový model popisuje pojmy z rezervační oblasti, ne technické komponenty. Model obsahuje šest pojmů: User (role student nebo pedagog), ConsultationSlot, TimeInterval, Reservation, ReservationHistory a Notification."
+        },
+        {
+          "type": "image",
+          "src": "c03b-domain-model.png",
+          "alt": "Doménový model konzultačních rezervací",
+          "caption": "Doménové pojmy, vztahy, násobnosti a invarianty.",
+          "initialWidth": 100
         },
         {
           "type": "code",
-          "language": "Doménové pojmy",
-          "content": "Student / Teacher\n  jsou role uživatele\n\nTeacher 1 ─── 0..* ConsultationSlot\n  pedagog vytváří a vlastní své konzultační termíny\n\nConsultationSlot 1 ─── 0..* Reservation\n  termín může mít historii rezervací, ale nejvýše jednu aktivní\n  Reservation se stavem PENDING nebo CONFIRMED\n\nStudent 1 ─── 0..* Reservation\n  student je žadatelem o konzultaci\n\nReservation 1 ─── 0..* ReservationHistory\n  historie zaznamenává akce, předchozí a nový stav, aktéra a poznámku\n\nReservation 1 ─── 0..* Notification\n  změna rezervace může vytvořit interní oznámení příjemci\n\nReservation.status:\n  PENDING | CONFIRMED | CANCELLED"
+          "language": "Přehled diagramu",
+          "content": "[Doménový model]\nobsahuje:\n- User — student nebo pedagog\n- ConsultationSlot — konzultační termín\n- TimeInterval — začátek a konec termínu\n- Reservation — žádost o konzultaci\n- ReservationHistory — historie změn\n- Notification — interní oznámení\n\n[User: pedagog] 1 ---> 0..* [ConsultationSlot]\n[User: student] 1 ---> 0..* [Reservation]\n[ConsultationSlot] 1 ---> 1 [TimeInterval]\n[ConsultationSlot] 1 ---> 0..* [Reservation]\n[Reservation] 1 ---> 1..* [ReservationHistory]\n[User: aktér] 1 ---> 0..* [ReservationHistory]\n[Reservation] 0..1 ---> 0..* [Notification]\n[User: příjemce] 1 ---> 0..* [Notification]\n\nJeden termín má nejvýše jednu aktivní rezervaci.\nPENDING a CONFIRMED blokují termín; CANCELLED jej uvolní."
         },
         {
           "type": "paragraph",
@@ -62,7 +69,12 @@
         {
           "type": "note",
           "variant": "info",
-          "content": "Controller, Repository, HTTP klient a Spring jsou technické prvky. Do doménového modelu patří až v návrhovém třídním diagramu, ne do tohoto modelu pojmů."
+          "content": "Controller, Repository, HTTP klient a Spring jsou technické prvky. Patří do návrhového třídního diagramu, nikoli do doménového modelu."
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Model C1 je konceptuální: User odpovídá AppUser, který může mít více rolí; konkrétní přihlášená relace má jednu aktivní roli. TimeInterval není samostatná Java třída: představují jej startsAt a endsAt v ConsultationSlot."
         }
       ]
     },
@@ -304,6 +316,11 @@
           "caption": "Student vybírá termín, vytváří a ruší rezervaci; pedagog spravuje termíny, schvaluje a ruší rezervace. Posuvník mění velikost diagramu."
         },
         {
+          "type": "code",
+          "language": "Přehled diagramu",
+          "content": "[Rezervační systém]\nobsahuje:\n- Dostupnost a rezervace konzultací\n- Správu termínů\n- Schvalování a rušení rezervací\n- Interní oznámení\n\n[Student] -- výběr termínu, žádost, zrušení --> [Rezervační systém]\n[Pedagog] -- správa termínů, schválení, zrušení --> [Rezervační systém]\n[Rezervační systém] -- výsledky a oznámení --> [Student / pedagog]\n\nExterní poskytovatel přihlášení ani e-mailová služba se nepoužívají."
+        },
+        {
           "type": "table",
           "headers": ["Aktér", "Co do systému posílá", "Co ze systému získá"],
           "rows": [
@@ -337,7 +354,13 @@
           "type": "image",
           "src": "c03b-static-architecture.png",
           "alt": "Statická architektura rezervačního systému TO-BE",
-          "caption": "Cílové komponenty, jejich odpovědnosti a vztahy. Diagram lze zvětšit posuvníkem."
+          "caption": "Cílové komponenty, jejich odpovědnosti a vztahy. Diagram lze zvětšit posuvníkem.",
+          "initialWidth": 50
+        },
+        {
+          "type": "code",
+          "language": "Přehled diagramu",
+          "content": "[Rezervační aplikace — TO-BE]\nobsahuje:\n- Uživatelské rozhraní\n- Autentizaci a rezervační API\n- Správu rezervací a konzultačních termínů\n- Interní oznámení\n- Perzistenci a integritu dat\n\n[React UI] -- požadavek + token --> [Bezpečnostní hranice / API]\n[API] --> [Správa rezervací]\n           +--> [Reservation: změna stavu]\n           +--> [Interní oznámení]\n           +--> [Perzistence: rezervace + historie]\n[API] --> [Správa termínů] --> [Perzistence]\n[Autentizace / interní oznámení] --> [Perzistence]\n    | čtení a zápis\n    v\n[PostgreSQL]\n\nReservationService koordinuje stav, historii a oznámení v jedné transakci."
         },
         {
           "type": "table",
@@ -352,13 +375,13 @@
               "React uživatelské rozhraní: BookingPage a TeacherPage.",
               "Formuláře, přehledy a zobrazení výsledků.",
               "Nevlastní autoritativní doménový stav; backend musí každé pravidlo znovu ověřit.",
-              "Posílá HTTPS/JSON požadavky do API."
+              "Posílá HTTP/JSON požadavky do API přes Nginx; lokální Compose nemá nakonfigurované TLS."
             ],
             [
               "Autentizační a bezpečnostní hranice: BearerTokenFilter a AuthService.",
               "Ověří bearer token a vytvoří AuthenticatedUser v Security Contextu.",
               "Vlastní ověřenou identitu a aktivní roli přihlášeného uživatele.",
-              "Předává identitu controllerům, které ji potřebují."
+              "Načítá relaci přes perzistenci a předává ověřenou identitu controllerům."
             ],
             [
               "Rezervační API: ReservationController.",
@@ -367,7 +390,7 @@
               "Deleguje operace na aplikační služby."
             ],
             [
-              "Správa rezervací: ReservationService a Reservation.",
+              "Správa rezervací: ReservationService, Reservation a pomocná UserService pro načtení aktéra.",
               "Ověří pravidla rezervace a rozhodne o povolených změnách životního cyklu.",
               "Vlastní aplikační rozhodnutí o stavech a koordinaci auditu.",
               "Používá doménové objekty, repository a NotificationService."
@@ -412,6 +435,11 @@
           "src": "c02-reservation-state.png",
           "alt": "Stavový diagram Reservation: PENDING, CONFIRMED a CANCELLED",
           "caption": "Stavy a povolené přechody rezervace převzaté z C02. Diagram lze zvětšit posuvníkem."
+        },
+        {
+          "type": "code",
+          "language": "Přehled diagramu",
+          "content": "[Reservation]\nobsahuje stavy:\n- PENDING — čeká na schválení, blokuje termín\n- CONFIRMED — potvrzená, blokuje termín\n- CANCELLED — zrušená, termín neblokuje\n\n[Vytvoření] ---> [PENDING]\n[PENDING] -- schválí vlastník termínu --> [CONFIRMED]\n[PENDING / CONFIRMED] -- oprávněné zrušení --> [CANCELLED]\n\nZrušení: nejméně 3 hodiny před začátkem.\nU CONFIRMED je povinný důvod zrušení."
         },
         {
           "type": "table",
@@ -470,6 +498,11 @@
           "caption": "Prohlížeč, Nginx frontend, backend Spring Boot, PostgreSQL a trvalý databázový volume. Diagram lze zvětšit posuvníkem."
         },
         {
+          "type": "code",
+          "language": "Přehled diagramu",
+          "content": "[Prohlížeč]\nobsahuje:\n- React UI: BookingPage, TeacherPage\n- API klienta\n    | HTTP, port 5173\n    v\n[Frontend kontejner: Nginx, port 80]\nobsahuje:\n- Statické soubory React aplikace\n- Reverse proxy pro /api\n    | HTTP /api\n    v\n[Backend kontejner: jeden proces Spring Boot, port 8080]\nobsahuje:\n- Autentizaci a rezervační API\n- Správu rezervací a schvalování\n- Správu konzultačních termínů\n- Interní oznámení\n- Repository a Flyway\n    | čtení / zápis / migrace přes JDBC\n    v\n[PostgreSQL 17, port 5432]\n    | trvalá data\n    v\n[Volume: postgres-data]\n\nExterní runtime systémy: žádné.\nAutentizace i oznámení jsou součástí backendu."
+        },
+        {
           "type": "table",
           "headers": ["Runtime prvek", "Běží kde", "Port / spojení", "Co obsahuje"],
           "rows": [
@@ -510,19 +543,16 @@
           "content": "C03A mapovala právě schválení rezervace, proto je toto hlavní scénář H1. Ukazuje cílovou architekturu, významné volání, bezpečnostní kontrolu, změnu stavu a chybovou větev."
         },
         {
-          "type": "code",
-          "language": "Sekvenční diagram — schválení",
-          "content": "Pedagog → TeacherPage:\n  vybere žádost se stavem PENDING a zvolí Schválit\n\nTeacherPage → API klient:\n  approveReservation(token, reservationId)\n\nAPI klient → ReservationController:\n  POST /api/reservations/{reservationId}/approve\n  + bearer token + ReservationTransitionRequest\n\nBearerTokenFilter → AuthService:\n  ověří bearer token a vloží AuthenticatedUser do SecurityContextu\n\nReservationController → ReservationService:\n  approve(reservationId, AuthenticatedUser, request)\n\nReservationService → ReservationRepository:\n  načte rezervaci\n\nReservationService:\n  ověří přihlášení, aktivní roli TEACHER,\n  vlastnictví slotu a stav PENDING\n\nalt ověření selže\n  ReservationService → Controller:\n    ApiException 401 / 403 / 404 / 409\n  Stav, historie ani oznámení se nezmění\nelse ověření projde\n  ReservationService → Reservation:\n    confirm()\n  ReservationService → ReservationHistoryRepository:\n    uloží PENDING → CONFIRMED, aktéra a poznámku\n  ReservationService → NotificationService:\n    vytvoří interní oznámení pro studenta\n  ReservationService → Controller:\n    vrátí ReservationResponse\n  Controller → TeacherPage:\n    HTTP 200; přehled se obnoví\nend\n\nZápisy probíhají v transakci ReservationService."
-        },
-        {
-          "type": "paragraph",
-          "content": "Přiložený obrázek níže ukazuje detailní sekvenci Create Reservation. Je to doplňující scénář z C02; nenahrazuje výše uvedený H1 scénář schválení z C03A."
-        },
-        {
           "type": "image",
-          "src": "c03b-create-reservation-sequence.png",
-          "alt": "Sekvenční diagram vytvoření rezervace přes frontend, Spring Security, controller, service a PostgreSQL",
-          "caption": "Doplňující sekvence Create Reservation: validace, PENDING, historie, oznámení a konflikt při souběhu. Diagram lze zvětšit posuvníkem."
+          "src": "c03b-approval-sequence.png",
+          "alt": "Sekvenční diagram schválení rezervace OP-05",
+          "caption": "H1 — schválení rezervace v přijaté TO-BE architektuře.",
+          "initialWidth": 100
+        },
+        {
+          "type": "code",
+          "language": "Přehled diagramu",
+          "content": "[Schválení rezervace — OP-05]\n[Pedagog] --> [TeacherPage] -- požadavek + token --> [Autentizace]\n    | ověřená identita\n    v\n[ReservationController] --> [ReservationService]\n    | načíst rezervaci a aktéra, ověřit roli, vlastníka a PENDING\n    +-- nepovoleno --> [HTTP 403 / 409, bez změn]\n    +-- povoleno ---> [Reservation.confirm(): CONFIRMED]\n                          +--> [Historie změny]\n                          +--> [NotificationService: oznámení studentovi]\n                                   | společný commit v PostgreSQL\n                                   v\n                              [HTTP 200] --> [Obnovený přehled]\n\nStav, historie a oznámení tvoří jednu transakci.\nChyba zápisu --> [Rollback, bez úspěšné odpovědi]."
         }
       ]
     },
@@ -537,13 +567,18 @@
         {
           "type": "code",
           "language": "Třídní diagram — schválení",
-          "content": "AuthenticatedUser\n  id, activeRole\n  vytvoří jej autentizační filtr z ověřené bearer relace\n\nReservationController\n  approve(reservationId, AuthenticatedUser, request)\n  přijme HTTP požadavek a deleguje\n\nReservationService <<transactional>>\n  approve(reservationId, AuthenticatedUser, request)\n  ověří aktéra, vlastníka slotu a stav PENDING\n  koordinuje změnu, historii a oznámení\n\nReservation\n  status: PENDING | CONFIRMED | CANCELLED\n  confirm()\n  nastaví CONFIRMED a confirmedAt\n\nReservationRepository\n  načte rezervaci podle ID\n\nReservationHistoryRepository\n  uloží akci, previousStatus, newStatus, actor a note\n\nNotificationService\n  create(student, reservation, type, title, message)\n  uloží interní oznámení\n\nVazby:\n  ReservationController → ReservationService\n  ReservationService → ReservationRepository\n  ReservationService → ReservationHistoryRepository\n  ReservationService → NotificationService\n  Reservation → ConsultationSlot\n  Reservation → Student"
+          "content": "[Schválení rezervace — hlavní třídy]\n[ReservationController.approve()]\n    | předá AuthenticatedUser z ověřené relace\n    v\n[ReservationService.approve()]\n- Ověří roli pedagoga, vlastnictví termínu a stav PENDING.\n- Koordinuje změnu, historii a oznámení v jedné transakci.\n    +--> [ReservationRepository: načíst rezervaci]\n    +--> [Reservation.confirm(): CONFIRMED + čas potvrzení]\n    +--> [ReservationHistoryRepository: uložit historii]\n    +--> [NotificationService: oznámit studentovi]\n\n[Reservation] --> [ConsultationSlot: vlastník termínu]"
         },
         {
           "type": "image",
           "src": "c03b-create-reservation-class.png",
           "alt": "UML třídní diagram rezervačního API, služeb, repository a doménových tříd",
           "caption": "Doplňující implementační třídní pohled dodaný pro Create Reservation; H2 výše zůstává zaměřený na schválení."
+        },
+        {
+          "type": "code",
+          "language": "Přehled diagramu",
+          "content": "[Třídní pohled — Create Reservation]\n[ReservationController] -- CreateReservationRequest --> [ReservationService]\n    +--> [UserService] --> [AppUser]\n    +--> [ConsultationSlotRepository] --> [ConsultationSlot]\n    +--> [ReservationRepository] --> [Reservation]\n    +--> [ReservationHistoryRepository] --> [ReservationHistory]\n    +--> [NotificationService]\n\n[Reservation]\nobsahuje:\n- Studenta a termín\n- Důvod konzultace\n- Stav PENDING / CONFIRMED / CANCELLED\n- Operace confirm() a cancel()\n\n[ConsultationSlot] 1 ---> 0..* [Reservation]\n[Reservation] 1 ---> 0..* [ReservationHistory]\nNová rezervace začíná jako PENDING; termín má nejvýše jednu aktivní rezervaci."
         }
       ]
     },
@@ -554,6 +589,14 @@
         {
           "type": "paragraph",
           "content": "Kontrolu provádíme před změnou kódu. Když se dvě části rozcházejí, nejdřív opravíme požadavek, odpovědnost nebo diagram — nevybíráme tiše jednu verzi."
+        },
+        {
+          "type": "paragraph",
+          "content": "Ověření proti aktuálnímu kódu: H1 používá stejný OP-05 jako C02 a C03A. TeacherPage a client.ts posílají token a prázdné tělo; ReservationController předává AuthenticatedUser. ReservationService.approve() ověřuje aktivní roli TEACHER, vlastníka a PENDING; Reservation.confirm() nastavuje stav a čas. @Transactional zahrnuje historii i NotificationService.create(); změněnou spravovanou entitu ukládá JPA, není zde explicitní reservations.save(). Účastníci H1 odpovídají G2; perzistence souhrnně zastupuje repository a PostgreSQL. G4 odpovídá compose.yaml, Dockerfile a nginx.conf, nikoli novému ověření běžícího nasazení."
+        },
+        {
+          "type": "paragraph",
+          "content": "Nové ověření 12. 10. 2026: ReservationAuthorizationTests — 10 testů, 0 selhání, 0 chyb. Sada ověřuje skutečný filtr, controller a ReservationService; AuthService, UserService, repository a NotificationService jsou nahrazené mocky. Výsledek potvrzuje oprávnění a běžné přechody, nikoli databázový commit/rollback, skutečné uložení oznámení nebo souběh."
         },
         {
           "type": "table",
@@ -641,6 +684,11 @@
               "CHANGE / samostatný úkol — tato vedlejší cesta není totéž co OP-04 přes ReservationController."
             ]
           ]
+        },
+        {
+          "type": "note",
+          "variant": "warning",
+          "content": "CHANGE + VERIFY — Souběh: approve() načítá rezervaci bez @Version nebo explicitního zámku. Dvě souběžná schválení proto mohou vytvořit duplicitní historii a oznámení. Limit pěti PENDING a časové kolize studenta se ověřují dotazy před vložením; paralelní vytvoření na různých slotech může tyto kontroly obejít. Unikátní index chrání pouze jednu aktivní rezervaci stejného slotu. Je třeba doplnit řízení souběhu a integrační testy."
         },
         {
           "type": "paragraph",

@@ -52,12 +52,19 @@
       "blocks": [
         {
           "type": "paragraph",
-          "content": "The domain model describes reservation concepts, not technical components. This scenario uses students, teachers, consultation slots, reservations, history, and internal notifications."
+          "content": "The domain model describes reservation concepts, not technical components. The model contains six concepts: User (student or teacher role), ConsultationSlot, TimeInterval, Reservation, ReservationHistory, and Notification."
+        },
+        {
+          "type": "image",
+          "src": "c03b-domain-model.png",
+          "alt": "Consultation reservation domain model",
+          "caption": "Domain concepts, relationships, multiplicities, and invariants.",
+          "initialWidth": 100
         },
         {
           "type": "code",
-          "language": "Domain concepts",
-          "content": "Student / Teacher\n  are user roles\n\nTeacher 1 ─── 0..* ConsultationSlot\n  a teacher creates and owns their consultation slots\n\nConsultationSlot 1 ─── 0..* Reservation\n  a slot may have reservation history, but at most one active\n  Reservation with status PENDING or CONFIRMED\n\nStudent 1 ─── 0..* Reservation\n  the student is the consultation requester\n\nReservation 1 ─── 0..* ReservationHistory\n  history records actions, previous/new status, actor, and note\n\nReservation 1 ─── 0..* Notification\n  a reservation change may create an internal message for a recipient\n\nReservation.status:\n  PENDING | CONFIRMED | CANCELLED"
+          "language": "Diagram overview",
+          "content": "[Domain Model]\ncontains:\n- User — student or teacher\n- ConsultationSlot — consultation slot\n- TimeInterval — slot start and end\n- Reservation — consultation request\n- ReservationHistory — transition history\n- Notification — internal message\n\n[User: teacher] 1 ---> 0..* [ConsultationSlot]\n[User: student] 1 ---> 0..* [Reservation]\n[ConsultationSlot] 1 ---> 1 [TimeInterval]\n[ConsultationSlot] 1 ---> 0..* [Reservation]\n[Reservation] 1 ---> 1..* [ReservationHistory]\n[User: actor] 1 ---> 0..* [ReservationHistory]\n[Reservation] 0..1 ---> 0..* [Notification]\n[User: recipient] 1 ---> 0..* [Notification]\n\nAt most one active reservation per slot.\nPENDING and CONFIRMED block the slot; CANCELLED releases it."
         },
         {
           "type": "paragraph",
@@ -67,6 +74,11 @@
           "type": "note",
           "variant": "info",
           "content": "Controller, Repository, HTTP client, and Spring are technical elements. They belong in a design class diagram, not in this domain concept model."
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "C1 is conceptual: User maps to AppUser, which can have multiple roles; a signed-in session has one active role. TimeInterval is not a separate Java class: it represents startsAt and endsAt in ConsultationSlot."
         }
       ]
     },
@@ -308,6 +320,11 @@
           "caption": "Students search slots, create and cancel reservations; teachers manage slots, approve and cancel reservations. Use the slider to scale the diagram."
         },
         {
+          "type": "code",
+          "language": "Diagram overview",
+          "content": "[Reservation System]\ncontains:\n- Consultation availability and booking\n- Slot management\n- Reservation approval and cancellation\n- Internal notifications\n\n[Student] -- select slot, request, cancel --> [Reservation System]\n[Teacher] -- manage slots, approve, cancel --> [Reservation System]\n[Reservation System] -- results and notifications --> [Student / teacher]\n\nNo external identity provider or email service is used."
+        },
+        {
           "type": "table",
           "headers": ["Actor", "What they send to the system", "What they receive"],
           "rows": [
@@ -341,7 +358,13 @@
           "type": "image",
           "src": "c03b-static-architecture.png",
           "alt": "TO-BE static architecture of the reservation system",
-          "caption": "Target components, responsibilities, and relationships. Use the slider to scale the diagram."
+          "caption": "Target components, responsibilities, and relationships. Use the slider to scale the diagram.",
+          "initialWidth": 50
+        },
+        {
+          "type": "code",
+          "language": "Diagram overview",
+          "content": "[Reservation Application — TO-BE]\ncontains:\n- User interface\n- Authentication and Reservation API\n- Reservation and slot management\n- Internal notifications\n- Persistence and data integrity\n\n[React UI] -- request + token --> [Security boundary / API]\n[API] --> [Reservation Management]\n           +--> [Reservation: status change]\n           +--> [Internal Notifications]\n           +--> [Persistence: reservation + history]\n[API] --> [Slot Management] --> [Persistence]\n[Authentication / Internal Notifications] --> [Persistence]\n    | read/write\n    v\n[PostgreSQL]\n\nReservationService coordinates status, history and notifications in one transaction."
         },
         {
           "type": "table",
@@ -356,7 +379,7 @@
               "React user interface: BookingPage and TeacherPage.",
               "Forms, overviews, and result display.",
               "Does not own authoritative domain state; the backend rechecks every rule.",
-              "Sends HTTPS/JSON requests to the API."
+              "Sends HTTP/JSON requests through Nginx; local Compose has no TLS configured."
             ],
             [
               "Authentication and security boundary: BearerTokenFilter and AuthService.",
@@ -371,7 +394,7 @@
               "Delegates operations to application services."
             ],
             [
-              "Reservation management: ReservationService and Reservation.",
+              "Reservation management: ReservationService, Reservation, and supporting UserService for actor lookup.",
               "Verifies reservation rules and decides permitted lifecycle changes.",
               "Owns application decisions about status and audit coordination.",
               "Uses domain objects, repositories, and NotificationService."
@@ -416,6 +439,11 @@
           "src": "c02-reservation-state.png",
           "alt": "Reservation state diagram: PENDING, CONFIRMED, and CANCELLED",
           "caption": "States and allowed reservation transitions from C02. Use the slider to scale the diagram."
+        },
+        {
+          "type": "code",
+          "language": "Diagram overview",
+          "content": "[Reservation]\ncontains states:\n- PENDING — awaiting approval, blocks the slot\n- CONFIRMED — approved, blocks the slot\n- CANCELLED — cancelled, releases the slot\n\n[Creation] ---> [PENDING]\n[PENDING] -- slot owner approves --> [CONFIRMED]\n[PENDING / CONFIRMED] -- authorized cancellation --> [CANCELLED]\n\nCancellation: at least 3 hours before the start.\nCancelling CONFIRMED requires a reason."
         },
         {
           "type": "table",
@@ -474,6 +502,11 @@
           "caption": "Browser, Nginx frontend, Spring Boot backend, PostgreSQL, and persistent database volume. Use the slider to scale the diagram."
         },
         {
+          "type": "code",
+          "language": "Diagram overview",
+          "content": "[Browser]\ncontains:\n- React UI: BookingPage, TeacherPage\n- API client\n    | HTTP, port 5173\n    v\n[Frontend container: Nginx, port 80]\ncontains:\n- Static React application files\n- Reverse proxy for /api\n    | HTTP /api\n    v\n[Backend container: one Spring Boot process, port 8080]\ncontains:\n- Authentication and Reservation API\n- Reservation Management and Approval Workflow\n- Consultation Slot Management\n- Internal Notifications\n- Repositories and Flyway\n    | read/write/migrations through JDBC\n    v\n[PostgreSQL 17, port 5432]\n    | persistent data\n    v\n[Volume: postgres-data]\n\nExternal runtime systems: none.\nAuthentication and notifications are part of the backend."
+        },
+        {
           "type": "table",
           "headers": ["Runtime element", "Where it runs", "Port / connection", "What it contains"],
           "rows": [
@@ -514,19 +547,16 @@
           "content": "C03A mapped reservation approval, so this is the main H1 scenario. It shows the target architecture, significant calls, security checks, state change, and an error branch."
         },
         {
-          "type": "code",
-          "language": "Sequence diagram — approval",
-          "content": "Teacher → TeacherPage:\n  selects a PENDING request and chooses Approve\n\nTeacherPage → API client:\n  approveReservation(token, reservationId)\n\nAPI client → ReservationController:\n  POST /api/reservations/{reservationId}/approve\n  + bearer token + ReservationTransitionRequest\n\nBearerTokenFilter → AuthService:\n  verifies bearer token and places AuthenticatedUser in SecurityContext\n\nReservationController → ReservationService:\n  approve(reservationId, AuthenticatedUser, request)\n\nReservationService → ReservationRepository:\n  loads reservation\n\nReservationService:\n  verifies signed-in actor, active TEACHER role,\n  slot ownership, and PENDING state\n\nalt verification fails\n  ReservationService → Controller:\n    ApiException 401 / 403 / 404 / 409\n  State, history, and notification remain unchanged\nelse verification succeeds\n  ReservationService → Reservation:\n    confirm()\n  ReservationService → ReservationHistoryRepository:\n    saves PENDING → CONFIRMED, actor, and note\n  ReservationService → NotificationService:\n    creates internal notification for student\n  ReservationService → Controller:\n    returns ReservationResponse\n  Controller → TeacherPage:\n    HTTP 200; overview reloads\nend\n\nReservationService database writes run in a transaction."
-        },
-        {
-          "type": "paragraph",
-          "content": "The attached image below shows a detailed Create Reservation sequence. It is an additional C02 scenario; it does not replace the approval scenario from C03A required for H1."
-        },
-        {
           "type": "image",
-          "src": "c03b-create-reservation-sequence.png",
-          "alt": "Sequence diagram of reservation creation through frontend, Spring Security, controller, service, and PostgreSQL",
-          "caption": "Additional Create Reservation sequence: validation, PENDING, history, notification, and concurrency conflict. Use the slider to scale the diagram."
+          "src": "c03b-approval-sequence.png",
+          "alt": "OP-05 reservation approval sequence diagram",
+          "caption": "H1 — reservation approval in the accepted TO-BE architecture.",
+          "initialWidth": 100
+        },
+        {
+          "type": "code",
+          "language": "Diagram overview",
+          "content": "[Reservation Approval — OP-05]\n[Teacher] --> [TeacherPage] -- request + token --> [Authentication]\n    | verified identity\n    v\n[ReservationController] --> [ReservationService]\n    | load reservation and actor, check role, ownership and PENDING\n    +-- rejected --> [HTTP 403 / 409, no changes]\n    +-- allowed ---> [Reservation.confirm(): CONFIRMED]\n                          +--> [Transition history]\n                          +--> [NotificationService: notify student]\n                                   | shared PostgreSQL commit\n                                   v\n                              [HTTP 200] --> [Reloaded overview]\n\nStatus, history and notification form one transaction.\nWrite failure --> [Rollback, no success response]."
         }
       ]
     },
@@ -541,13 +571,18 @@
         {
           "type": "code",
           "language": "Class diagram — approval",
-          "content": "AuthenticatedUser\n  id, activeRole\n  created by the authentication filter from a verified bearer session\n\nReservationController\n  approve(reservationId, AuthenticatedUser, request)\n  accepts HTTP request and delegates\n\nReservationService <<transactional>>\n  approve(reservationId, AuthenticatedUser, request)\n  verifies actor, slot owner, and PENDING state\n  coordinates state change, history, and notification\n\nReservation\n  status: PENDING | CONFIRMED | CANCELLED\n  confirm()\n  sets CONFIRMED and confirmedAt\n\nReservationRepository\n  loads reservation by ID\n\nReservationHistoryRepository\n  saves action, previousStatus, newStatus, actor, and note\n\nNotificationService\n  create(student, reservation, type, title, message)\n  stores internal notification\n\nRelationships:\n  ReservationController → ReservationService\n  ReservationService → ReservationRepository\n  ReservationService → ReservationHistoryRepository\n  ReservationService → NotificationService\n  Reservation → ConsultationSlot\n  Reservation → Student"
+          "content": "[Reservation Approval — main classes]\n[ReservationController.approve()]\n    | passes AuthenticatedUser from the verified session\n    v\n[ReservationService.approve()]\n- Checks teacher role, slot ownership and PENDING status.\n- Coordinates status, history and notification in one transaction.\n    +--> [ReservationRepository: load reservation]\n    +--> [Reservation.confirm(): CONFIRMED + confirmation time]\n    +--> [ReservationHistoryRepository: save history]\n    +--> [NotificationService: notify student]\n\n[Reservation] --> [ConsultationSlot: slot owner]"
         },
         {
           "type": "image",
           "src": "c03b-create-reservation-class.png",
           "alt": "UML class diagram of reservation API, services, repositories, and domain classes",
           "caption": "Additional implementation class view supplied for Create Reservation; the H2 model above remains focused on approval."
+        },
+        {
+          "type": "code",
+          "language": "Diagram overview",
+          "content": "[Class View — Create Reservation]\n[ReservationController] -- CreateReservationRequest --> [ReservationService]\n    +--> [UserService] --> [AppUser]\n    +--> [ConsultationSlotRepository] --> [ConsultationSlot]\n    +--> [ReservationRepository] --> [Reservation]\n    +--> [ReservationHistoryRepository] --> [ReservationHistory]\n    +--> [NotificationService]\n\n[Reservation]\ncontains:\n- Student and slot\n- Consultation reason\n- PENDING / CONFIRMED / CANCELLED status\n- confirm() and cancel() operations\n\n[ConsultationSlot] 1 ---> 0..* [Reservation]\n[Reservation] 1 ---> 0..* [ReservationHistory]\nA new reservation starts as PENDING; a slot has at most one active reservation."
         }
       ]
     },
@@ -558,6 +593,14 @@
         {
           "type": "paragraph",
           "content": "Perform this check before changing code. If two parts disagree, first fix the requirement, responsibility, or diagram; do not silently choose one version."
+        },
+        {
+          "type": "paragraph",
+          "content": "Checked against current code: H1 uses the same OP-05 as C02 and C03A. TeacherPage and client.ts send a token and empty body; ReservationController passes AuthenticatedUser. ReservationService.approve() checks active TEACHER role, ownership and PENDING; Reservation.confirm() sets status and time. @Transactional covers history and NotificationService.create(); JPA persists the changed managed entity without an explicit reservations.save(). H1 participants map to G2; persistence aggregates repositories and PostgreSQL. G4 matches compose.yaml, Dockerfiles and nginx.conf, not a new live deployment check."
+        },
+        {
+          "type": "paragraph",
+          "content": "New verification on 12 October 2026: ReservationAuthorizationTests — 10 tests, 0 failures, 0 errors. The suite exercises the real filter, controller and ReservationService; AuthService, UserService, repositories and NotificationService are mocked. This verifies authorization and normal transitions, not database commit/rollback, actual notification persistence or concurrency."
         },
         {
           "type": "table",
@@ -645,6 +688,11 @@
               "CHANGE / separate task — this side path is not the same as OP-04 through ReservationController."
             ]
           ]
+        },
+        {
+          "type": "note",
+          "variant": "warning",
+          "content": "CHANGE + VERIFY — Concurrency: approve() loads a reservation without @Version or an explicit lock. Two concurrent approvals may therefore duplicate history and notifications. The five-PENDING limit and student overlap rules are checked by queries before insertion; parallel creation for different slots may bypass these checks. The unique index only protects one active reservation for the same slot. Concurrency control and integration tests are needed."
         },
         {
           "type": "paragraph",

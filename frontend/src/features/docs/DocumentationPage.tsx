@@ -38,31 +38,10 @@ function Diagram({
   alt,
   caption,
   fullWidth,
+  initialWidth,
   language,
 }: Extract<DocumentationBlock, { type: 'image' }> & { language: Language }) {
-  const [size, setSize] = useState(20)
-  if (fullWidth) {
-    return (
-      <figure className="docs-flow-figure">
-        <div
-          className="docs-flow-scroll"
-          role="region"
-          aria-label={
-            language === 'cs' ? 'Diagram schválení rezervace' : 'Reservation approval diagram'
-          }
-          tabIndex={0}
-        >
-          <img src={imageUrl(src)} alt={alt} />
-        </div>
-        <figcaption>
-          {caption ??
-            (language === 'cs'
-              ? 'Na menší obrazovce lze diagram posunout do stran.'
-              : 'On smaller screens, scroll horizontally to view the diagram.')}
-        </figcaption>
-      </figure>
-    )
-  }
+  const [size, setSize] = useState(initialWidth ?? (fullWidth ? 100 : 20))
   return (
     <div className="docs-image-control-group">
       <label className="docs-image-control">
@@ -70,13 +49,18 @@ function Diagram({
         <input
           type="range"
           min="20"
-          max="100"
+          max="400"
+          step="10"
           value={size}
+          aria-valuetext={`${size} %`}
           onChange={(event) => setSize(Number(event.target.value))}
         />
+        <span>{size} %</span>
       </label>
-      <figure className="docs-diagram" style={{ width: `${size}%` }}>
-        <img src={imageUrl(src)} alt={alt} />
+      <figure className="docs-diagram">
+        <div className="docs-image-scroll" role="region" aria-label={alt} tabIndex={0}>
+          <img src={imageUrl(src)} alt={alt} style={{ width: `${size}%` }} />
+        </div>
         {caption && <figcaption>{caption}</figcaption>}
       </figure>
     </div>

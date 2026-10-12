@@ -10,6 +10,7 @@ export type DocumentationBlock =
       alt: string
       caption?: string
       fullWidth?: boolean
+      initialWidth?: number
     }
   | { type: 'checklist'; items: { label: string; done: boolean }[] }
 
@@ -78,7 +79,12 @@ function assertBlock(value: unknown, location: string): asserts value is Documen
         typeof value.src !== 'string' ||
         typeof value.alt !== 'string' ||
         (value.caption !== undefined && typeof value.caption !== 'string') ||
-        (value.fullWidth !== undefined && typeof value.fullWidth !== 'boolean')
+        (value.fullWidth !== undefined && typeof value.fullWidth !== 'boolean') ||
+        (value.initialWidth !== undefined &&
+          (typeof value.initialWidth !== 'number' ||
+            !Number.isFinite(value.initialWidth) ||
+            value.initialWidth < 20 ||
+            value.initialWidth > 100))
       ) {
         throw new Error(`${location}: image block has invalid fields`)
       }

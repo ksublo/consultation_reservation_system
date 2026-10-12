@@ -236,6 +236,11 @@
           "alt": "Schválení rezervace: přihlášení → rezervační API → zpracování rezervace → oznámení. Přihlášení, zpracování a oznámení používají ukládání dat napojené na PostgreSQL."
         },
         {
+          "type": "code",
+          "language": "Přehled diagramu",
+          "content": "[Schválení rezervace — historický AS-IS]\nobsahuje:\n- Přihlášení\n- Rezervační API\n- Zpracování rezervace\n- Interní oznámení\n- Ukládání dat\n\n[Přihlášení] --> [Rezervační API] --> [Zpracování rezervace]\n                                          | vytvořit zprávu\n                                          v\n                                   [Interní oznámení]\n[Přihlášení / zpracování / oznámení]\n    | čtení a zápis přes repository\n    v\n[PostgreSQL]\n\nPůvodní schválení důvěřovalo ID z požadavku.\nOpravená verze používá ověřenou identitu z relace."
+        },
+        {
           "type": "paragraph",
           "content": "Konkrétní třídy jednotlivých bloků:"
         },

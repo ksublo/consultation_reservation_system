@@ -124,6 +124,11 @@
           "src": "c02-use-cases.png",
           "alt": "Use-case diagram of the reservation system",
           "caption": "Use-case diagram — C02"
+        },
+        {
+          "type": "code",
+          "language": "Diagram overview",
+          "content": "[Reservation System]\ncontains:\n- Check Availability\n- Create Reservation\n- Confirm Reservation\n- Cancel Reservation\n\n[Student] ---> [Availability / create / cancel own reservation]\n[Teacher] ---> [Confirm / cancel a reservation for own slot]"
         }
       ]
     },
@@ -140,6 +145,11 @@
           "src": "c02-reservation-state.png",
           "alt": "State diagram of the reservation lifecycle",
           "caption": "Reservation lifecycle — C02"
+        },
+        {
+          "type": "code",
+          "language": "Diagram overview",
+          "content": "[Reservation]\ncontains states:\n- PENDING — awaiting approval, blocks the slot\n- CONFIRMED — approved, blocks the slot\n- CANCELLED — cancelled, releases the slot\n\n[Creation] ---> [PENDING]\n[PENDING] -- slot owner approves --> [CONFIRMED]\n[PENDING / CONFIRMED] -- authorized cancellation --> [CANCELLED]\n\nCancellation: at least 3 hours before the start.\nCancelling CONFIRMED requires a reason."
         }
       ]
     },
@@ -156,6 +166,11 @@
           "src": "c02-activity-diagram.png",
           "alt": "Activity diagram of the four reservation operations",
           "caption": "Activity diagram — C02"
+        },
+        {
+          "type": "code",
+          "language": "Diagram overview",
+          "content": "[User selects an operation]\n    +--> [Availability] --> [Future active slots without active reservations]\n    +--> [Creation] ------> [Check student, slot, limit and overlaps]\n    |                          +-- valid --> [PENDING + history]\n    |                          +-- invalid -> [Reject]\n    +--> [Approval] ------> [Slot owner + PENDING]\n    |                          +-- valid --> [CONFIRMED + history]\n    |                          +-- invalid -> [Reject]\n    +--> [Cancellation] --> [Authorization, status, cutoff and reason]\n                               +-- valid --> [CANCELLED + history]\n                               +-- invalid -> [Reject]"
         }
       ]
     },
