@@ -897,19 +897,33 @@ main.login-page {
 }
 
 .docs-diagram {
-  @apply mt-0 max-w-full justify-self-center overflow-hidden rounded-2xl border border-slate-300 bg-slate-700 shadow-sm;
+  @apply mt-0 w-full min-w-0 max-w-full rounded-2xl border border-slate-300 bg-slate-700 shadow-sm;
 }
 .docs-image-control-group {
   @apply mt-5 grid min-w-0;
 }
 .docs-image-control {
-  @apply mb-2 flex w-full max-w-xs items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700;
+  @apply mb-2 flex w-full max-w-md items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700;
 }
 .docs-image-control input[type='range'] {
   @apply min-w-0 flex-1 accent-teal-600;
 }
+.docs-image-scroll {
+  max-height: 70vh;
+  overflow: auto;
+  border-radius: 1rem;
+  background: white;
+}
+.docs-image-scroll:focus-visible {
+  outline: 3px solid #0f766e;
+  outline-offset: 3px;
+}
 .docs-diagram img {
-  @apply block h-auto w-full max-w-full bg-white;
+  display: block;
+  height: auto;
+  max-width: none;
+  margin-inline: auto;
+  background: white;
 }
 .docs-diagram figcaption {
   @apply border-t border-slate-500 bg-slate-700 px-4 py-3 text-sm font-semibold text-slate-50;
@@ -984,31 +998,4 @@ main.login-page {
 }
 .docs-block {
   min-width: 0;
-}
-
-.docs-flow-figure {
-  margin: 1.25rem 0 0;
-  width: 100%;
-  max-width: 1040px;
-}
-.docs-flow-scroll {
-  overflow-x: auto;
-  border: 1px solid #d4deeb;
-  border-radius: 16px;
-  background: white;
-}
-.docs-flow-scroll:focus-visible {
-  outline: 3px solid #0f766e;
-  outline-offset: 3px;
-}
-.docs-flow-scroll img {
-  display: block;
-  width: 100%;
-  min-width: 850px;
-  height: auto;
-}
-.docs-flow-figure figcaption {
-  margin-top: 8px;
-  color: #52677b;
-  font-size: 0.875rem;
 }

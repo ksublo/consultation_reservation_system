@@ -233,6 +233,11 @@
           "alt": "Reservation approval: authentication → reservation API → reservation processing → notifications. Authentication, processing and notifications use data storage connected to PostgreSQL."
         },
         {
+          "type": "code",
+          "language": "Diagram overview",
+          "content": "[Reservation Approval — historical AS-IS]\ncontains:\n- Authentication\n- Reservation API\n- Reservation Processing\n- Internal Notifications\n- Persistence\n\n[Authentication] --> [Reservation API] --> [Reservation Processing]\n                                               | create message\n                                               v\n                                        [Internal Notifications]\n[Authentication / processing / notifications]\n    | read/write through repositories\n    v\n[PostgreSQL]\n\nOriginal approval trusted the ID in the request.\nThe corrected version uses verified session identity."
+        },
+        {
           "type": "paragraph",
           "content": "Concrete classes in each block:"
         },

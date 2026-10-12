@@ -124,6 +124,11 @@
           "src": "c02-use-cases.png",
           "alt": "Diagram případů užití rezervačního systému",
           "caption": "Use-case diagram — C02"
+        },
+        {
+          "type": "code",
+          "language": "Přehled diagramu",
+          "content": "[Rezervační systém]\nobsahuje:\n- Kontrolu dostupnosti\n- Vytvoření rezervace\n- Potvrzení rezervace\n- Zrušení rezervace\n\n[Student] ---> [Dostupnost / vytvoření / zrušení vlastní rezervace]\n[Pedagog] --> [Potvrzení / zrušení rezervace svého termínu]"
         }
       ]
     },
@@ -140,6 +145,11 @@
           "src": "c02-reservation-state.png",
           "alt": "Stavový diagram životního cyklu rezervace",
           "caption": "Reservation lifecycle — C02"
+        },
+        {
+          "type": "code",
+          "language": "Přehled diagramu",
+          "content": "[Reservation]\nobsahuje stavy:\n- PENDING — čeká na schválení, blokuje termín\n- CONFIRMED — potvrzená, blokuje termín\n- CANCELLED — zrušená, termín neblokuje\n\n[Vytvoření] ---> [PENDING]\n[PENDING] -- schválí vlastník termínu --> [CONFIRMED]\n[PENDING / CONFIRMED] -- oprávněné zrušení --> [CANCELLED]\n\nZrušení: nejméně 3 hodiny před začátkem.\nU CONFIRMED je povinný důvod zrušení."
         }
       ]
     },
@@ -156,6 +166,11 @@
           "src": "c02-activity-diagram.png",
           "alt": "Diagram aktivit čtyř operací rezervace",
           "caption": "Activity diagram — C02"
+        },
+        {
+          "type": "code",
+          "language": "Přehled diagramu",
+          "content": "[Uživatel vybere operaci]\n    +--> [Dostupnost] --> [Budoucí aktivní termíny bez aktivní rezervace]\n    +--> [Vytvoření] ---> [Kontrola studenta, termínu, limitu a překryvů]\n    |                         +-- splněno --> [PENDING + historie]\n    |                         +-- nesplněno -> [Odmítnutí]\n    +--> [Schválení] ---> [Vlastník termínu + PENDING]\n    |                         +-- splněno --> [CONFIRMED + historie]\n    |                         +-- nesplněno -> [Odmítnutí]\n    +--> [Zrušení] -----> [Oprávnění, stav, časová hranice a důvod]\n                              +-- splněno --> [CANCELLED + historie]\n                              +-- nesplněno -> [Odmítnutí]"
         }
       ]
     },
