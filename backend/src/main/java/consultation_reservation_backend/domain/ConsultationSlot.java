@@ -19,6 +19,12 @@ public class ConsultationSlot {
   @Column(nullable = false)
   private OffsetDateTime endsAt;
 
+  @Column(name = "online_available", nullable = false)
+  private boolean onlineAvailable;
+
+  @Column(name = "offline_available", nullable = false)
+  private boolean offlineAvailable;
+
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
   private SlotStatus status;
@@ -28,13 +34,24 @@ public class ConsultationSlot {
 
   protected ConsultationSlot() {}
 
-  public ConsultationSlot(AppUser teacher, OffsetDateTime startsAt, OffsetDateTime endsAt) {
+  public ConsultationSlot(
+      AppUser teacher,
+      OffsetDateTime startsAt,
+      OffsetDateTime endsAt,
+      boolean onlineAvailable,
+      boolean offlineAvailable) {
     this.id = UUID.randomUUID();
     this.teacher = teacher;
     this.startsAt = startsAt;
     this.endsAt = endsAt;
+    this.onlineAvailable = onlineAvailable;
+    this.offlineAvailable = offlineAvailable;
     this.status = SlotStatus.ACTIVE;
     this.createdAt = OffsetDateTime.now();
+  }
+
+  public ConsultationSlot(AppUser teacher, OffsetDateTime startsAt, OffsetDateTime endsAt) {
+    this(teacher, startsAt, endsAt, true, true);
   }
 
   public UUID getId() {
@@ -51,6 +68,14 @@ public class ConsultationSlot {
 
   public OffsetDateTime getEndsAt() {
     return endsAt;
+  }
+
+  public boolean isOnlineAvailable() {
+    return onlineAvailable;
+  }
+
+  public boolean isOfflineAvailable() {
+    return offlineAvailable;
   }
 
   public SlotStatus getStatus() {

@@ -155,6 +155,45 @@ form {
 form label {
   @apply text-sm font-bold text-slate-600;
 }
+.consultation-mode-options {
+  @apply relative my-2 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-teal-100 bg-teal-50/60 px-3 pb-3 pt-5;
+}
+.consultation-mode-options label {
+  @apply flex min-h-7 items-center gap-2;
+}
+.consultation-mode-options input {
+  @apply h-4 w-4 shrink-0 rounded border-0 p-0 accent-vsb;
+}
+.slot-mode-checkboxes {
+  @apply relative my-2 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-teal-100 bg-teal-50/60 px-3 pb-3 pt-5 sm:col-span-2;
+}
+.consultation-mode-options legend,
+.slot-mode-checkboxes legend {
+  @apply absolute -top-2 left-3 z-10 bg-teal-50/60 px-1 text-xs font-bold text-vsb-dark;
+}
+.slot-mode-checkboxes label {
+  @apply flex min-h-7 items-center gap-2;
+}
+.slot-mode-checkboxes input {
+  @apply h-4 w-4 shrink-0 rounded border-0 p-0 accent-vsb;
+}
+.labeled-field {
+  @apply relative mt-2 rounded-xl border border-teal-100 bg-teal-50/60;
+}
+.labeled-field:focus-within {
+  @apply border-vsb ring-2 ring-teal-100;
+}
+.labeled-field label {
+  @apply absolute -top-2 left-3 z-10 bg-teal-50/60 px-1 text-xs font-bold text-vsb-dark;
+}
+.labeled-field input,
+.labeled-field select,
+.labeled-field textarea {
+  @apply w-full border-0 bg-transparent px-3 pb-2 pt-4 shadow-none focus:border-0 focus:ring-0;
+}
+.labeled-field textarea {
+  @apply min-h-28 resize-y;
+}
 .login-page {
   @apply fixed inset-0 grid min-h-screen w-screen max-w-none place-items-center bg-teal-50 p-6;
 }
@@ -377,7 +416,7 @@ main.login-page {
   @apply mb-7 gap-3;
 }
 .student-slot-card form {
-  @apply mt-0 gap-3 pt-6;
+  @apply mt-0 gap-4 pt-6;
 }
 .student-slot-card textarea {
   @apply h-40 resize-none overflow-y-auto;
@@ -444,7 +483,7 @@ main.login-page {
   @apply self-center;
 }
 .teacher-slot-form {
-  @apply mt-4 w-full gap-4 border-t-0 pt-0 sm:grid-cols-2;
+  @apply mt-6 w-full gap-5 border-t border-slate-100 pt-5 sm:grid-cols-2;
 }
 .slot-form-field {
   @apply grid gap-2;

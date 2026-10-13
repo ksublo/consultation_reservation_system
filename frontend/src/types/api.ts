@@ -1,4 +1,5 @@
 export type UserRole = 'STUDENT' | 'TEACHER'
+export type ConsultationMode = 'ONLINE' | 'OFFLINE'
 
 export interface Session {
   token: string
@@ -15,6 +16,8 @@ export interface ConsultationSlot {
   teacherName: string
   startsAt: string
   endsAt: string
+  onlineAvailable?: boolean
+  offlineAvailable?: boolean
   status: 'ACTIVE' | 'CANCELLED'
 }
 
@@ -24,6 +27,7 @@ export interface Teacher {
   lastName: string
   login: string
   email: string
+  cabinet?: string | null
 }
 
 export interface ApiError {
@@ -60,6 +64,8 @@ export interface Reservation {
   studentEmail: string
   reasonTitle: string
   reasonDescription: string
+  consultationMode: ConsultationMode
+  teacherCabinet: string | null
   status: ReservationStatus
   startsAt: string
   endsAt: string
