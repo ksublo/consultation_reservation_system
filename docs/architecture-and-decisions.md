@@ -184,3 +184,46 @@ Testovali jsme na dočasných účtech a rezervacích, které jsme potom odstran
 | Odmítnutí podstrčeného ID | Zaznamenané obejití kontroly | Opakovatelné regresní testy API a služby | VERIFY |
 
 **Rozsah:** schválení a rušení rezervací. Vytváření rezervací, správa termínů a ostatní endpointy nejsou touto opravou revidované; další použití klientských ID vyžaduje samostatnou kontrolu. Tato dílčí oprava nepředstavuje dokončení všech bodů C03.
+
+## C05 Detailed Design — Stage 1: design intent
+
+### Selected architecture unit
+
+**Unit:** `ReservationService` and the `Reservation` lifecycle entity.
+
+**Related requirements/scenarios:** OP-05/REQ-05 (teacher approves a pending reservation), REQ-04/BR-03 (authorized cancellation and audit history), BR-02 (one active reservation per slot), and the C02 approval scenario.
+
+### Detailed responsibilities
+
+| Detailed responsibility | Why it is needed |
+| --- | --- |
+| Resolve and verify the actor | Decisions must use the authenticated session and required active role. |
+| Load the reservation for a state decision | The lifecycle decision needs the current reservation state. |
+| Validate transition policy | Approval, cancellation cutoff and cancellation-reason rules must be explicit. |
+| Apply the domain transition | `Reservation` owns status and transition timestamps. |
+| Coordinate audit and notification writes | State, history and notification must commit together. |
+| Return a stable result or failure | API clients need a response or a defined 4xx outcome. |
+
+### Design elements and ownership
+
+| Responsibility | Owner | State/data | Why here? |
+| --- | --- | --- | --- |
+| HTTP boundary | `ReservationController` | request and `AuthenticatedUser` | Maps HTTP; does not decide lifecycle rules. |
+| Lifecycle orchestration | `ReservationService` | actor, previous status, transaction | Keeps authorization and writes under one owner. |
+| State transition | `Reservation` | status, timestamps, cancellation data | Domain object owns its state. |
+| Durable writes | repositories and `NotificationService` | reservation, history, notification | Isolates persistence and notification boundaries. |
+
+### Interface / contract
+
+```text
+approve(reservationId, authenticatedActor, transitionRequest)
+  -> ReservationResponse
+cancel(reservationId, authenticatedActor, transitionRequest)
+  -> ReservationResponse
+```
+
+Preconditions: authenticated actor; teacher owns the slot for approval; reservation is `PENDING` for approval; cancellation actor is the student or slot teacher; confirmed cancellation has a reason; slot is at least three hours away.
+
+Postconditions: the state transition, history row and internal notification commit together. A persistence or notification failure rolls the transaction back. Failures are `401`, `403`, `409` or `400` according to the violated precondition.
+
+This first stage records the design intent before adding the focused diagram and implementation verification.
