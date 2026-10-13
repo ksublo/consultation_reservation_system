@@ -72,6 +72,7 @@ export default function BookingPage({
   const [slotId, setSlotId] = useState('')
   const [reasonTitle, setReasonTitle] = useState('')
   const [reasonDescription, setReasonDescription] = useState('')
+  const [consultationMode, setConsultationMode] = useState<'ONLINE' | 'OFFLINE'>('OFFLINE')
   const [loading, setLoading] = useState(true)
 
   async function loadSlots() {
@@ -105,6 +106,7 @@ export default function BookingPage({
           lastName: user.lastName,
           login: user.login,
           email: user.email,
+          cabinet: user.cabinet,
           name: `${user.firstName} ${user.lastName}`,
         }))
         .map((item) => ({
@@ -168,6 +170,7 @@ export default function BookingPage({
     () => visibleSlots.filter((slot) => availableSlotIds.has(slot.id)),
     [availableSlotIds, visibleSlots],
   )
+  const selectedVisibleSlot = visibleSlots.find((slot) => slot.id === slotId)
   function updateTeacherQuery(value: string) {
     setTeacherQuery(value)
     setTeacherId('')
@@ -211,11 +214,13 @@ export default function BookingPage({
         studentId: session.userId,
         reasonTitle,
         reasonDescription,
+        consultationMode,
       })
       onToast({ type: 'success', message: t('reservationCreated') })
       setSlotId('')
       setReasonTitle('')
       setReasonDescription('')
+      setConsultationMode('OFFLINE')
       await loadSlots()
     } catch (error) {
       const isSlotConflict =
@@ -256,6 +261,11 @@ export default function BookingPage({
               </h2>
               <span>{teacher.login}</span>
               <span>{teacher.email}</span>
+              {teacher.cabinet && (
+                <span>
+                  {t('cabinet')}: {teacher.cabinet}
+                </span>
+              )}
             </div>
           ) : (
             <h2>{t('enterTeacherName')}</h2>
@@ -284,6 +294,11 @@ export default function BookingPage({
                     <strong>{item.name}</strong>
                     <b>{item.login}</b>
                     <b>{item.email}</b>
+                    {item.cabinet && (
+                      <b>
+                        {t('cabinet')}: {item.cabinet}
+                      </b>
+                    )}
                     <span>
                       {item.slotCount} {t('freeSlots')}
                     </span>
@@ -379,7 +394,14 @@ export default function BookingPage({
                     type="button"
                     disabled={!availableSlotIds.has(slot.id)}
                     className={`${slotId === slot.id ? 'slot selected' : 'slot'} ${!availableSlotIds.has(slot.id) ? 'occupied' : ''}`}
-                    onClick={() => setSlotId(slot.id)}
+                    onClick={() => {
+                      setSlotId(slot.id)
+                      setConsultationMode(
+                        slot.onlineAvailable !== false && slot.offlineAvailable === false
+                          ? 'ONLINE'
+                          : 'OFFLINE',
+                      )
+                    }}
                   >
                     {timeFormatter.format(new Date(slot.startsAt))}–
                     {timeFormatter.format(new Date(slot.endsAt))}
@@ -393,24 +415,65 @@ export default function BookingPage({
               )}
             </div>
             <form onSubmit={reserve}>
-              <label htmlFor="reason-title">{t('reasonTitle')}</label>
-              <input
-                id="reason-title"
-                required
-                maxLength={150}
-                value={reasonTitle}
-                onChange={(event) => setReasonTitle(event.target.value)}
-                placeholder={t('reasonTitlePlaceholder')}
-              />
-              <label htmlFor="reason-description">{t('reasonDescription')}</label>
-              <textarea
-                id="reason-description"
-                required
-                maxLength={1000}
-                value={reasonDescription}
-                onChange={(event) => setReasonDescription(event.target.value)}
-                placeholder={t('reasonDescriptionPlaceholder')}
-              />
+              {selectedVisibleSlot && (
+                <fieldset className="consultation-mode-options">
+                  <legend>{t('consultationMode')}</legend>
+                  {selectedVisibleSlot.onlineAvailable !== false &&
+                  selectedVisibleSlot.offlineAvailable !== false ? (
+                    <>
+                      <label>
+                        <input
+                          type="radio"
+                          name="consultation-mode"
+                          value="OFFLINE"
+                          checked={consultationMode === 'OFFLINE'}
+                          onChange={() => setConsultationMode('OFFLINE')}
+                        />
+                        {t('offlineConsultation')}
+                        {teacher.cabinet ? ` · ${teacher.cabinet}` : ''}
+                      </label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="consultation-mode"
+                          value="ONLINE"
+                          checked={consultationMode === 'ONLINE'}
+                          onChange={() => setConsultationMode('ONLINE')}
+                        />
+                        {t('onlineConsultation')}
+                      </label>
+                    </>
+                  ) : (
+                    <span>
+                      {selectedVisibleSlot.onlineAvailable !== false
+                        ? `${t('onlineOnly')}`
+                        : `${t('offlineOnly')}${teacher.cabinet ? ` · ${teacher.cabinet}` : ''}`}
+                    </span>
+                  )}
+                </fieldset>
+              )}
+              <div className="labeled-field">
+                <label htmlFor="reason-title">{t('reasonTitle')}</label>
+                <input
+                  id="reason-title"
+                  required
+                  maxLength={150}
+                  value={reasonTitle}
+                  onChange={(event) => setReasonTitle(event.target.value)}
+                  placeholder={t('reasonTitlePlaceholder')}
+                />
+              </div>
+              <div className="labeled-field">
+                <label htmlFor="reason-description">{t('reasonDescription')}</label>
+                <textarea
+                  id="reason-description"
+                  required
+                  maxLength={1000}
+                  value={reasonDescription}
+                  onChange={(event) => setReasonDescription(event.target.value)}
+                  placeholder={t('reasonDescriptionPlaceholder')}
+                />
+              </div>
               <button className="reserve-button" type="submit">
                 {t('reserveConsultation')}
               </button>

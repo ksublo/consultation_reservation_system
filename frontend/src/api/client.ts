@@ -78,6 +78,14 @@ const apiMessages: Record<string, Record<Language, string>> = {
     cs: 'Tento termín není dostupný.',
     en: 'This slot is not available.',
   },
+  'This consultation mode is not available for the slot.': {
+    cs: 'Tento způsob konzultace není pro zvolený termín dostupný.',
+    en: 'This consultation mode is not available for the selected slot.',
+  },
+  'A slot must allow online or in-person consultations.': {
+    cs: 'Termín musí povolovat online nebo osobní konzultaci.',
+    en: 'A slot must allow online or in-person consultations.',
+  },
   'Reservations must be created at least 3 hours before the consultation starts.': {
     cs: 'Rezervaci lze vytvořit nejpozději 3 hodiny před začátkem konzultace.',
     en: 'Reservations must be created at least 3 hours before the consultation starts.',
@@ -185,12 +193,14 @@ export const api = {
     teacherId: string,
     startsAt: string,
     endsAt: string,
+    onlineAvailable: boolean,
+    offlineAvailable: boolean,
   ): Promise<ConsultationSlot> =>
     readJson<ConsultationSlot>(
       await fetch(`${API_ROOT}/slots`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authorization(token) },
-        body: JSON.stringify({ teacherId, startsAt, endsAt }),
+        body: JSON.stringify({ teacherId, startsAt, endsAt, onlineAvailable, offlineAvailable }),
       }),
     ),
   cancelSlot: async (token: string, slotId: string, actorUserId: string): Promise<void> => {
@@ -260,7 +270,13 @@ export const api = {
   },
   reserve: async (
     token: string,
-    payload: { slotId: string; studentId: string; reasonTitle: string; reasonDescription: string },
+    payload: {
+      slotId: string
+      studentId: string
+      reasonTitle: string
+      reasonDescription: string
+      consultationMode: 'ONLINE' | 'OFFLINE'
+    },
   ): Promise<void> => {
     await readJson<void>(
       await fetch(`${API_ROOT}/reservations`, {

@@ -36,6 +36,11 @@ const buildDays = (month: Date) => {
 const statusLabel = (status: Reservation['status'], t: TFunction) =>
   status === 'PENDING' ? t('pending') : status === 'CONFIRMED' ? t('confirmed') : t('cancelled')
 
+const consultationModesLabel = (slot: ConsultationSlot, t: TFunction) => {
+  if (slot.onlineAvailable !== false && slot.offlineAvailable !== false) return t('bothModes')
+  return slot.onlineAvailable !== false ? t('onlineConsultation') : t('offlineConsultation')
+}
+
 const cancellationCutoffMs = 3 * 60 * 60 * 1000
 
 export default function TeacherPage({ session, onToast, view, language, t }: Props) {
@@ -64,6 +69,8 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
   const [month, setMonth] = useState(new Date())
   const [startTime, setStartTime] = useState('09:00')
   const [duration, setDuration] = useState('30')
+  const [onlineAvailable, setOnlineAvailable] = useState(true)
+  const [offlineAvailable, setOfflineAvailable] = useState(true)
   const [now, setNow] = useState(() => Date.now())
   const [slotToCancel, setSlotToCancel] = useState<ConsultationSlot | null>(null)
 
@@ -124,7 +131,14 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
         onToast({ type: 'error', message: t('workingHoursFailed') })
         return
       }
-      await api.createSlot(session.token, session.userId, start, end)
+      await api.createSlot(
+        session.token,
+        session.userId,
+        start,
+        end,
+        onlineAvailable,
+        offlineAvailable,
+      )
       onToast({ type: 'success', message: t('slotCreated') })
       await load()
     } catch (error) {
@@ -214,6 +228,11 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
                       {dateFormatter.format(new Date(request.startsAt))} ·{' '}
                       {time.format(new Date(request.startsAt))}–
                       {time.format(new Date(request.endsAt))}
+                    </small>
+                    <small>
+                      {request.consultationMode === 'ONLINE'
+                        ? t('onlineConsultation')
+                        : `${t('offlineConsultation')}${request.teacherCabinet ? ` · ${request.teacherCabinet}` : ''}`}
                     </small>
                     <p>{request.reasonDescription}</p>
                   </div>
@@ -324,7 +343,7 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
                     {time.format(new Date(slot.startsAt))}–{time.format(new Date(slot.endsAt))}
                   </span>
                   {!occupied && <span className="remove-slot">×</span>}
-                  {occupied && ` ${t('occupied')}`}
+                  {occupied ? ` ${t('occupied')}` : ` · ${consultationModesLabel(slot, t)}`}
                 </button>
               )
             })}
@@ -332,7 +351,7 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
           </div>
           <h2 className="add-slot-title">{t('addSlot')}</h2>
           <form className="teacher-slot-form" onSubmit={add}>
-            <div className="slot-form-field">
+            <div className="slot-form-field labeled-field">
               <label htmlFor="slot-start">{t('start')}</label>
               <input
                 id="slot-start"
@@ -341,7 +360,7 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
                 onChange={(event) => setStartTime(event.target.value)}
               />
             </div>
-            <div className="slot-form-field">
+            <div className="slot-form-field labeled-field">
               <label htmlFor="slot-duration">{t('consultationLength')}</label>
               <select
                 id="slot-duration"
@@ -355,6 +374,27 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
                 <option value="90">90 {t('minutes')}</option>
               </select>
             </div>
+            <fieldset className="slot-mode-checkboxes">
+              <legend>{t('consultationMode')}</legend>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={onlineAvailable}
+                  disabled={onlineAvailable && !offlineAvailable}
+                  onChange={(event) => setOnlineAvailable(event.target.checked)}
+                />
+                {t('onlineConsultation')}
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={offlineAvailable}
+                  disabled={offlineAvailable && !onlineAvailable}
+                  onChange={(event) => setOfflineAvailable(event.target.checked)}
+                />
+                {t('offlineConsultation')}
+              </label>
+            </fieldset>
             <button className="reserve-button">{t('addSlot')}</button>
           </form>
         </section>

@@ -68,6 +68,11 @@ function ReservationList({
             <div>
               <strong>{reservation.teacherName}</strong>
               <span>
+                {reservation.consultationMode === 'ONLINE'
+                  ? t('onlineConsultation')
+                  : `${t('offlineConsultation')}${reservation.teacherCabinet ? ` · ${reservation.teacherCabinet}` : ''}`}
+              </span>
+              <span>
                 {dateTimeFormatter.format(new Date(reservation.startsAt))}–
                 {timeFormatter.format(new Date(reservation.endsAt))}
               </span>

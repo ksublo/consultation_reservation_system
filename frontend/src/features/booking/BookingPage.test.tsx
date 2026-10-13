@@ -101,6 +101,7 @@ describe('BookingPage reservation flow', () => {
         studentId: session.userId,
         reasonTitle: 'Databázový návrh',
         reasonDescription: 'Potřebuji probrat návrh tabulek.',
+        consultationMode: 'OFFLINE',
       })
     })
     expect(onToast).toHaveBeenCalledWith({ type: 'success', message: 'reservationCreated' })

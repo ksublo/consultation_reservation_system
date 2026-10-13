@@ -45,4 +45,6 @@ mvn fmt:check
 4. API vrátí odpověď `201 Created` včetně nového `reservationId`.
 5. Automatický integrační test vytvoří rezervaci přes API, ověří stavový kód `201`, existenci vráceného ID a načtení stejné rezervace z PostgreSQL databáze.
 
+Pedagog při vytváření termínu povolí online, osobní nebo obě formy konzultace. Student vybírá formu jen v případě, že jsou povolené obě. Zvolená forma se uloží k rezervaci a backend ověřuje její dostupnost pro daný termín. U osobní formy se zobrazuje kabinet pedagoga. Kabinety jsou sdílené mezi pedagogy; demonstrační přiřazení vytváří migrace V12. Online odkaz zatím aplikace nezadává. Migrace V13 nastavuje u stávajících termínů obě formy.
+
 Tato cesta bude po C03 spustitelná s PostgreSQL databází a představuje CP1 walking skeleton před C04.

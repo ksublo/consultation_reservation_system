@@ -11,6 +11,8 @@ public record SlotResponse(
     String teacherName,
     OffsetDateTime startsAt,
     OffsetDateTime endsAt,
+    boolean onlineAvailable,
+    boolean offlineAvailable,
     SlotStatus status) {
   public static SlotResponse from(ConsultationSlot slot) {
     return new SlotResponse(
@@ -19,6 +21,8 @@ public record SlotResponse(
         slot.getTeacher().getFirstName() + " " + slot.getTeacher().getLastName(),
         slot.getStartsAt(),
         slot.getEndsAt(),
+        slot.isOnlineAvailable(),
+        slot.isOfflineAvailable(),
         slot.getStatus());
   }
 }

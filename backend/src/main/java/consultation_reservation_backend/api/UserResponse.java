@@ -6,7 +6,14 @@ import java.util.Set;
 import java.util.UUID;
 
 public record UserResponse(
-    UUID id, Set<UserRole> roles, String firstName, String lastName, String login, String email) {
+    UUID id,
+    Set<UserRole> roles,
+    String firstName,
+    String lastName,
+    String login,
+    String email,
+    UUID cabinetId,
+    String cabinet) {
   public static UserResponse from(AppUser user) {
     return new UserResponse(
         user.getId(),
@@ -14,6 +21,8 @@ public record UserResponse(
         user.getFirstName(),
         user.getLastName(),
         user.getLogin(),
-        user.getEmail());
+        user.getEmail(),
+        user.getCabinet() == null ? null : user.getCabinet().getId(),
+        user.getCabinet() == null ? null : user.getCabinet().getName());
   }
 }

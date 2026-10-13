@@ -49,6 +49,10 @@ public class ReservationService {
     OffsetDateTime now = OffsetDateTime.now();
     if (slot.getStatus() != SlotStatus.ACTIVE || !slot.getStartsAt().isAfter(now))
       throw new ApiException(HttpStatus.CONFLICT, "This slot is not available.");
+    if ((request.consultationMode() == ConsultationMode.ONLINE && !slot.isOnlineAvailable())
+        || (request.consultationMode() == ConsultationMode.OFFLINE
+            && !slot.isOfflineAvailable()))
+      throw new ApiException(HttpStatus.CONFLICT, "This consultation mode is not available for the slot.");
     if (slot.getStartsAt().isBefore(now.plusHours(RESERVATION_CUTOFF_HOURS)))
       throw new ApiException(
           HttpStatus.CONFLICT,
@@ -67,7 +71,12 @@ public class ReservationService {
     try {
       Reservation reservation =
           reservations.saveAndFlush(
-              new Reservation(slot, student, request.reasonTitle(), request.reasonDescription()));
+              new Reservation(
+                  slot,
+                  student,
+                  request.reasonTitle(),
+                  request.reasonDescription(),
+                  request.consultationMode()));
       history.save(
           new ReservationHistory(
               reservation,

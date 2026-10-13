@@ -25,6 +25,10 @@ public class Reservation {
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
+  private ConsultationMode consultationMode;
+
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
   private ReservationStatus status;
 
   @ManyToOne(fetch = FetchType.LAZY)
@@ -42,14 +46,24 @@ public class Reservation {
   protected Reservation() {}
 
   public Reservation(
-      ConsultationSlot slot, AppUser student, String reasonTitle, String reasonDescription) {
+      ConsultationSlot slot,
+      AppUser student,
+      String reasonTitle,
+      String reasonDescription,
+      ConsultationMode consultationMode) {
     this.id = UUID.randomUUID();
     this.slot = slot;
     this.student = student;
     this.reasonTitle = reasonTitle;
     this.reasonDescription = reasonDescription;
+    this.consultationMode = consultationMode;
     this.status = ReservationStatus.PENDING;
     this.createdAt = OffsetDateTime.now();
+  }
+
+  public Reservation(
+      ConsultationSlot slot, AppUser student, String reasonTitle, String reasonDescription) {
+    this(slot, student, reasonTitle, reasonDescription, ConsultationMode.OFFLINE);
   }
 
   public UUID getId() {
@@ -70,6 +84,10 @@ public class Reservation {
 
   public String getReasonDescription() {
     return reasonDescription;
+  }
+
+  public ConsultationMode getConsultationMode() {
+    return consultationMode;
   }
 
   public ReservationStatus getStatus() {

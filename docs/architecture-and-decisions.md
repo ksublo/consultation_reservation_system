@@ -23,6 +23,8 @@ Aplikace je rozdělena na frontend, backend a relační databázi.
 - `reservations` – rezervace termínů studenty.
 - `reservation_history` – historie změn stavu rezervací.
 - `auth_sessions` – relace přihlášených uživatelů.
+- `cabinets` – sdílené kabinety; každý pedagog má jeden kabinet a kabinet může mít více pedagogů.
+- `reservations.consultation_mode` – forma konkrétní konzultace (`ONLINE` nebo `OFFLINE`).
 
 ## Key decisions
 
@@ -45,6 +47,14 @@ Každá změna rezervace se uloží do historie. Lze tak dohledat vytvoření, s
 ### Authentication uses sessions
 
 Po přihlášení backend vytvoří relaci. Frontend posílá token relace při požadavcích na chráněné API.
+
+### Consultation mode belongs to a reservation
+
+Pedagog při vytvoření termínu povolí online konzultaci, osobní konzultaci nebo obě možnosti. Student si vybírá pouze tehdy, když jsou povolené obě; při jediné možnosti se tato forma zobrazí bez volby. Zvolená forma se uloží k rezervaci a backend kontroluje, že ji termín povoluje. U osobní konzultace se zobrazuje kabinet pedagoga. Online odkaz se v této verzi nevytváří ani neukládá.
+
+### Teachers share cabinets
+
+Kabinet je samostatná databázová entita a pedagog na ni odkazuje cizím klíčem. Jeden kabinet tak může být přiřazen více pedagogům, zatímco pedagog má nejvýše jeden kabinet. Migrace V12 přiřazuje demonstrační pedagogy do tří sdílených kabinetů.
 
 ## C03 — Část A: AS-IS mapování scénáře
 

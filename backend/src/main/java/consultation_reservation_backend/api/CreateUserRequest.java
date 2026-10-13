@@ -4,6 +4,7 @@ import consultation_reservation_backend.domain.UserRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.util.UUID;
 
 public record CreateUserRequest(
     @NotNull UserRole role,
@@ -11,4 +12,5 @@ public record CreateUserRequest(
     @NotBlank String lastName,
     @NotBlank String login,
     @NotBlank @Email String email,
-    @NotBlank String password) {}
+    @NotBlank String password,
+    UUID cabinetId) {}
