@@ -35,6 +35,10 @@ public class AppUser {
   @Column(nullable = false)
   private OffsetDateTime createdAt;
 
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "cabinet_id")
+  private Cabinet cabinet;
+
   protected AppUser() {}
 
   public AppUser(
@@ -43,7 +47,8 @@ public class AppUser {
       String lastName,
       String login,
       String email,
-      String passwordHash) {
+      String passwordHash,
+      Cabinet cabinet) {
     this.id = UUID.randomUUID();
     this.roles.add(role);
     this.firstName = firstName;
@@ -51,7 +56,18 @@ public class AppUser {
     this.login = login;
     this.email = email;
     this.passwordHash = passwordHash;
+    this.cabinet = cabinet;
     this.createdAt = OffsetDateTime.now();
+  }
+
+  public AppUser(
+      UserRole role,
+      String firstName,
+      String lastName,
+      String login,
+      String email,
+      String passwordHash) {
+    this(role, firstName, lastName, login, email, passwordHash, null);
   }
 
   public UUID getId() {
@@ -84,5 +100,9 @@ public class AppUser {
 
   public String getPasswordHash() {
     return passwordHash;
+  }
+
+  public Cabinet getCabinet() {
+    return cabinet;
   }
 }

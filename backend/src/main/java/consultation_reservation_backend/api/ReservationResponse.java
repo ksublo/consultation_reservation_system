@@ -2,6 +2,7 @@ package consultation_reservation_backend.api;
 
 import consultation_reservation_backend.domain.Reservation;
 import consultation_reservation_backend.domain.ReservationStatus;
+import consultation_reservation_backend.domain.ConsultationMode;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -17,6 +18,8 @@ public record ReservationResponse(
     String studentEmail,
     String reasonTitle,
     String reasonDescription,
+    ConsultationMode consultationMode,
+    String teacherCabinet,
     ReservationStatus status,
     OffsetDateTime startsAt,
     OffsetDateTime endsAt,
@@ -36,6 +39,10 @@ public record ReservationResponse(
         r.getStudent().getEmail(),
         r.getReasonTitle(),
         r.getReasonDescription(),
+        r.getConsultationMode(),
+        r.getSlot().getTeacher().getCabinet() == null
+            ? null
+            : r.getSlot().getTeacher().getCabinet().getName(),
         r.getStatus(),
         r.getSlot().getStartsAt(),
         r.getSlot().getEndsAt(),

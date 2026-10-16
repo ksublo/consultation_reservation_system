@@ -33,8 +33,67 @@ const buildDays = (month: Date) => {
   })
 }
 
+const localDateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
+const addDays = (date: Date, amount: number) => {
+  const result = new Date(date)
+  result.setDate(result.getDate() + amount)
+  return result
+}
+
+const allowedDurations = ['15', '30', '45', '60', '90']
+const maxBulkSlots = 250
+const maxBulkRangeDays = 180
+
+interface SlotDraft {
+  startsAt: string
+  endsAt: string
+}
+
+function generateSlotDrafts(
+  dateFrom: string,
+  dateTo: string,
+  daysOfWeek: number[],
+  timeFrom: string,
+  timeTo: string,
+  durationMinutes: number,
+  breakMinutes: number,
+): SlotDraft[] {
+  const [fromYear, fromMonth, fromDay] = dateFrom.split('-').map(Number)
+  const [toYear, toMonth, toDay] = dateTo.split('-').map(Number)
+  const first = new Date(fromYear, fromMonth - 1, fromDay, 12)
+  const last = new Date(toYear, toMonth - 1, toDay, 12)
+  const [startHour, startMinute] = timeFrom.split(':').map(Number)
+  const [endHour, endMinute] = timeTo.split(':').map(Number)
+  const startOfWindow = startHour * 60 + startMinute
+  const endOfWindow = endHour * 60 + endMinute
+  const drafts: SlotDraft[] = []
+
+  for (const day = new Date(first); day <= last; day.setDate(day.getDate() + 1)) {
+    if (!daysOfWeek.includes(day.getDay())) continue
+    for (
+      let minute = startOfWindow;
+      minute + durationMinutes <= endOfWindow;
+      minute += durationMinutes + breakMinutes
+    ) {
+      const startsAt = new Date(day)
+      startsAt.setHours(Math.floor(minute / 60), minute % 60, 0, 0)
+      const endsAt = new Date(startsAt.getTime() + durationMinutes * 60_000)
+      drafts.push({ startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() })
+    }
+  }
+
+  return drafts
+}
+
 const statusLabel = (status: Reservation['status'], t: TFunction) =>
   status === 'PENDING' ? t('pending') : status === 'CONFIRMED' ? t('confirmed') : t('cancelled')
+
+const consultationModesLabel = (slot: ConsultationSlot, t: TFunction) => {
+  if (slot.onlineAvailable !== false && slot.offlineAvailable !== false) return t('bothModes')
+  return slot.onlineAvailable !== false ? t('onlineConsultation') : t('offlineConsultation')
+}
 
 const cancellationCutoffMs = 3 * 60 * 60 * 1000
 
@@ -64,6 +123,22 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
   const [month, setMonth] = useState(new Date())
   const [startTime, setStartTime] = useState('09:00')
   const [duration, setDuration] = useState('30')
+  const [onlineAvailable, setOnlineAvailable] = useState(true)
+  const [offlineAvailable, setOfflineAvailable] = useState(true)
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const [bulkOnlineAvailable, setBulkOnlineAvailable] = useState(true)
+  const [bulkOfflineAvailable, setBulkOfflineAvailable] = useState(true)
+  const [bulkDateFrom, setBulkDateFrom] = useState(localDateKey(new Date()))
+  const [bulkDateTo, setBulkDateTo] = useState(localDateKey(addDays(new Date(), 27)))
+  const [bulkDays, setBulkDays] = useState<number[]>([1, 3])
+  const [bulkTimeFrom, setBulkTimeFrom] = useState('09:00')
+  const [bulkTimeTo, setBulkTimeTo] = useState('12:00')
+  const [bulkDuration, setBulkDuration] = useState('30')
+  const [bulkBreak, setBulkBreak] = useState('0')
+  const [bulkSubmitting, setBulkSubmitting] = useState(false)
+  const [bulkProgress, setBulkProgress] = useState(0)
+  const [bulkResult, setBulkResult] = useState<{ created: number; skipped: number } | null>(null)
+  const [bulkError, setBulkError] = useState('')
   const [now, setNow] = useState(() => Date.now())
   const [slotToCancel, setSlotToCancel] = useState<ConsultationSlot | null>(null)
 
@@ -124,7 +199,14 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
         onToast({ type: 'error', message: t('workingHoursFailed') })
         return
       }
-      await api.createSlot(session.token, session.userId, start, end)
+      await api.createSlot(
+        session.token,
+        session.userId,
+        start,
+        end,
+        onlineAvailable,
+        offlineAvailable,
+      )
       onToast({ type: 'success', message: t('slotCreated') })
       await load()
     } catch (error) {
@@ -132,6 +214,124 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
         type: 'error',
         message: error instanceof Error ? error.message : t('slotCreateFailed'),
       })
+    }
+  }
+
+  const bulkDrafts = useMemo(() => {
+    if (
+      !bulkDateFrom ||
+      !bulkDateTo ||
+      !bulkDays.length ||
+      !allowedDurations.includes(bulkDuration)
+    )
+      return []
+    const rangeDays =
+      (new Date(`${bulkDateTo}T12:00:00`).getTime() -
+        new Date(`${bulkDateFrom}T12:00:00`).getTime()) /
+      86_400_000
+    if (rangeDays < 0 || rangeDays > maxBulkRangeDays) return []
+    return generateSlotDrafts(
+      bulkDateFrom,
+      bulkDateTo,
+      bulkDays,
+      bulkTimeFrom,
+      bulkTimeTo,
+      Number(bulkDuration),
+      Number(bulkBreak),
+    )
+  }, [bulkDateFrom, bulkDateTo, bulkDays, bulkTimeFrom, bulkTimeTo, bulkDuration, bulkBreak])
+
+  function toggleBulkDay(day: number) {
+    setBulkDays((selected) =>
+      selected.includes(day) ? selected.filter((item) => item !== day) : [...selected, day],
+    )
+    setBulkResult(null)
+  }
+
+  async function addBulkSlots(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setBulkError('')
+    setBulkResult(null)
+    if (!bulkDays.length) {
+      setBulkError(t('bulkChooseDays'))
+      return
+    }
+    if (bulkDateFrom > bulkDateTo) {
+      setBulkError(t('bulkInvalidDates'))
+      return
+    }
+    const rangeDays =
+      (new Date(`${bulkDateTo}T12:00:00`).getTime() -
+        new Date(`${bulkDateFrom}T12:00:00`).getTime()) /
+      86_400_000
+    if (rangeDays > maxBulkRangeDays) {
+      setBulkError(t('bulkRangeTooLong'))
+      return
+    }
+    const [fromHour, fromMinute] = bulkTimeFrom.split(':').map(Number)
+    const [toHour, toMinute] = bulkTimeTo.split(':').map(Number)
+    const startMinutes = fromHour * 60 + fromMinute
+    const endMinutes = toHour * 60 + toMinute
+    if (startMinutes < 7 * 60 + 15 || endMinutes > 19 * 60 + 15 || endMinutes <= startMinutes) {
+      setBulkError(t('bulkInvalidHours'))
+      return
+    }
+    const drafts = bulkDrafts
+    if (!drafts.length) {
+      setBulkError(t('bulkNoSlotsFit'))
+      return
+    }
+    if (drafts.length > maxBulkSlots) {
+      setBulkError(t('bulkTooManySlots'))
+      return
+    }
+
+    const availableDrafts = drafts.filter((draft) => {
+      const draftStart = new Date(draft.startsAt).getTime()
+      const draftEnd = new Date(draft.endsAt).getTime()
+      return (
+        draftStart > Date.now() &&
+        !slots.some(
+          (slot) =>
+            slot.status === 'ACTIVE' &&
+            new Date(slot.startsAt).getTime() < draftEnd &&
+            new Date(slot.endsAt).getTime() > draftStart,
+        )
+      )
+    })
+    let created = 0
+    const alreadySkipped = drafts.length - availableDrafts.length
+    let skipped = alreadySkipped
+    setBulkSubmitting(true)
+    setBulkProgress(alreadySkipped)
+    try {
+      for (const [index, draft] of availableDrafts.entries()) {
+        try {
+          await api.createSlot(
+            session.token,
+            session.userId,
+            draft.startsAt,
+            draft.endsAt,
+            bulkOnlineAvailable,
+            bulkOfflineAvailable,
+          )
+          created += 1
+        } catch {
+          skipped += 1
+        }
+        setBulkProgress(alreadySkipped + index + 1)
+      }
+      setBulkResult({ created, skipped })
+      await load()
+      onToast({
+        type: skipped ? 'error' : 'success',
+        message: skipped
+          ? `${t('bulkCreatedCount')}: ${created} · ${t('bulkSkippedCount')}: ${skipped}`
+          : `${t('bulkCreatedCount')}: ${created}`,
+        durationMs: 7000,
+      })
+    } finally {
+      setBulkSubmitting(false)
     }
   }
 
@@ -214,6 +414,11 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
                       {dateFormatter.format(new Date(request.startsAt))} ·{' '}
                       {time.format(new Date(request.startsAt))}–
                       {time.format(new Date(request.endsAt))}
+                    </small>
+                    <small>
+                      {request.consultationMode === 'ONLINE'
+                        ? t('onlineConsultation')
+                        : `${t('offlineConsultation')}${request.teacherCabinet ? ` · ${request.teacherCabinet}` : ''}`}
                     </small>
                     <p>{request.reasonDescription}</p>
                   </div>
@@ -305,7 +510,20 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
         </section>
 
         <section className="card">
-          <h2>{t('mySlots')}</h2>
+          <div className="my-slots-heading">
+            <h2>{t('mySlots')}</h2>
+            <button
+              type="button"
+              className="bulk-slot-button"
+              onClick={() => {
+                setBulkResult(null)
+                setBulkError('')
+                setBulkOpen(true)
+              }}
+            >
+              {t('bulkAddSlots')}
+            </button>
+          </div>
           <p className="selected-slot-date">{dateFormatter.format(new Date(`${date}T12:00:00`))}</p>
           <div className="slot-list teacher-slots">
             {daySlots.map((slot) => {
@@ -324,15 +542,17 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
                     {time.format(new Date(slot.startsAt))}–{time.format(new Date(slot.endsAt))}
                   </span>
                   {!occupied && <span className="remove-slot">×</span>}
-                  {occupied && ` ${t('occupied')}`}
+                  {occupied ? ` ${t('occupied')}` : ` · ${consultationModesLabel(slot, t)}`}
                 </button>
               )
             })}
             {!daySlots.length && <p className="muted">{t('noTeacherSlotsForDay')}</p>}
           </div>
-          <h2 className="add-slot-title">{t('addSlot')}</h2>
+          <div className="add-slot-heading">
+            <h2 className="add-slot-title">{t('addSlot')}</h2>
+          </div>
           <form className="teacher-slot-form" onSubmit={add}>
-            <div className="slot-form-field">
+            <div className="slot-form-field labeled-field">
               <label htmlFor="slot-start">{t('start')}</label>
               <input
                 id="slot-start"
@@ -341,7 +561,7 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
                 onChange={(event) => setStartTime(event.target.value)}
               />
             </div>
-            <div className="slot-form-field">
+            <div className="slot-form-field labeled-field">
               <label htmlFor="slot-duration">{t('consultationLength')}</label>
               <select
                 id="slot-duration"
@@ -355,6 +575,27 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
                 <option value="90">90 {t('minutes')}</option>
               </select>
             </div>
+            <fieldset className="slot-mode-checkboxes">
+              <legend>{t('consultationMode')}</legend>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={onlineAvailable}
+                  disabled={onlineAvailable && !offlineAvailable}
+                  onChange={(event) => setOnlineAvailable(event.target.checked)}
+                />
+                {t('onlineConsultation')}
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={offlineAvailable}
+                  disabled={offlineAvailable && !onlineAvailable}
+                  onChange={(event) => setOfflineAvailable(event.target.checked)}
+                />
+                {t('offlineConsultation')}
+              </label>
+            </fieldset>
             <button className="reserve-button">{t('addSlot')}</button>
           </form>
         </section>
@@ -391,6 +632,200 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
                 {t('cancelOccupiedSlotConfirm')}
               </button>
             </div>
+          </section>
+        </div>
+      )}
+
+      {bulkOpen && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !bulkSubmitting) setBulkOpen(false)
+          }}
+        >
+          <section
+            className="bulk-slot-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bulk-slot-title"
+          >
+            <div className="bulk-slot-modal-heading">
+              <div>
+                <p className="label">{t('slotsCalendar')}</p>
+                <h2 id="bulk-slot-title">{t('bulkAddSlots')}</h2>
+                <p>{t('bulkIntro')}</p>
+              </div>
+              <button
+                type="button"
+                className="bulk-slot-close"
+                aria-label={t('back')}
+                disabled={bulkSubmitting}
+                onClick={() => setBulkOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+            <form className="bulk-slot-form" onSubmit={addBulkSlots}>
+              <div className="bulk-date-fields">
+                <div className="labeled-field">
+                  <label htmlFor="bulk-date-from">{t('bulkDateFrom')}</label>
+                  <input
+                    id="bulk-date-from"
+                    type="date"
+                    required
+                    value={bulkDateFrom}
+                    onChange={(event) => setBulkDateFrom(event.target.value)}
+                  />
+                </div>
+                <div className="labeled-field">
+                  <label htmlFor="bulk-date-to">{t('bulkDateTo')}</label>
+                  <input
+                    id="bulk-date-to"
+                    type="date"
+                    min={bulkDateFrom}
+                    required
+                    value={bulkDateTo}
+                    onChange={(event) => setBulkDateTo(event.target.value)}
+                  />
+                </div>
+              </div>
+
+              <fieldset className="bulk-weekday-picker">
+                <legend>{t('bulkWeekdays')}</legend>
+                <div>
+                  {weekdays[language].slice(0, 5).map((weekday, index) => {
+                    const day = index + 1
+                    return (
+                      <label key={day} className={bulkDays.includes(day) ? 'selected' : ''}>
+                        <input
+                          type="checkbox"
+                          checked={bulkDays.includes(day)}
+                          onChange={() => toggleBulkDay(day)}
+                        />
+                        {weekday}
+                      </label>
+                    )
+                  })}
+                </div>
+              </fieldset>
+
+              <p className="bulk-repeat-hint">{t('bulkRepeatsWeekly')}</p>
+
+              <div className="bulk-mode-row" role="group" aria-label={t('consultationMode')}>
+                <span className="bulk-mode-label">{t('consultationMode')}:</span>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={bulkOnlineAvailable}
+                    disabled={bulkOnlineAvailable && !bulkOfflineAvailable}
+                    onChange={(event) => setBulkOnlineAvailable(event.target.checked)}
+                  />
+                  {t('onlineConsultation')}
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={bulkOfflineAvailable}
+                    disabled={bulkOfflineAvailable && !bulkOnlineAvailable}
+                    onChange={(event) => setBulkOfflineAvailable(event.target.checked)}
+                  />
+                  {t('offlineConsultation')}
+                </label>
+              </div>
+
+              <div className="bulk-date-fields">
+                <div className="labeled-field">
+                  <label htmlFor="bulk-time-from">{t('bulkTimeFrom')}</label>
+                  <input
+                    id="bulk-time-from"
+                    type="time"
+                    required
+                    value={bulkTimeFrom}
+                    onChange={(event) => setBulkTimeFrom(event.target.value)}
+                  />
+                </div>
+                <div className="labeled-field">
+                  <label htmlFor="bulk-time-to">{t('bulkTimeTo')}</label>
+                  <input
+                    id="bulk-time-to"
+                    type="time"
+                    required
+                    value={bulkTimeTo}
+                    onChange={(event) => setBulkTimeTo(event.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="bulk-date-fields">
+                <div className="labeled-field">
+                  <label htmlFor="bulk-duration">{t('consultationLength')}</label>
+                  <select
+                    id="bulk-duration"
+                    value={bulkDuration}
+                    onChange={(event) => setBulkDuration(event.target.value)}
+                  >
+                    {allowedDurations.map((minutes) => (
+                      <option key={minutes} value={minutes}>
+                        {minutes} {t('minutes')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="labeled-field">
+                  <label htmlFor="bulk-break">{t('bulkBreak')}</label>
+                  <select
+                    id="bulk-break"
+                    value={bulkBreak}
+                    onChange={(event) => setBulkBreak(event.target.value)}
+                  >
+                    {['0', '5', '10', '15'].map((minutes) => (
+                      <option key={minutes} value={minutes}>
+                        {minutes} {t('minutes')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="bulk-slot-preview">
+                <strong>{bulkDrafts.length}</strong>
+                <span>{t('bulkPreviewCount')}</span>
+              </div>
+              {bulkError && (
+                <p className="bulk-slot-error" role="alert">
+                  {bulkError}
+                </p>
+              )}
+              {bulkResult && (
+                <p className="bulk-slot-result" role="status">
+                  {t('bulkCreatedCount')}: {bulkResult.created} · {t('bulkSkippedCount')}:{' '}
+                  {bulkResult.skipped}
+                </p>
+              )}
+              {bulkSubmitting && (
+                <div className="bulk-progress">
+                  <progress value={bulkProgress} max={bulkDrafts.length} />
+                  <span>
+                    {bulkProgress} / {bulkDrafts.length}
+                  </span>
+                </div>
+              )}
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="text-button"
+                  disabled={bulkSubmitting}
+                  onClick={() => setBulkOpen(false)}
+                >
+                  {t('back')}
+                </button>
+                <button className="reserve-button" type="submit" disabled={bulkSubmitting}>
+                  {bulkSubmitting ? t('bulkCreating') : t('bulkCreateAction')}
+                </button>
+              </div>
+            </form>
           </section>
         </div>
       )}

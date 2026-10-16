@@ -40,6 +40,9 @@ public class ConsultationSlotService {
   }
 
   public SlotResponse create(CreateSlotRequest request) {
+    if (!request.allowsOnline() && !request.allowsOffline())
+      throw new ApiException(
+          HttpStatus.BAD_REQUEST, "A slot must allow online or in-person consultations.");
     if (!request.endsAt().isAfter(request.startsAt()))
       throw new ApiException(HttpStatus.BAD_REQUEST, "Slot end must be after its start.");
     if (!request.startsAt().isAfter(OffsetDateTime.now()))
@@ -51,7 +54,13 @@ public class ConsultationSlotService {
       throw new ApiException(HttpStatus.FORBIDDEN, "Only a teacher can create slots.");
     try {
       return SlotResponse.from(
-          slots.saveAndFlush(new ConsultationSlot(teacher, request.startsAt(), request.endsAt())));
+          slots.saveAndFlush(
+              new ConsultationSlot(
+                  teacher,
+                  request.startsAt(),
+                  request.endsAt(),
+                  request.allowsOnline(),
+                  request.allowsOffline())));
     } catch (DataIntegrityViolationException exception) {
       throw new ApiException(
           HttpStatus.CONFLICT, "This slot overlaps another active slot of the teacher.");
