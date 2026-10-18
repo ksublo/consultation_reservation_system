@@ -212,6 +212,21 @@ form label {
 .login-error {
   @apply text-sm font-semibold text-rose-600;
 }
+.login-card form {
+  @apply mt-6 grid gap-3;
+}
+.login-card form label {
+  @apply mt-2 text-sm font-semibold text-slate-700;
+}
+.login-card form input {
+  @apply w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100;
+}
+.login-card .secondary-button {
+  @apply w-full rounded-xl border border-teal-200 bg-white px-4 py-3 font-semibold text-teal-800 hover:bg-teal-50 disabled:opacity-60;
+}
+.login-hint {
+  @apply text-sm text-slate-600;
+}
 main.login-page {
   position: static !important;
   inset: auto !important;

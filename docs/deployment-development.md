@@ -45,12 +45,14 @@ Vytvořte Web Service z téhož repozitáře a nastavte:
 - Instance: Free
 - `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` a `SPRING_DATASOURCE_PASSWORD` podle Supabase
 - `APP_CORS_ALLOWED_ORIGIN` = přesná veřejná URL Vercel webu, bez koncového `/`
+- `WEBAUTHN_RP_ID` = hostname Vercel webu, například `consultation-reservation-system.vercel.app`
+- `WEBAUTHN_ORIGIN` = přesná HTTPS URL webu, například `https://consultation-reservation-system.vercel.app`
 
 Po prvním úspěšném nasazení zkopírujte veřejnou URL Render služby a vložte ji ve Vercelu do `VITE_API_BASE_URL`. Potom spusťte redeploy frontendu. CORS na backendu povolí pouze nastavený Vercel origin.
 
 ## Samostatná databáze a demonstrační data
 
-Nová Supabase databáze bude oddělená od databáze používané při vývoji. Flyway v ní automaticky vytvoří aktuální schéma i demonstrační účty, rezervace a termíny. Demo účty používají heslo `password`; v aplikaci zatím není samostatná registrační obrazovka, takže demonstrační účty umožní web rovnou používat.
+Flyway v Supabase vytvoří také tabulky pro passkeys. Každý demo účet si při prvním přihlášení založí passkey pomocí demo hesla `password`; heslo se použije jen při tomto jednorázovém nastavení a běžné přihlášení už používá passkey.
 
 ## Omezení bezplatných plánů
 
