@@ -8,7 +8,7 @@ import type {
   UserRole,
 } from '../types/api'
 import type { Language } from '../i18n'
-const API_ROOT = '/api'
+const API_ROOT = `${import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? ''}/api`
 let apiLanguage: Language = sessionStorage.getItem('language') === 'en' ? 'en' : 'cs'
 const apiMessages: Record<string, Record<Language, string>> = {
   'Server vrátil neplatnou odpověď.': {
