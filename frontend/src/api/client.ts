@@ -190,7 +190,8 @@ interface PasskeyCeremonyOptions {
 }
 
 function decodeBase64Url(value: string): ArrayBuffer {
-  const padded = value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (value.length % 4)) % 4)
+  const padded =
+    value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (value.length % 4)) % 4)
   const binary = atob(padded)
   return Uint8Array.from(binary, (character) => character.charCodeAt(0)).buffer
 }
@@ -250,9 +251,9 @@ async function loginWithPasskey(login: string, role: UserRole): Promise<Session>
     }),
   )
   const options = ceremony.options
-  const allowCredentials = (options.allowCredentials as Array<Record<string, unknown>> | undefined)?.map(
-    (item) => ({ ...item, id: decodeBase64Url(item.id as string) }),
-  )
+  const allowCredentials = (
+    options.allowCredentials as Array<Record<string, unknown>> | undefined
+  )?.map((item) => ({ ...item, id: decodeBase64Url(item.id as string) }))
   const publicKey = {
     ...options,
     challenge: decodeBase64Url(options.challenge as string),
@@ -280,9 +281,9 @@ async function registerPasskey(login: string, password: string, role: UserRole):
   )
   const options = ceremony.options
   const user = options.user as Record<string, unknown>
-  const excludeCredentials = (options.excludeCredentials as Array<Record<string, unknown>> | undefined)?.map(
-    (item) => ({ ...item, id: decodeBase64Url(item.id as string) }),
-  )
+  const excludeCredentials = (
+    options.excludeCredentials as Array<Record<string, unknown>> | undefined
+  )?.map((item) => ({ ...item, id: decodeBase64Url(item.id as string) }))
   const publicKey = {
     ...options,
     challenge: decodeBase64Url(options.challenge as string),

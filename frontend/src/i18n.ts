@@ -28,7 +28,8 @@ const messages = {
     setUpPasskey: 'Poprvé? Nastavit passkey',
     createPasskey: 'Vytvořit passkey a přihlásit se',
     passwordForPasskeySetup: 'Demo heslo pro jednorázové nastavení',
-    passkeySetupHint: 'Heslo se použije jen pro založení passkey. Další přihlášení už heslo neodešlou.',
+    passkeySetupHint:
+      'Heslo se použije jen pro založení passkey. Další přihlášení už heslo neodešlou.',
     passkeyUnsupported: 'Passkeys vyžadují podporovaný prohlížeč a zabezpečené HTTPS připojení.',
     pleaseWait: 'Chvilku…',
     cancelPasskeySetup: 'Zrušit',
@@ -174,7 +175,8 @@ const messages = {
     setUpPasskey: 'First time? Set up a passkey',
     createPasskey: 'Create passkey and sign in',
     passwordForPasskeySetup: 'Demo password for one-time setup',
-    passkeySetupHint: 'The password is used only to create your passkey. It will not be sent for future sign-ins.',
+    passkeySetupHint:
+      'The password is used only to create your passkey. It will not be sent for future sign-ins.',
     passkeyUnsupported: 'Passkeys require a supported browser and a secure HTTPS connection.',
     pleaseWait: 'Please wait…',
     cancelPasskeySetup: 'Cancel',
