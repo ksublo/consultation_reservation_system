@@ -194,3 +194,162 @@ Testovali jsme na dočasných účtech a rezervacích, které jsme potom odstran
 | Odmítnutí podstrčeného ID | Zaznamenané obejití kontroly | Opakovatelné regresní testy API a služby | VERIFY |
 
 **Rozsah:** schválení a rušení rezervací. Vytváření rezervací, správa termínů a ostatní endpointy nejsou touto opravou revidované; další použití klientských ID vyžaduje samostatnou kontrolu. Tato dílčí oprava nepředstavuje dokončení všech bodů C03.
+
+## C05 Detailed Design
+
+### 1. Vybraná jednotka a cíl návrhu
+
+Rozpracováváme **schválení rezervace pedagogem** v metodě `ReservationService.approve`. Tato jednotka patří do správy rezervací z C03. Jejím cílem je bezpečně změnit čekající žádost na potvrzenou a společně se změnou uložit historii a oznámení studentovi.
+
+| Vazba na předchozí zadání | Význam pro tento návrh |
+| --- | --- |
+| OP-05, REQ-05; související REQ-03 | Pedagog schvaluje žádost o svůj konzultační termín. |
+| ADR-01 | Identita pedagoga pochází z ověřeného přihlášení. |
+| BR-02 | Termín má nejvýše jednu aktivní rezervaci; PENDING i CONFIRMED jej blokují. |
+
+**Návrhový záměr:** o oprávnění a povoleném přechodu rozhoduje služba rezervací. Kontroly proběhnou před změnou dat; kontrola identity a role navíc před načtením rezervace. Stav, historie a oznámení se mají uložit společně, nebo se nemá uložit nic. Tato pravidla určují, co má implementace splnit a co mají ověřovat testy.
+
+Rozsah zahrnuje přechod PENDING → CONFIRMED. Vytváření a rušení rezervací mají vlastní pravidla a do tohoto návrhu nepatří. Část implementace již existuje; její shodu s návrhem vyhodnocujeme zvlášť v evidenci.
+
+### 2. Podrobné odpovědnosti (detailed responsibilities)
+
+| Odpovědnost | Proč je potřebná? |
+| --- | --- |
+| D1: Ověřit přihlášeného uživatele a jeho aktivní roli | Nepřihlášený uživatel ani student nesmí schvalovat nebo tímto voláním zjišťovat existenci rezervace. |
+| D2: Ověřit vstup a načíst rezervaci i pedagoga | Musíme rozlišit neplatný vstup a neexistující záznam. |
+| D3: Ověřit vlastníka termínu a čekající stav | Schvalovat smí pouze vlastník a pouze rezervaci PENDING. |
+| D4: Potvrdit rezervaci a zaznamenat čas | Výsledný stav a čas potvrzení musí být jednoznačné. |
+| D5: Vytvořit historii změny a oznámení | Musí být dohledatelné, kdo rezervaci schválil, a student musí dostat informaci. |
+| D6: Zajistit společné uložení a předat chybu volajícímu | Částečně uložená změna se nesmí vydávat za úspěšné schválení. |
+
+### 3. Rozdělení odpovědností a vlastnictví dat
+
+| Odpovědnost | Vlastník | Data nebo stav | Proč zde? |
+| --- | --- | --- | --- |
+| D1–D3: rozhodnutí o povolení operace | ReservationService | Identita, aktivní role, ID, stav rezervace | Pravidla platí pro každého volajícího služby, nejen pro HTTP controller. |
+| D2: načtení rezervace | ReservationRepository | Reservation nebo prázdný výsledek | Rozhraní odděluje logiku služby od databáze. |
+| D2: načtení pedagoga | UserService | AppUser podle ověřeného ID | Dodá uživatele pro kontrolu a historii; o schválení nerozhoduje. |
+| D4: změna rezervace | Reservation | status, confirmedAt; vazby na termín a studenta | Entita uchovává stav a provede jeho změnu po kontrolách služby. |
+| D5: historie | ReservationHistory; ReservationHistoryRepository | Předchozí a nový stav, akce, aktér, poznámka | Záznam uchovává doklad změny; repository ho ukládá. |
+| D5: oznámení | NotificationService | Student, rezervace, typ a obsah oznámení | Služba rezervací určí příjemce; oznámení vytvoří specializovaná služba. |
+| D6: společné uložení | ReservationService a transakční podpora Spring | Změna rezervace, historie a oznámení | Jedna transakce zahrnuje všechny tři zápisy. |
+
+### 4. Rozhraní a kontrakty
+
+```java
+ReservationResponse approve(UUID reservationId,
+    AuthenticatedUser actor, ReservationTransitionRequest request);
+
+// Rozhraní ReservationRepository dědí tuto operaci z JpaRepository:
+Optional<Reservation> findById(UUID id);
+```
+
+`approve` přijímá ID rezervace, důvěryhodnou identitu a požadavek s volitelnou poznámkou `note`. Identitu vytváří autentizační vrstva; služba sama token neověřuje. Podmínky úspěchu a chybové výsledky jsou v části 6.
+
+Kontrakt `findById`: vstupní ID nesmí být null. Výstup obsahuje nalezenou rezervaci, nebo `Optional.empty`, pokud neexistuje. Chyba databáze se předává volajícímu. Operace nezaručuje výlučné uzamčení rezervace.
+
+### 5. Strukturální UML pohled
+
+
+![C05 — UML schválení rezervace](../frontend/src/assets/docs/c05-reservation-lifecycle.svg)
+
+[Upravitelný zdroj diagramu](diagrams/c05-reservation-lifecycle.dot). Osm prvků zahrnuje službu, vstupní identitu, doménový stav a skutečná rozhraní repository. Pravidla jsou uvnitř ReservationService; samostatná třída Policy nevzniká.
+
+### 6. Významné operace a pořadí rozhodování
+
+
+| Položka | approve(id, actor, request) | Reservation.confirm() |
+| --- | --- | --- |
+| Odpovědnost | D1–D6; autorizovat a koordinovat schválení | D4; změnit stav a čas |
+| Vstup | UUID rezervace, ověřená identita, request s volitelnou note | Žádné parametry |
+| Výstup | ReservationResponse s CONFIRMED a confirmedAt | void |
+| Preconditions | Aktér a role TEACHER; nenulové ID/request; rezervace existuje; vlastník; PENDING | Služba již ověřila oprávnění a PENDING |
+| Postconditions | Úspěšný commit stavu, historie a interního oznámení | status=CONFIRMED; confirmedAt nastaven; slot/student zachovány |
+| Side effects | Načtení uživatele/rezervace, změna entity, dva související zápisy | Změna entity v paměti, načtení systémového času |
+| Failure behavior | 401/403/400/404/409 dle tabulky; technické RuntimeException propagovat | Preconditions jsou odpovědností služby; metoda samostatně neautorizuje |
+
+**Algorithm / decision logic:** pravidla mají následující prioritu (první neúspěch ukončí operaci).
+
+| Pořadí | Podmínka | Výsledek při nesplnění |
+| --- | --- | --- |
+| 1 | actor != null | 401; bez přístupu k repository |
+| 2 | actor.activeRole == TEACHER | 403; bez přístupu k repository |
+| 3 | id != null a request != null | 400; bez přístupu k repository |
+| 4 | findById(id) obsahuje rezervaci | 404; bez zápisu |
+| 5 | UserService.get(actor.id) najde aktéra | 404; bez zápisu |
+| 6 | slot.teacher.id == actor.id | 403, i když už rezervace není PENDING |
+| 7 | status == PENDING | 409; bez nové historie/oznámení |
+| 8 | confirm; save history; create notification | Technická chyba se propaguje; žádná úspěšná response |
+
+```text
+ověř identitu, roli a tvar vstupu
+načti rezervaci a aktéra
+ověř vlastnictví a PENDING
+reservation.confirm()
+history.save(CONFIRMED, PENDING, CONFIRMED, actor, request.note)
+notifications.create(reservation.student, RESERVATION_APPROVED, ...)
+vytvoř response; transakční interceptor provede commit
+```
+
+### 7. Stavy a podmínky uložení
+
+Následující tabulka platí po úspěšném ověření vstupu, identity a vlastnictví. Cizí pedagog je odmítnut dříve, než služba rozhoduje podle stavu.
+
+| Výchozí stav | Operace | Výsledek | Historie a oznámení |
+| --- | --- | --- | --- |
+| PENDING | approve vlastníkem | CONFIRMED, nový confirmedAt | Jeden nový záznam historie a jedno oznámení studentovi při úspěšném samostatném volání |
+| CONFIRMED | approve vlastníkem | 409; původní confirmedAt zůstává | Bez nových záznamů |
+| CANCELLED | approve vlastníkem | 409; stav zůstává | Bez nových záznamů |
+
+**Invarianty úspěchu:** ID rezervace, student a termín se nemění. Schválení neuvolňuje termín, protože PENDING i CONFIRMED jsou aktivní stavy. Historie obsahuje akci CONFIRMED, přechod PENDING → CONFIRMED a skutečného přihlášeného pedagoga. Poznámka je volitelná; null je platná hodnota. Opakované schválení vrací konflikt, nikoli další úspěch.
+
+**Kontrakt selhání:** validační a autorizační chyby nastávají před změnou entity. Technická chyba po `confirm()` může změnit objekt v paměti, ale nesmí zanechat potvrzenou rezervaci ani novou historii či oznámení v databázi. Tato atomická vlastnost vyžaduje volání přes Spring transakční proxy a účast všech zápisů ve stejné transakci. Přímé volání objektu služby v unit testu rollback neprokazuje. Kódy 400/401/403/404/409 v tomto DD označují status v `ApiException`; HTTP filtr nebo validace požadavku mohou chybný požadavek odmítnout ještě před voláním služby.
+
+**Uložení:** JPA sleduje změnu načtené entity a zapíše ji při dokončení transakce (dirty checking). Proto `approve` nemusí samostatně volat `reservations.save`. Interní oznámení se ukládá do stejné databáze.
+
+**Souběh:** tento návrh dosud nezajišťuje, aby dvě současná schválení stejné rezervace vytvořila pouze jednu historii a jedno oznámení. Unikátní index pro aktivní rezervaci termínu tento problém neřeší. Ochrana souběhu zůstává otevřeným návrhovým rizikem.
+
+### 8. Detailní sekvence schválení
+
+
+```mermaid
+sequenceDiagram
+    participant Caller as ReservationController
+    participant S as ReservationService
+    participant R as ReservationRepository
+    participant U as UserService
+    participant D as Reservation
+    participant H as ReservationHistoryRepository
+    participant N as NotificationService
+    Caller->>S: approve(id, actor, request) [Spring transakce]
+    S->>S: ověř identitu, TEACHER a vstup
+    Note over S,R: Neplatný vstup končí před čtením repository.
+    S->>R: findById(id)
+    R-->>S: Optional(Reservation)
+    S->>U: get(actor.id)
+    U-->>S: AppUser
+    S->>S: ověř vlastníka a PENDING
+    alt cizí vlastník / nepovolený stav
+        S-->>Caller: ApiException 403 / 409, bez zápisů
+    else vlastník schvaluje PENDING
+        S->>D: confirm()
+        S->>H: save(ReservationHistory)
+        S->>N: create(student, RESERVATION_APPROVED, ...)
+        Note over S,N: Technickou výjimku nepohlcovat. Spring rollbackne transakci.
+        S-->>Caller: ReservationResponse po úspěšném commitu
+    end
+```
+
+### 9. Testy odvozené z návrhu
+
+Z D1–D3 vyplývají testy odmítnutí neplatného vstupu, neoprávněného uživatele a nepovoleného stavu. D4–D5 vyžadují test úspěšného přechodu, správného aktéra v historii a správného příjemce oznámení. D6 vyžaduje ověření předání technických chyb a společného uložení dat.
+
+[Tabulka testů a výsledků](evidence-and-evolution.md#c05-dd-verification-evidence) propojuje každé rozhodnutí s konkrétním testem a vysvětluje volbu testovací úrovně. Unit testy používají náhrady databázových závislostí (mocky); samy nemohou prokázat vrácení databázové transakce zpět.
+
+Pro ověření této vlastnosti stanovujeme dva integrační testy: selhání historie a selhání oznámení. Test připraví a uloží PENDING rezervaci, zavolá službu přes transakční podporu Spring a vyvolá chybu příslušného zápisu. Potom v nové transakci ověří PENDING, nenastavený confirmedAt a nezměněné počty historie i oznámení. Automatický rollback samotného testu se nesmí zaměnit za důkaz rollbacku služby. Tyto případy jsou implementované v ReservationApprovalPersistenceTests; výsledek běhu je uveden v evidenci. Doplňuje je pozitivní kontrola úspěšného uložení všech tří změn.
+
+### 10. Detaily ponechané kódu
+
+V kódu ponecháváme gettery, jednoduché mapování výsledku, přesné znění oznámení a syntaxi frameworkových anotací. Význam transakční hranice je však součástí návrhu výše.
+
+Pravidla nyní vlastní jedna služba. Samostatnou třídu pro rozhodovací pravidla přidáme teprve tehdy, pokud vzniknou různé způsoby schvalování a bude potřeba je oddělit.

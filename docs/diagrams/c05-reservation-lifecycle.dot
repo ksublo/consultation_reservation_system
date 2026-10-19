@@ -1,0 +1,22 @@
+digraph C05ReservationLifecycle {
+  graph [rankdir=TB, bgcolor="white", pad="0.25", nodesep="0.4", ranksep="0.7", labelloc="t", label="C05 — Schválení rezervace: návrhový třídní diagram", fontsize=20, fontname="Arial"];
+  node [shape=record, style="rounded,filled", fillcolor="#eef4ff", color="#56739b", fontname="Arial", fontsize=12, margin="0.12,0.08"];
+  edge [color="#53657e", fontname="Arial", fontsize=10];
+  actor [label="{AuthenticatedUser|id: UUID\lactiveRole: UserRole\l}"];
+  service [label="{ReservationService|autorizace a řízení transakce\l|+ approve(id, actor, request): ReservationResponse\l}", fillcolor="#e5f7ef"];
+  users [label="{UserService|+ get(id): AppUser\l}"];
+  reservation [label="{Reservation|status: ReservationStatus\lconfirmedAt: OffsetDateTime\lslot: ConsultationSlot\lstudent: AppUser\l|+ confirm(): void\l}", fillcolor="#e5f7ef"];
+  repos [label="{«interface» ReservationRepository|+ findById(id): Optional(Reservation)\l}", fillcolor="#fff1e6"];
+  audit [label="{ReservationHistory|previousStatus, newStatus\laction, actor, note, createdAt\l}"];
+  history [label="{«interface» ReservationHistoryRepository|+ save(history): ReservationHistory\l}", fillcolor="#fff1e6"];
+  notify [label="{NotificationService|+ create(recipient, reservation, type, title, message)\l}"];
+  service -> actor [style=dashed, label="ověřená identita"];
+  service -> users [style=dashed, label="načíst aktéra"];
+  service -> reservation [style=dashed, label="ověřit stav; confirm()"];
+  service -> repos [style=dashed, label="načíst rezervaci"];
+  service -> audit [style=dashed, label="vytvořit záznam"];
+  service -> history [style=dashed, label="uložit historii"];
+  service -> notify [style=dashed, label="oznámit studentovi"];
+  repos -> reservation [style=dashed, label="vrací"];
+  history -> audit [style=dashed, label="ukládá"];
+}

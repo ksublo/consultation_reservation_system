@@ -82,3 +82,111 @@
 **Artefakty:** Bilingvní C03A a C03B jsou dostupné v aplikaci v dokumentaci; zdroje každé části a jazyka jsou samostatně ve složkách `frontend/src/features/docs/c03a/` a `frontend/src/features/docs/c03b/`. Orientační materiály jsou v `docs/c03-a/` a `docs/c03-b/`.
 
 **Commit / tag aplikace:** Doplní tým při odevzdání.
+
+## C05 DD Verification Evidence
+
+**Revize:** 2026-10-19. **Jednotka:** schvalování rezervace, OP-05. [Návrh C05](architecture-and-decisions.md#c05-detailed-design) stanovuje požadované chování; tato část uvádí, jak bylo ověřeno a co ještě zbývá.
+
+Návrh jsme porovnali se zadáním C05, požadavky C02 a aktuálními zdrojovými soubory. Zpřesnili jsme rozdělení odpovědností: `ReservationService` rozhoduje o schválení, `UserService` pouze načítá uživatele. Při navazující implementaci jsme přidali ReservationApprovalPersistenceTests se třemi integračními případy. Produkční logika nevyžadovala další změnu; testy potvrdily stávající transakční chování.
+
+### 1. Testy odvozené z návrhu
+
+
+Všech 12 nových případů je v [ReservationApprovalDesignTests](../backend/src/test/java/consultation_reservation_backend/ReservationApprovalDesignTests.java). Testovaná služba a doménové objekty jsou skutečné; repository, UserService a NotificationService jsou mocky. Žádný Spring kontext ani HTTP v této sadě neběží.
+
+| DD element / decision | What must hold? | Test level | Test case |
+| --- | --- | --- | --- |
+| D1: původ identity | Chybějící aktér dostane 401 i pro neexistující ID; žádné čtení dat | Unit | missingActorIsRejectedBeforeReadingReservation |
+| D1: aktivní role | Student dostane 403 před načtením rezervace | Unit | studentIsRejectedBeforeReadingReservation |
+| D2: vstupní ID | Null ID je 400, bez čtení a zápisu | Unit | missingIdIsRejectedBeforeReadingReservation |
+| D2: vstupní request | Null tělo je 400, bez čtení a zápisu | Unit | missingRequestIsRejectedBeforeReadingReservation |
+| D2: repository contract | Optional.empty je 404, nenásleduje načtení aktéra ani zápis | Unit | missingReservationReturnsNotFoundWithoutWrites |
+| D3: priorita vlastnictví | Cizí pedagog dostane 403 i pro CONFIRMED | Unit | foreignTeacherCannotApproveEvenWhenStateIsInvalid |
+| D3: opakování | CONFIRMED nelze schválit znovu; čas a stav se nemění | Unit | ownerCannotApproveConfirmedReservationAgain |
+| D3: zakázaný přechod | CANCELLED nelze schválit; žádné zápisy | Unit | ownerCannotApproveCancelledReservation |
+| D4–D5: úspěch a spolupráce | CONFIRMED, čas, správný aktér a přechod historie, oznámení správnému studentovi právě jednou | Unit (služba + entity, mockované hranice) | ownerApprovesWithCorrectAuditAndStudentNotification |
+| Kontrakt poznámky | Schválení dovoluje note=null | Unit | optionalNoteMayBeNull |
+| D6: chyba historie | Stejná výjimka opustí službu; oznámení nevzniká | Unit | historyFailurePropagatesAndPreventsNotification |
+| D6: chyba oznámení | Výjimka se propaguje; služba nevrátí úspěšnou response | Unit | notificationFailurePropagatesWithoutSuccessResponse |
+
+**Zdůvodnění úrovně, případ 1:** `missingActorIsRejectedBeforeReadingReservation` je unit test veřejného kontraktu služby. Záměr je chránit i jiné vstupy než controller; pouze HTTP test s filtrem by pořadí kontrol uvnitř služby neověřil. Mock repository umožní prokázat, že žádné čtení nenastalo.
+
+**Zdůvodnění úrovně, případ 2:** `ownerApprovesWithCorrectAuditAndStudentNotification` je unit test spolupráce služby s mockovanými hranicemi. Ověřuje vlastnictví rozhodnutí, přechod entity a skutečný obsah vytvořené historie. DB není potřebná pro toto rozhodnutí; test však neprokazuje commit transakce. Privátní auditní data jsou kontrolována přes ReflectionTestUtils, aby kvůli testu nevznikaly nové produkční gettery.
+
+**Zdůvodnění úrovně, případ 3:** `notificationFailurePropagatesWithoutSuccessResponse` ověřuje propagaci chyby bez Spring proxy. Pro důkaz fyzického rollbacku by byl nutný integrační test s PostgreSQL; výsledek tohoto unit testu není takovým důkazem.
+
+### 2. Skutečně provedené ověření
+
+Dne 2026-10-19 jsme z kořene projektu spustili celou sadu po čistém sestavení:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 bash backend/mvnw -f backend/pom.xml --batch-mode --no-transfer-progress clean test
+```
+
+| Sada | Rozsah | Výsledek |
+| --- | --- | --- |
+| ReservationApprovalDesignTests | Pravidla služby a spolupráce s nahrazenými závislostmi | 12 testů prošlo |
+| ReservationAuthorizationTests | MockMvc, bezpečnostní filtr, controller a služba | 10 testů prošlo |
+| ReservationApprovalPersistenceTests | Spring transakce a skutečná PostgreSQL: commit a dva rollbacky | 3 testy prošly |
+| ConsultationReservationBackendApplicationTests | Start aplikačního kontextu | 1 test prošel |
+| Celkem | Celá backendová sada | **26 testů, 0 selhání, 0 chyb, 0 vynechaných; BUILD SUCCESS** |
+
+Běh skončil 2026-10-19 v 18:25:54 +02:00 a trval 13,235 s. Samostatné spuštění tří nových testů také prošlo. Spuštění vyžaduje Java 21 a lokální PostgreSQL na localhost:5432 s výchozím nastavením projektu. Omezené prostředí blokovalo databázové spojení; úspěšné běhy proběhly po povolení přístupu mimo něj.
+
+Integrační sada vytváří náhodně pojmenované schéma c05_test_…, aplikuje skutečné Flyway migrace a po dokončení schéma odstraní. Výchozí data testu jsou commitnutá před voláním služby; testy samy neběží v automaticky vracené testovací transakci. Kontrola výsledku používá nové SQL čtení v nové transakci.
+
+Technická chyba je řízeně vyvolaná testovacím spy objektem po flush zápisů do skutečné databáze. Test historie vynutí zápis změněné rezervace a historie; test oznámení provede skutečnou metodu create a vynutí všechny tři zápisy. Následně vyvolají RuntimeException a kontrolují původní PENDING, null confirmedAt a původní záznamy historie i oznámení. Pozitivní test ověřuje úspěšný commit a správného aktéra/příjemce. Nejde o simulaci výpadku síťového spojení ani o test souběhu.
+
+Doklady: backend/target/surefire-reports/ pro čtyři uvedené třídy. Reporty se generují při běhu a nejsou verzované. Dřívější výsledek 22 testů byl cílenou kontrolou bez databázových testů; uvedených 26 je aktuální úplný běh.
+
+### 3. Porovnání návrhu s implementací a řešení rozdílů
+
+| Rozhodnutí z DD | Implementováno? | Doklad | Rozhodnutí / další akce |
+| --- | --- | --- | --- |
+| Identita a role se kontrolují před načtením rezervace | YES | ReservationService.approve; missingActor…, student… | Ponechat existující úpravu; aktuální testy prošly. |
+| Chybějící ID nebo request znamená 400 | YES | approve; missingId…, missingRequest… | Ponechat explicitní kontrolu vstupu. |
+| Schválit smí vlastník a pouze PENDING | YES | approve; foreignTeacher…, ownerCannotApprove… | Ponechat; odmítnutí nemění stav a nevytváří historii ani oznámení. |
+| Reservation vlastní status a confirmedAt | YES | Reservation.confirm; ownerApproves… | Ponechat; služba kontroluje podmínky před voláním confirm. |
+| Služba koordinuje historii a oznámení a předává technické chyby | YES | ownerApproves…; historyFailure…; notificationFailure… | Ponechat; testy ověřují obsah a volání spolupracujících prvků. |
+| Všechny změny se uloží společně, nebo žádná | YES — pro ověřené scénáře | ReservationApprovalPersistenceTests: úspěšný commit a rollback při chybě historie/oznámení | Ponechat produkční transakci; doplněné tři integrační testy prošly. |
+| O schválení rozhoduje služba rezervací | YES | approve provádí kontroly; UserService.get načítá aktéra | Zpřesněn text DD, který dříve uváděl společného vlastníka rozhodnutí. |
+
+Návrh zachovává pravidla v jedné službě, protože nyní existuje jeden způsob schvalování. Samostatná policy třída není pro tento rozsah potřebná. Diagram proto ukazuje existující rozhraní repository a závislosti služby.
+
+### 4. Integrační ověření a zbývající rizika
+
+
+- Souběžná schválení nejsou serializována zámkem ani verzí entity; mohou vytvořit duplicitní historii/oznámení. Sekvenční 409 test není testem souběhu.
+- Rollback je nyní ověřen proti PostgreSQL pro řízené RuntimeException po zápisech. Výpadek databázového spojení ani jiné druhy selhání tento test nepokrývá.
+- `Reservation.confirm()` se spoléhá na kontrolu služby. Nový volající musí respektovat stejný kontrakt.
+
+Následující případy v ReservationApprovalPersistenceTests **prošly**:
+
+| DD element / decision | What must hold? | Test level | Test case (PASS) |
+| --- | --- | --- | --- |
+| D4–D6: úspěšné společné uložení | CONFIRMED, čas a právě jeden nový záznam historie i oznámení se správným aktérem/příjemcem | Integration: Spring proxy + PostgreSQL | successfulApprovalCommitsStateHistoryAndNotification |
+| D6: atomická transakce při chybě oznámení | Po selhání zůstane v DB PENDING, confirmedAt=null a původní počty historie/oznámení | Integration: Spring proxy + PostgreSQL | notificationFailureRollsBackApprovalAndHistory |
+| D6: atomická transakce při chybě historie | Po selhání se potvrzení neuloží a nevznikne oznámení | Integration: Spring proxy + PostgreSQL | historyFailureRollsBackApproval |
+
+**Proč integrační úroveň:** rozhodnutí o společné transakci realizuje Spring a databáze. Mocky neumějí prokázat commit ani rollback. Kontrola proto proběhne novým načtením z databáze po skončení volané transakce; podrobný postup je v C05 DD. Tyto případy doplňují existující unit testy propagace výjimek.
+
+### 5. Kontrola úplnosti podle zadání
+
+| Požadovaný výstup | Stav |
+| --- | --- |
+| Jedna jednotka, vazba na požadavky a scénář | Hotovo v C05 DD, část 1 |
+| 3–7 odpovědností a jejich vlastníci | Hotovo, části 2–3 |
+| Rozhraní a kontrakty | Hotovo, části 4 a 6–7 |
+| Strukturální UML a detailní sekvence | Zahrnuty, části 5 a 8 |
+| Významné operace, algoritmus a stavy | Hotovo, části 6–7 |
+| Nejméně 5 odvozených testů, zdůvodnění alespoň dvou úrovní | Hotovo, 12 případů v části 1 této evidence |
+| Spuštění unit/component testů | Hotovo, 26 testů prošlo v aktuální revizi |
+| Porovnání návrhu a implementace | Hotovo; zahrnuje databázový commit a rollback |
+| Doklad atomického uložení při chybě | Hotovo; oba rollback testy proti PostgreSQL prošly |
+| Commit/tag | `v0.3-c05` |
+
+### 6. Commit/tag a další postup
+
+**Commit/tag:** `v0.3-c05`
+
+Návrh, implementace vybraného scénáře i její ověření jsou pro uvedený rozsah hotové. Souběžné schvalování zůstává přiznaným návrhovým rizikem a vyžaduje samostatné rozhodnutí.
