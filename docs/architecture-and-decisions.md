@@ -320,7 +320,7 @@ sequenceDiagram
     U-->>S: AppUser
     S->>S: ověř vlastníka a PENDING
     alt cizí vlastník / nepovolený stav
-        S-->>Caller: ApiException 403 / 409; bez zápisů
+        S-->>Caller: ApiException 403 / 409, bez zápisů
     else vlastník schvaluje PENDING
         S->>D: confirm()
         S->>H: save(ReservationHistory)

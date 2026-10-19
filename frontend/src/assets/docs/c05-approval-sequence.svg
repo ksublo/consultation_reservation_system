@@ -52,7 +52,7 @@
 <text x="47" y="601" font-size="15" text-anchor="middle">alt</text>
 <text x="100" y="603" font-size="15" text-anchor="start">[foreign owner / invalid state]</text>
 <line x1="370" y1="655" x2="125" y2="655" stroke="#334155" marker-end="url(#arrow)" stroke-dasharray="6 5"/>
-<text x="247.5" y="645" font-size="15" text-anchor="middle">ApiException 403 / 409; no writes</text>
+<text x="247.5" y="645" font-size="15" text-anchor="middle">ApiException 403 / 409, no writes</text>
 <line x1="15" y1="690" x2="1705" y2="690" stroke="#334155" stroke-dasharray="6 5"/>
 <text x="100" y="718" font-size="15" text-anchor="start">[owner approves PENDING]</text>
 <line x1="370" y1="760" x2="1105" y2="760" stroke="#334155" marker-end="url(#arrow)"/>
