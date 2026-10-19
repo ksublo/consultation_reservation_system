@@ -1,9 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api } from '../../api/client'
-import HistoryPeriodFilter, {
-  filterHistoryByPeriod,
-  type HistoryPeriod,
-} from '../../components/HistoryPeriodFilter'
 import type { Language, TFunction } from '../../i18n'
 import { localeFor } from '../../i18n'
 import type { ConsultationSlot, Reservation, Session, Toast } from '../../types/api'
@@ -145,8 +141,6 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
   const [bulkError, setBulkError] = useState('')
   const [now, setNow] = useState(() => Date.now())
   const [slotToCancel, setSlotToCancel] = useState<ConsultationSlot | null>(null)
-  const [showRequestHistory, setShowRequestHistory] = useState(false)
-  const [requestHistoryPeriod, setRequestHistoryPeriod] = useState<HistoryPeriod>('lastWeek')
 
   async function load() {
     try {
@@ -172,23 +166,6 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
   const daySlots = useMemo(
     () => slots.filter((slot) => slot.status === 'ACTIVE' && key(slot.startsAt) === date),
     [slots, date],
-  )
-
-  const [activeRequests, historicalRequests] = useMemo(() => {
-    return requests.reduce<[Reservation[], Reservation[]]>(
-      (groups, request) => {
-        const historical =
-          request.status === 'CANCELLED' || new Date(request.endsAt).getTime() < now
-        groups[historical ? 1 : 0].push(request)
-        return groups
-      },
-      [[], []],
-    )
-  }, [now, requests])
-
-  const filteredHistoricalRequests = useMemo(
-    () => filterHistoryByPeriod(historicalRequests, requestHistoryPeriod, now),
-    [historicalRequests, now, requestHistoryPeriod],
   )
 
   const reservationToCancel = slotToCancel
@@ -405,122 +382,73 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
     }
   }
 
-  function renderRequestTable(items: Reservation[]) {
-    return (
-      <div className="request-table">
-        <div className="request-head">
-          <span>{t('studentColumn')}</span>
-          <span>{t('appointment')}</span>
-          <span>{t('topic')}</span>
-          <span>{t('status')}</span>
-          <span>{t('actions')}</span>
-        </div>
-        {items.map((request) => {
-          const canCancel =
-            request.status !== 'CANCELLED' &&
-            new Date(request.startsAt).getTime() - now >= cancellationCutoffMs
-          const canApprove =
-            request.status === 'PENDING' && new Date(request.endsAt).getTime() >= now
-          return (
-            <div className="request-row" key={request.id}>
-              <div className="request-cell request-student" data-label={t('studentColumn')}>
-                <b>
-                  {request.studentFirstName} {request.studentLastName}
-                </b>
-                <small>{request.studentLogin}</small>
-                <small>{request.studentEmail}</small>
-              </div>
-              <div className="request-cell request-appointment" data-label={t('appointment')}>
-                <small>
-                  {dateFormatter.format(new Date(request.startsAt))} ·{' '}
-                  {time.format(new Date(request.startsAt))}–{time.format(new Date(request.endsAt))}
-                </small>
-                <small>
-                  {request.consultationMode === 'ONLINE'
-                    ? t('onlineConsultation')
-                    : `${t('offlineConsultation')}${request.teacherCabinet ? ` · ${request.teacherCabinet}` : ''}`}
-                </small>
-              </div>
-              <div className="request-cell request-consultation" data-label={t('topic')}>
-                <b>{request.reasonTitle}</b>
-                <p>{request.reasonDescription}</p>
-              </div>
-              <div className="request-cell request-status" data-label={t('status')}>
-                <span className={`status ${request.status.toLowerCase()}`}>
-                  {statusLabel(request.status, t)}
-                </span>
-              </div>
-              <div className="request-cell request-actions" data-label={t('actions')}>
-                <button
-                  className="approve-icon"
-                  title={t('approve')}
-                  disabled={!canApprove}
-                  onClick={() => void api.approveReservation(session.token, request.id).then(load)}
-                >
-                  ✓
-                </button>
-                <button
-                  className="cancel-icon"
-                  title={canCancel ? t('cancel') : t('cancelTooLate')}
-                  disabled={!canCancel}
-                  onClick={() => void cancelReservation(request)}
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    )
-  }
-
   if (view === 'requests') {
     return (
       <main>
         <section className="card">
           <h2>{t('teacherRequests')}</h2>
-          {activeRequests.length ? (
-            renderRequestTable(activeRequests)
-          ) : (
-            <p className="muted">{t('noTeacherRequests')}</p>
-          )}
-        </section>
-        <section className="card reservation-history">
-          <div className="section-title">
-            <div>
-              <h2>{t('history')}</h2>
+          <div className="request-table">
+            <div className="request-head">
+              <span>{t('studentColumn')}</span>
+              <span>{t('contact')}</span>
+              <span>{t('topic')}</span>
+              <span>{t('status')}</span>
+              <span>{t('actions')}</span>
             </div>
-            <div className="history-controls">
-              {showRequestHistory && (
-                <HistoryPeriodFilter
-                  value={requestHistoryPeriod}
-                  onChange={setRequestHistoryPeriod}
-                  t={t}
-                />
-              )}
-              <button
-                className="history-toggle"
-                type="button"
-                aria-label={showRequestHistory ? t('hideHistory') : t('showHistory')}
-                aria-expanded={showRequestHistory}
-                onClick={() => setShowRequestHistory((current) => !current)}
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d={showRequestHistory ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
-                </svg>
-              </button>
-            </div>
+            {requests.map((request) => {
+              const canCancel =
+                request.status !== 'CANCELLED' &&
+                new Date(request.startsAt).getTime() - now >= cancellationCutoffMs
+              return (
+                <div className="request-row" key={request.id}>
+                  <div>
+                    <b>
+                      {request.studentFirstName} {request.studentLastName}
+                    </b>
+                    <small>{request.studentLogin}</small>
+                  </div>
+                  <small>{request.studentEmail}</small>
+                  <div>
+                    <b>{request.reasonTitle}</b>
+                    <small>
+                      {dateFormatter.format(new Date(request.startsAt))} ·{' '}
+                      {time.format(new Date(request.startsAt))}–
+                      {time.format(new Date(request.endsAt))}
+                    </small>
+                    <small>
+                      {request.consultationMode === 'ONLINE'
+                        ? t('onlineConsultation')
+                        : `${t('offlineConsultation')}${request.teacherCabinet ? ` · ${request.teacherCabinet}` : ''}`}
+                    </small>
+                    <p>{request.reasonDescription}</p>
+                  </div>
+                  <span className={`status ${request.status.toLowerCase()}`}>
+                    {statusLabel(request.status, t)}
+                  </span>
+                  <div className="request-actions">
+                    <button
+                      className="approve-icon"
+                      title={t('approve')}
+                      disabled={request.status !== 'PENDING'}
+                      onClick={() =>
+                        void api.approveReservation(session.token, request.id).then(load)
+                      }
+                    >
+                      ✓
+                    </button>
+                    <button
+                      className="cancel-icon"
+                      title={canCancel ? t('cancel') : t('cancelTooLate')}
+                      disabled={!canCancel}
+                      onClick={() => void cancelReservation(request)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
-          {showRequestHistory && (
-            <>
-              {filteredHistoricalRequests.length ? (
-                renderRequestTable(filteredHistoricalRequests)
-              ) : (
-                <p className="muted">{t('emptyHistory')}</p>
-              )}
-            </>
-          )}
         </section>
       </main>
     )

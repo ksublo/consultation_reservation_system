@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import logo from '../../assets/vsb-logo.png'
 import { api } from '../../api/client'
 import type { Session, UserRole } from '../../types/api'
 import type { TFunction } from '../../i18n'
@@ -12,10 +13,7 @@ interface LoginProps {
 export default function Login({ role, onLogin, t }: LoginProps) {
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
-  const [settingUpPasskey, setSettingUpPasskey] = useState(false)
   const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
-
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
@@ -23,80 +21,41 @@ export default function Login({ role, onLogin, t }: LoginProps) {
       setError(t('loginTooLong'))
       return
     }
-    setBusy(true)
     try {
-      const session = settingUpPasskey
-        ? await api.registerPasskey(login, password, role)
-        : await api.loginWithPasskey(login, role)
-      setPassword('')
-      onLogin(session)
+      onLogin(await api.login(login, password, role))
     } catch (requestError) {
-      const message = requestError instanceof Error ? requestError.message : t('loginFailed')
-      setError(
-        message === 'Passkeys require a supported browser on HTTPS or localhost.'
-          ? t('passkeyUnsupported')
-          : message,
-      )
-    } finally {
-      setBusy(false)
+      setError(requestError instanceof Error ? requestError.message : t('loginFailed'))
     }
   }
-
   return (
     <main className="login-page">
       <section className="login-card">
+        <img src={logo} alt="VŠB Technical University of Ostrava" className="mb-8 h-36 w-auto" />
         <p>{t('landingEyebrow')}</p>
         <h1>
           {t('loginTitle')} —{' '}
           {role === 'STUDENT' ? t('student').toLocaleLowerCase() : t('teacher').toLocaleLowerCase()}
         </h1>
         <form onSubmit={submit}>
-          <div className="labeled-field login-field">
-            <label htmlFor="login">{t('login')}</label>
-            <input
-              id="login"
-              required
-              maxLength={7}
-              pattern="[A-Za-z]{3}[0-9]{4}"
-              autoComplete="username webauthn"
-              value={login}
-              onChange={(event) => setLogin(event.target.value)}
-              placeholder="ABC0001"
-            />
-          </div>
-          {settingUpPasskey && (
-            <div className="labeled-field login-field">
-              <label htmlFor="password">{t('passwordForPasskeySetup')}</label>
-              <input
-                id="password"
-                required
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-            </div>
-          )}
-          <button className="reserve-button" disabled={busy}>
-            {busy
-              ? t('pleaseWait')
-              : settingUpPasskey
-                ? t('createPasskey')
-                : t('signInWithPasskey')}
-          </button>
-          <button
-            className="passkey-setup-link"
-            type="button"
-            disabled={busy}
-            onClick={() => {
-              setError('')
-              setPassword('')
-              setSettingUpPasskey((current) => !current)
-            }}
-          >
-            {settingUpPasskey ? t('cancelPasskeySetup') : t('setUpPasskey')}
-          </button>
-          <p className="login-hint">{t('passkeySetupHint')}</p>
+          <label htmlFor="login">{t('login')}</label>
+          <input
+            id="login"
+            required
+            maxLength={7}
+            pattern="[A-Za-z]{3}[0-9]{4}"
+            value={login}
+            onChange={(event) => setLogin(event.target.value)}
+            placeholder="BLO0021"
+          />
+          <label htmlFor="password">{t('password')}</label>
+          <input
+            id="password"
+            required
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+          <button className="reserve-button">{t('signIn')}</button>
           {error && <span className="login-error">{error}</span>}
         </form>
       </section>

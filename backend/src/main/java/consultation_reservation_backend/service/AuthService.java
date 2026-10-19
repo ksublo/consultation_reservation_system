@@ -13,18 +13,28 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class AuthService {
+  private final AppUserRepository users;
   private final AuthSessionRepository sessions;
   private final PasswordEncoder passwordEncoder;
 
-  public AuthService(AuthSessionRepository sessions, PasswordEncoder passwordEncoder) {
+  public AuthService(
+      AppUserRepository users, AuthSessionRepository sessions, PasswordEncoder passwordEncoder) {
+    this.users = users;
     this.sessions = sessions;
     this.passwordEncoder = passwordEncoder;
   }
 
-  public LoginResponse loginWithPasskey(AppUser user, UserRole role) {
-    if (!user.hasRole(role))
+  public LoginResponse login(LoginRequest request) {
+    AppUser user =
+        users
+            .findByLoginIgnoreCase(request.login())
+            .orElseThrow(
+                () -> new ApiException(HttpStatus.UNAUTHORIZED, "Neplatný login nebo heslo."));
+    if (!passwordEncoder.matches(request.password(), user.getPasswordHash()))
+      throw new ApiException(HttpStatus.UNAUTHORIZED, "Neplatný login nebo heslo.");
+    if (!user.hasRole(request.role()))
       throw new ApiException(HttpStatus.FORBIDDEN, "Tento účet nemá zvolenou roli.");
-    AuthSession session = sessions.save(new AuthSession(user, role));
+    AuthSession session = sessions.save(new AuthSession(user, request.role()));
     return new LoginResponse(
         session.getId().toString(),
         user.getId(),
@@ -32,11 +42,7 @@ public class AuthService {
         user.getFirstName(),
         user.getLastName(),
         user.getRoles(),
-        role);
-  }
-
-  public boolean matchesPassword(AppUser user, String password) {
-    return passwordEncoder.matches(password, user.getPasswordHash());
+        request.role());
   }
 
   @Transactional(readOnly = true)

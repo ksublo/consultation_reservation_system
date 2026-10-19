@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -42,12 +41,7 @@ public class ReservationController {
   }
 
   @GetMapping
-  public List<ReservationResponse> mine(
-      @RequestParam UUID userId, @AuthenticationPrincipal AuthenticatedUser actor) {
-    if (!actor.id().equals(userId)) {
-      throw new ResponseStatusException(
-          HttpStatus.FORBIDDEN, "You can only view your own reservations.");
-    }
+  public List<ReservationResponse> mine(@RequestParam UUID userId) {
     return reservations.forUser(userId);
   }
 }

@@ -8,7 +8,7 @@ import type {
   UserRole,
 } from '../types/api'
 import type { Language } from '../i18n'
-const API_ROOT = `${import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? ''}/api`
+const API_ROOT = '/api'
 let apiLanguage: Language = sessionStorage.getItem('language') === 'en' ? 'en' : 'cs'
 const apiMessages: Record<string, Record<Language, string>> = {
   'Server vrátil neplatnou odpověď.': {
@@ -26,30 +26,6 @@ const apiMessages: Record<string, Record<Language, string>> = {
   'Neplatný login nebo heslo.': {
     cs: 'Neplatný login nebo heslo.',
     en: 'Invalid login or password.',
-  },
-  'Neplatný login nebo ověření passkey.': {
-    cs: 'Neplatný login nebo ověření passkey.',
-    en: 'The login or passkey could not be verified.',
-  },
-  'Přihlaste se pomocí passkey.': {
-    cs: 'Přihlaste se pomocí passkey.',
-    en: 'Sign in with a passkey.',
-  },
-  'Tento účet už passkey má. Přihlaste se jí.': {
-    cs: 'Tento účet už passkey má. Přihlaste se jí.',
-    en: 'This account already has a passkey. Sign in with it.',
-  },
-  'Nejdřív si pro účet založte passkey.': {
-    cs: 'Nejdřív si pro účet založte passkey.',
-    en: 'Set up a passkey for this account first.',
-  },
-  'Registraci passkey se nepodařilo ověřit.': {
-    cs: 'Registraci passkey se nepodařilo ověřit.',
-    en: 'The passkey registration could not be verified.',
-  },
-  'Platnost ověření vypršela. Zkuste to znovu.': {
-    cs: 'Platnost ověření vypršela. Zkuste to znovu.',
-    en: 'The verification expired. Please try again.',
   },
   'Tento účet nemá zvolenou roli.': {
     cs: 'Tento účet nemá zvolenou roli.',
@@ -183,134 +159,18 @@ async function readJson<T>(response: Response): Promise<T> {
   return body as T
 }
 const authorization = (token: string): HeadersInit => ({ Authorization: `Bearer ${token}` })
-
-interface PasskeyCeremonyOptions {
-  flowId: string
-  options: Record<string, unknown>
-}
-
-function decodeBase64Url(value: string): ArrayBuffer {
-  const padded =
-    value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (value.length % 4)) % 4)
-  const binary = atob(padded)
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0)).buffer
-}
-
-function encodeBase64Url(value: ArrayBuffer): string {
-  const bytes = new Uint8Array(value)
-  let binary = ''
-  bytes.forEach((byte) => (binary += String.fromCharCode(byte)))
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
-}
-
-function credentialToJson(credential: PublicKeyCredential) {
-  const response = credential.response
-  const common = {
-    id: credential.id,
-    rawId: encodeBase64Url(credential.rawId),
-    type: credential.type,
-    authenticatorAttachment: credential.authenticatorAttachment,
-    clientExtensionResults: credential.getClientExtensionResults(),
-  }
-  if (response instanceof AuthenticatorAttestationResponse) {
-    return {
-      ...common,
-      response: {
-        attestationObject: encodeBase64Url(response.attestationObject),
-        clientDataJSON: encodeBase64Url(response.clientDataJSON),
-        transports: response.getTransports?.(),
-      },
-    }
-  }
-  const assertion = response as AuthenticatorAssertionResponse
-  return {
-    ...common,
-    response: {
-      authenticatorData: encodeBase64Url(assertion.authenticatorData),
-      clientDataJSON: encodeBase64Url(assertion.clientDataJSON),
-      signature: encodeBase64Url(assertion.signature),
-      userHandle: assertion.userHandle ? encodeBase64Url(assertion.userHandle) : null,
-    },
-  }
-}
-
-function requireWebAuthn(): CredentialsContainer {
-  if (!window.isSecureContext || !navigator.credentials || !window.PublicKeyCredential) {
-    throw new Error('Passkeys require a supported browser on HTTPS or localhost.')
-  }
-  return navigator.credentials
-}
-
-async function loginWithPasskey(login: string, role: UserRole): Promise<Session> {
-  const credentials = requireWebAuthn()
-  const ceremony = await readJson<PasskeyCeremonyOptions>(
-    await fetch(`${API_ROOT}/auth/passkey/login/options`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ login, role }),
-    }),
-  )
-  const options = ceremony.options
-  const allowCredentials = (
-    options.allowCredentials as Array<Record<string, unknown>> | undefined
-  )?.map((item) => ({ ...item, id: decodeBase64Url(item.id as string) }))
-  const publicKey = {
-    ...options,
-    challenge: decodeBase64Url(options.challenge as string),
-    allowCredentials,
-  } as PublicKeyCredentialRequestOptions
-  const credential = await credentials.get({ publicKey })
-  if (!(credential instanceof PublicKeyCredential)) throw new Error('Passkey login was cancelled.')
-  return readJson<Session>(
-    await fetch(`${API_ROOT}/auth/passkey/login/verify`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ flowId: ceremony.flowId, credential: credentialToJson(credential) }),
-    }),
-  )
-}
-
-async function registerPasskey(login: string, password: string, role: UserRole): Promise<Session> {
-  const credentials = requireWebAuthn()
-  const ceremony = await readJson<PasskeyCeremonyOptions>(
-    await fetch(`${API_ROOT}/auth/passkey/register/options`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ login, password, role }),
-    }),
-  )
-  const options = ceremony.options
-  const user = options.user as Record<string, unknown>
-  const excludeCredentials = (
-    options.excludeCredentials as Array<Record<string, unknown>> | undefined
-  )?.map((item) => ({ ...item, id: decodeBase64Url(item.id as string) }))
-  const publicKey = {
-    ...options,
-    challenge: decodeBase64Url(options.challenge as string),
-    user: { ...user, id: decodeBase64Url(user.id as string) },
-    excludeCredentials,
-  } as PublicKeyCredentialCreationOptions
-  const credential = await credentials.create({ publicKey })
-  if (!(credential instanceof PublicKeyCredential)) throw new Error('Passkey setup was cancelled.')
-  return readJson<Session>(
-    await fetch(`${API_ROOT}/auth/passkey/register/verify`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        flowId: ceremony.flowId,
-        label: 'This device',
-        credential: credentialToJson(credential),
-      }),
-    }),
-  )
-}
-
 export const api = {
   setLanguage: (language: Language): void => {
     apiLanguage = language
   },
-  loginWithPasskey,
-  registerPasskey,
+  login: async (login: string, password: string, role: UserRole): Promise<Session> =>
+    readJson<Session>(
+      await fetch(`${API_ROOT}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ login, password, role }),
+      }),
+    ),
   logout: async (token: string): Promise<void> => {
     await fetch(`${API_ROOT}/auth/logout`, { method: 'POST', headers: authorization(token) })
   },
