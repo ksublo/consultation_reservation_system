@@ -13,6 +13,8 @@ docs/
   c03a/en.json
   c03b/cs.json
   c03b/en.json
+  c05/cs.json
+  c05/en.json
 ```
 
 Every file contains one document with `title` and `sections`. Each section has
@@ -28,3 +30,9 @@ When adding another part, create matching `cs.json` and `en.json` files with
 the same structure, then add the part to `DocsSection`, `tabs` and the
 `documents` map in `DocumentationPage.tsx`. Format the files with
 `npm run format` from `frontend/`.
+
+C05 copies the design and verification sections from `docs/architecture-and-decisions.md`
+and `docs/evidence-and-evolution.md`. Keep the Czech copy and English translation
+in sync when those source sections change. Sequence diagram source is in
+`docs/diagrams/c05-approval-sequence.svg`; its bundled copy is in
+`frontend/src/assets/docs/`.

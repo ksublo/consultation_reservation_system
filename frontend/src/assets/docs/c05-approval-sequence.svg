@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1720" height="1100" viewBox="0 0 1720 1100" role="img" aria-labelledby="title desc">
+<title id="title">C05 — Reservation approval sequence</title>
+<desc id="desc">The service validates identity, role and input, loads the reservation and actor, checks ownership and state, then either rejects without writes or confirms with history and notification in one transaction.</desc>
+<defs><marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0 0 L10 4 L0 8" fill="none" stroke="#334155"/></marker></defs>
+<rect width="1720" height="1100" fill="#fff"/>
+<g font-family="Arial, sans-serif" fill="#172b4d">
+<text x="860" y="35" font-size="25" text-anchor="middle">C05 — Reservation approval / Schválení rezervace</text>
+<text x="860" y="62" font-size="16" text-anchor="middle">One Spring transaction • Jedna Spring transakce</text>
+<rect x="10" y="90" width="230" height="55" fill="#eff6ff" stroke="#94a3b8"/>
+<text x="125" y="122" font-size="14" text-anchor="middle">ReservationController</text>
+<line x1="125" y1="145" x2="125" y2="1065" stroke="#334155" stroke-dasharray="6 5"/>
+<rect x="255" y="90" width="230" height="55" fill="#e5f7ef" stroke="#94a3b8"/>
+<text x="370" y="122" font-size="14" text-anchor="middle">ReservationService</text>
+<line x1="370" y1="145" x2="370" y2="1065" stroke="#334155" stroke-dasharray="6 5"/>
+<rect x="500" y="90" width="230" height="55" fill="#eff6ff" stroke="#94a3b8"/>
+<text x="615" y="122" font-size="14" text-anchor="middle">ReservationRepository</text>
+<line x1="615" y1="145" x2="615" y2="1065" stroke="#334155" stroke-dasharray="6 5"/>
+<rect x="745" y="90" width="230" height="55" fill="#eff6ff" stroke="#94a3b8"/>
+<text x="860" y="122" font-size="14" text-anchor="middle">UserService</text>
+<line x1="860" y1="145" x2="860" y2="1065" stroke="#334155" stroke-dasharray="6 5"/>
+<rect x="990" y="90" width="230" height="55" fill="#eff6ff" stroke="#94a3b8"/>
+<text x="1105" y="122" font-size="14" text-anchor="middle">Reservation</text>
+<line x1="1105" y1="145" x2="1105" y2="1065" stroke="#334155" stroke-dasharray="6 5"/>
+<rect x="1235" y="90" width="230" height="55" fill="#eff6ff" stroke="#94a3b8"/>
+<text x="1350" y="122" font-size="14" text-anchor="middle">ReservationHistoryRepository</text>
+<line x1="1350" y1="145" x2="1350" y2="1065" stroke="#334155" stroke-dasharray="6 5"/>
+<rect x="1480" y="90" width="230" height="55" fill="#eff6ff" stroke="#94a3b8"/>
+<text x="1595" y="122" font-size="14" text-anchor="middle">NotificationService</text>
+<line x1="1595" y1="145" x2="1595" y2="1065" stroke="#334155" stroke-dasharray="6 5"/>
+<line x1="125" y1="190" x2="370" y2="190" stroke="#334155" marker-end="url(#arrow)"/>
+<text x="247.5" y="180" font-size="15" text-anchor="middle">approve(id, actor, request)</text>
+<line x1="370" y1="225" x2="460" y2="225" stroke="#334155"/>
+<line x1="460" y1="225" x2="460" y2="247" stroke="#334155"/>
+<line x1="460" y1="247" x2="370" y2="247" stroke="#334155" marker-end="url(#arrow)"/>
+<text x="475" y="241" font-size="15" text-anchor="start">Check identity, TEACHER and input</text>
+<rect x="410" y="265" width="610" height="40" fill="#fff7ed" stroke="#94a3b8"/>
+<text x="715" y="291" font-size="15" text-anchor="middle">Invalid identity / role / input → stop before repository reads</text>
+<line x1="370" y1="345" x2="615" y2="345" stroke="#334155" marker-end="url(#arrow)"/>
+<text x="492.5" y="335" font-size="15" text-anchor="middle">findById(id)</text>
+<line x1="615" y1="390" x2="370" y2="390" stroke="#334155" marker-end="url(#arrow)" stroke-dasharray="6 5"/>
+<text x="492.5" y="380" font-size="15" text-anchor="middle">Optional(Reservation)</text>
+<line x1="370" y1="440" x2="860" y2="440" stroke="#334155" marker-end="url(#arrow)"/>
+<text x="615.0" y="430" font-size="15" text-anchor="middle">get(actor.id)</text>
+<line x1="860" y1="485" x2="370" y2="485" stroke="#334155" marker-end="url(#arrow)" stroke-dasharray="6 5"/>
+<text x="615.0" y="475" font-size="15" text-anchor="middle">AppUser</text>
+<line x1="370" y1="520" x2="460" y2="520" stroke="#334155"/>
+<line x1="460" y1="520" x2="460" y2="542" stroke="#334155"/>
+<line x1="460" y1="542" x2="370" y2="542" stroke="#334155" marker-end="url(#arrow)"/>
+<text x="475" y="536" font-size="15" text-anchor="start">Check owner and PENDING</text>
+<rect x="15" y="580" width="1690" height="415" fill="none" stroke="#94a3b8"/>
+<rect x="15" y="580" width="65" height="30" fill="#eff6ff" stroke="#94a3b8"/>
+<text x="47" y="601" font-size="15" text-anchor="middle">alt</text>
+<text x="100" y="603" font-size="15" text-anchor="start">[foreign owner / invalid state]</text>
+<line x1="370" y1="655" x2="125" y2="655" stroke="#334155" marker-end="url(#arrow)" stroke-dasharray="6 5"/>
+<text x="247.5" y="645" font-size="15" text-anchor="middle">ApiException 403 / 409; no writes</text>
+<line x1="15" y1="690" x2="1705" y2="690" stroke="#334155" stroke-dasharray="6 5"/>
+<text x="100" y="718" font-size="15" text-anchor="start">[owner approves PENDING]</text>
+<line x1="370" y1="760" x2="1105" y2="760" stroke="#334155" marker-end="url(#arrow)"/>
+<text x="737.5" y="750" font-size="15" text-anchor="middle">confirm()</text>
+<line x1="370" y1="810" x2="1350" y2="810" stroke="#334155" marker-end="url(#arrow)"/>
+<text x="860.0" y="800" font-size="15" text-anchor="middle">save(ReservationHistory)</text>
+<line x1="370" y1="860" x2="1595" y2="860" stroke="#334155" marker-end="url(#arrow)"/>
+<text x="982.5" y="850" font-size="15" text-anchor="middle">create(student, reservation, RESERVATION_APPROVED, ...)</text>
+<rect x="410" y="885" width="1160" height="45" fill="#fff7ed" stroke="#94a3b8"/>
+<text x="990" y="913" font-size="15" text-anchor="middle">Technical exception → propagate and roll back the transaction; no successful response</text>
+<line x1="370" y1="970" x2="125" y2="970" stroke="#334155" marker-end="url(#arrow)" stroke-dasharray="6 5"/>
+<text x="247.5" y="960" font-size="15" text-anchor="middle">ReservationResponse after commit</text>
+<text x="860" y="1040" font-size="17" text-anchor="middle">Reservation state + history + notification participate in the same transaction.</text>
+</g></svg>

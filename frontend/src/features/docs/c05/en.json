@@ -1,0 +1,639 @@
+{
+  "title": "C05 — Detailed design of reservation approval",
+  "sections": [
+    {
+      "id": "c05-design-1",
+      "title": "1. Selected unit and design intent",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "We design teacher approval of a reservation in ReservationService.approve, within the reservation management responsibility from C03. The operation changes a pending request to confirmed and records its history and a student notification."
+        },
+        {
+          "type": "table",
+          "headers": ["Reference", "Meaning for this design"],
+          "rows": [
+            [
+              "OP-05, REQ-05; related REQ-03",
+              "Teachers approve requests for their own consultation slots."
+            ],
+            ["ADR-01", "The actor's identity comes from an authenticated session."],
+            [
+              "BR-02",
+              "A slot has at most one active reservation; both PENDING and CONFIRMED block it."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Design intent: ReservationService decides authorization and the permitted state transition. Checks precede mutation; identity and role checks also precede loading the reservation. State, history and notification must be persisted together or not at all. These rules define the intended implementation and verification."
+        },
+        {
+          "type": "paragraph",
+          "content": "Scope: PENDING → CONFIRMED. Creation and cancellation have separate rules. Some implementation already exists; its consistency with this design is assessed in the evidence below."
+        }
+      ]
+    },
+    {
+      "id": "c05-design-2",
+      "title": "2. Detailed responsibilities",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Responsibility", "Why is it needed?"],
+          "rows": [
+            [
+              "D1: Check the authenticated actor and active role",
+              "Unauthenticated users and students must not approve or discover reservation existence through this operation."
+            ],
+            [
+              "D2: Validate input and load the reservation and teacher",
+              "Distinguish invalid input from a missing record."
+            ],
+            [
+              "D3: Check slot ownership and pending state",
+              "Only the owner may approve, and only from PENDING."
+            ],
+            [
+              "D4: Confirm the reservation and record the time",
+              "The resulting state and confirmation time must be explicit."
+            ],
+            ["D5: Create history and notification", "Record who approved and inform the student."],
+            [
+              "D6: Persist atomically and propagate errors",
+              "A partially persisted change must not be reported as success."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c05-design-3",
+      "title": "3. Design elements and data ownership",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Responsibility", "Owner", "Data/state", "Why here?"],
+          "rows": [
+            [
+              "D1–D3: decide whether approval is permitted",
+              "ReservationService",
+              "Identity, active role, ID, reservation state",
+              "Rules apply to every service caller, not only the HTTP controller."
+            ],
+            [
+              "D2: load reservation",
+              "ReservationRepository",
+              "Reservation or empty result",
+              "The interface separates service logic from persistence."
+            ],
+            [
+              "D2: load teacher",
+              "UserService",
+              "AppUser for the authenticated ID",
+              "Supplies the user for checks and history; does not decide approval."
+            ],
+            [
+              "D4: change reservation",
+              "Reservation",
+              "status, confirmedAt; slot and student references",
+              "The entity owns state and changes it after service checks."
+            ],
+            [
+              "D5: history",
+              "ReservationHistory; ReservationHistoryRepository",
+              "Previous/new states, action, actor, note",
+              "The record represents the change; the repository persists it."
+            ],
+            [
+              "D5: notification",
+              "NotificationService",
+              "Student, reservation, type, message",
+              "ReservationService chooses the recipient; the notification service creates the notification."
+            ],
+            [
+              "D6: atomic persistence",
+              "ReservationService and Spring transaction support",
+              "Reservation change, history, notification",
+              "One transaction includes all three writes."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c05-design-4",
+      "title": "4. Interfaces and contracts",
+      "blocks": [
+        {
+          "type": "code",
+          "language": "java",
+          "content": "ReservationResponse approve(UUID reservationId,\n    AuthenticatedUser actor, ReservationTransitionRequest request);\n\n// ReservationRepository inherits this operation from JpaRepository:\nOptional<Reservation> findById(UUID id);"
+        },
+        {
+          "type": "paragraph",
+          "content": "approve takes a reservation ID, trusted identity and a request with an optional note. Authentication creates the identity; the service does not validate the token itself. Success conditions and failures are defined in section 6."
+        },
+        {
+          "type": "paragraph",
+          "content": "findById requires a non-null ID. It returns the reservation or Optional.empty when absent. Database errors propagate. It does not guarantee exclusive locking."
+        }
+      ]
+    },
+    {
+      "id": "c05-design-5",
+      "title": "5. Focused structural UML view",
+      "blocks": [
+        {
+          "type": "image",
+          "src": "c05-reservation-lifecycle.svg",
+          "alt": "C05 — reservation approval class diagram (Czech labels)",
+          "initialWidth": 100
+        },
+        {
+          "type": "paragraph",
+          "content": "Editable source: docs/diagrams/c05-reservation-lifecycle.dot. Eight elements show the service, identity, domain state and repository interfaces. Approval rules remain in ReservationService; a separate Policy class is not introduced."
+        }
+      ]
+    },
+    {
+      "id": "c05-design-6",
+      "title": "6. Significant operations and decision order",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Item", "approve(id, actor, request)", "Reservation.confirm()"],
+          "rows": [
+            [
+              "Responsibility",
+              "D1–D6; authorize and coordinate approval",
+              "D4; change state and time"
+            ],
+            [
+              "Input",
+              "Reservation UUID, trusted actor, request with optional note",
+              "No parameters"
+            ],
+            ["Output", "ReservationResponse with CONFIRMED and confirmedAt", "void"],
+            [
+              "Preconditions",
+              "Actor with TEACHER role; non-null ID/request; existing reservation; ownership; PENDING",
+              "Service has checked authorization and PENDING"
+            ],
+            [
+              "Postconditions",
+              "Successful commit of state, history and notification",
+              "status=CONFIRMED; confirmedAt set; slot/student unchanged"
+            ],
+            [
+              "Side effects",
+              "Read user/reservation, mutate entity, write history and notification",
+              "Mutate entity in memory; read system time"
+            ],
+            [
+              "Failure behavior",
+              "401/403/400/404/409 as below; propagate technical RuntimeException",
+              "Preconditions are the service's responsibility; this method does not authorize"
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Checks have the following priority. The first failed check ends the operation."
+        },
+        {
+          "type": "table",
+          "headers": ["Order", "Condition", "Failure result"],
+          "rows": [
+            ["1", "actor != null", "401; no repository access"],
+            ["2", "actor.activeRole == TEACHER", "403; no repository access"],
+            ["3", "id != null and request != null", "400; no repository access"],
+            ["4", "findById(id) contains a reservation", "404; no writes"],
+            ["5", "UserService.get(actor.id) finds the actor", "404; no writes"],
+            ["6", "slot.teacher.id == actor.id", "403, even if the state is no longer PENDING"],
+            ["7", "status == PENDING", "409; no new history/notification"],
+            [
+              "8",
+              "confirm; save history; create notification",
+              "Propagate technical failure; no successful response"
+            ]
+          ]
+        },
+        {
+          "type": "code",
+          "language": "text",
+          "content": "validate identity, role and input\nload reservation and actor\ncheck ownership and PENDING\nreservation.confirm()\nhistory.save(CONFIRMED, PENDING, CONFIRMED, actor, request.note)\nnotifications.create(reservation.student, RESERVATION_APPROVED, ...)\nbuild response; transaction interceptor commits"
+        }
+      ]
+    },
+    {
+      "id": "c05-design-7",
+      "title": "7. State and persistence conditions",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "The table applies after input, identity and ownership checks. A different teacher is rejected before the state decision."
+        },
+        {
+          "type": "table",
+          "headers": ["Initial state", "Operation", "Result", "History and notification"],
+          "rows": [
+            [
+              "PENDING",
+              "Owner approves",
+              "CONFIRMED, new confirmedAt",
+              "One new history record and one student notification for a successful isolated call"
+            ],
+            ["CONFIRMED", "Owner approves", "409; original confirmedAt retained", "No new records"],
+            ["CANCELLED", "Owner approves", "409; state unchanged", "No new records"]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Success invariants: reservation ID, student and slot stay unchanged. Approval does not release the slot: PENDING and CONFIRMED are active. History records action CONFIRMED, transition PENDING → CONFIRMED and the authenticated teacher. A null note is valid. Repeated approval returns a conflict."
+        },
+        {
+          "type": "paragraph",
+          "content": "Failure contract: validation and authorization errors occur before mutation. A technical failure after confirm() may alter the in-memory object but must leave no confirmed reservation or new history/notification in the database. This requires a call through Spring's transaction proxy with all writes participating in the same transaction. Direct unit-test calls do not prove rollback. Status codes here describe ApiException; HTTP filters or validation may reject requests earlier."
+        },
+        {
+          "type": "paragraph",
+          "content": "Persistence: JPA dirty checking writes changes to the managed entity when the transaction completes, so approve need not call reservations.save. Internal notifications use the same database."
+        },
+        {
+          "type": "paragraph",
+          "content": "Concurrency: this design does not yet ensure that simultaneous approvals produce only one history record and notification. The active-reservation unique index does not solve this problem. Concurrency protection remains an open design risk."
+        }
+      ]
+    },
+    {
+      "id": "c05-design-8",
+      "title": "8. Detailed approval sequence",
+      "blocks": [
+        {
+          "type": "image",
+          "src": "c05-approval-sequence.svg",
+          "alt": "C05 — approval sequence",
+          "initialWidth": 100
+        },
+        {
+          "type": "code",
+          "language": "mermaid",
+          "content": "sequenceDiagram\n    participant Caller as ReservationController\n    participant S as ReservationService\n    participant R as ReservationRepository\n    participant U as UserService\n    participant D as Reservation\n    participant H as ReservationHistoryRepository\n    participant N as NotificationService\n    Caller->>S: approve(id, actor, request) [Spring transaction]\n    S->>S: check identity, TEACHER and input\n    Note over S,R: Invalid input ends before repository reads.\n    S->>R: findById(id)\n    R-->>S: Optional(Reservation)\n    S->>U: get(actor.id)\n    U-->>S: AppUser\n    S->>S: check ownership and PENDING\n    alt foreign owner / invalid state\n        S-->>Caller: ApiException 403 / 409; no writes\n    else owner approves PENDING\n        S->>D: confirm()\n        S->>H: save(ReservationHistory)\n        S->>N: create(student, RESERVATION_APPROVED, ...)\n        Note over S,N: Propagate technical errors. Spring rolls back the transaction.\n        S-->>Caller: ReservationResponse after successful commit\n    end"
+        }
+      ]
+    },
+    {
+      "id": "c05-design-9",
+      "title": "9. Tests derived from the design",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "D1–D3 imply rejection tests for invalid input, unauthorized actors and invalid states. D4–D5 require successful transition, correct history actor and correct notification recipient. D6 requires error propagation and atomic persistence verification."
+        },
+        {
+          "type": "paragraph",
+          "content": "The evidence table below links each decision to a test and explains the chosen test level. Unit tests replace database dependencies with mocks and cannot prove database rollback."
+        },
+        {
+          "type": "paragraph",
+          "content": "Two integration tests cover history failure and notification failure. They are implemented in ReservationApprovalPersistenceTests, alongside a positive commit check. Commit a PENDING fixture, call the service through Spring transaction support, and cause the relevant write to fail. In a new transaction verify PENDING, no confirmedAt, and unchanged history/notification counts. Automatic rollback of the test itself must not be mistaken for evidence of service rollback."
+        }
+      ]
+    },
+    {
+      "id": "c05-design-10",
+      "title": "10. Details intentionally left to code",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Getters, simple response mapping, exact notification wording and framework annotation syntax remain in code. The meaning of the transaction boundary is part of this design."
+        },
+        {
+          "type": "paragraph",
+          "content": "One service owns the rules. A separate policy class should be considered if distinct approval strategies need to be separated."
+        }
+      ]
+    },
+    {
+      "id": "c05-evidence-intro",
+      "title": "Verification evidence",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Revision: 2026-10-19. Unit: reservation approval, OP-05. The design above defines intended behavior; this evidence records verification and remaining work."
+        },
+        {
+          "type": "paragraph",
+          "content": "We compared the design with the C05 assignment, C02 requirements and current source files. Ownership was clarified: ReservationService decides approval; UserService only loads the user. The follow-up implementation added three integration cases in ReservationApprovalPersistenceTests. No further production change was needed; the tests verified the existing transaction behavior."
+        }
+      ]
+    },
+    {
+      "id": "c05-evidence-2",
+      "title": "1. Tests derived from the design",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "ReservationApprovalDesignTests contains 12 cases. The service and entities are real; repositories, UserService and NotificationService are mocks. This suite runs without Spring context or HTTP."
+        },
+        {
+          "type": "table",
+          "headers": ["DD decision", "What must hold?", "Level", "Test case"],
+          "rows": [
+            [
+              "D1: identity",
+              "Missing actor returns 401 even for an unknown ID; no reads",
+              "Unit",
+              "missingActorIsRejectedBeforeReadingReservation"
+            ],
+            [
+              "D1: active role",
+              "Student returns 403 before loading the reservation",
+              "Unit",
+              "studentIsRejectedBeforeReadingReservation"
+            ],
+            [
+              "D2: ID",
+              "Null ID returns 400; no reads/writes",
+              "Unit",
+              "missingIdIsRejectedBeforeReadingReservation"
+            ],
+            [
+              "D2: request",
+              "Null request returns 400; no reads/writes",
+              "Unit",
+              "missingRequestIsRejectedBeforeReadingReservation"
+            ],
+            [
+              "D2: repository contract",
+              "Optional.empty returns 404; no actor load or writes",
+              "Unit",
+              "missingReservationReturnsNotFoundWithoutWrites"
+            ],
+            [
+              "D3: ownership priority",
+              "Foreign teacher returns 403 even for CONFIRMED",
+              "Unit",
+              "foreignTeacherCannotApproveEvenWhenStateIsInvalid"
+            ],
+            [
+              "D3: repeated approval",
+              "CONFIRMED cannot be approved again; time/state unchanged",
+              "Unit",
+              "ownerCannotApproveConfirmedReservationAgain"
+            ],
+            [
+              "D3: invalid transition",
+              "CANCELLED cannot be approved; no writes",
+              "Unit",
+              "ownerCannotApproveCancelledReservation"
+            ],
+            [
+              "D4–D5: success and collaboration",
+              "CONFIRMED, time, correct history actor/transition and one notification to the correct student",
+              "Unit (service + entities, mocked boundaries)",
+              "ownerApprovesWithCorrectAuditAndStudentNotification"
+            ],
+            ["Optional note", "note=null is valid", "Unit", "optionalNoteMayBeNull"],
+            [
+              "D6: history failure",
+              "The same exception propagates; no notification",
+              "Unit",
+              "historyFailurePropagatesAndPreventsNotification"
+            ],
+            [
+              "D6: notification failure",
+              "Exception propagates; no successful response",
+              "Unit",
+              "notificationFailurePropagatesWithoutSuccessResponse"
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Level rationale 1: missingActorIsRejectedBeforeReadingReservation is a unit test of the public service contract. It protects non-HTTP callers too; an HTTP filter test alone cannot establish the order inside the service. The repository mock proves that no read occurred."
+        },
+        {
+          "type": "paragraph",
+          "content": "Level rationale 2: ownerApprovesWithCorrectAuditAndStudentNotification is a unit test with mocked boundaries. It verifies decision ownership, entity transition and the actual history content. A database is unnecessary for these decisions, but the test does not prove commit. ReflectionTestUtils inspects private history data without introducing production getters solely for testing."
+        },
+        {
+          "type": "paragraph",
+          "content": "Level rationale 3: notificationFailurePropagatesWithoutSuccessResponse verifies error propagation without a Spring proxy. Actual rollback requires an integration test against PostgreSQL."
+        }
+      ]
+    },
+    {
+      "id": "c05-evidence-3",
+      "title": "2. Executed verification",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "On 2026-10-19, the complete backend suite ran from a clean build:"
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "content": "JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 bash backend/mvnw -f backend/pom.xml --batch-mode --no-transfer-progress clean test"
+        },
+        {
+          "type": "table",
+          "headers": ["Suite", "Scope", "Result"],
+          "rows": [
+            [
+              "ReservationApprovalDesignTests",
+              "Service rules and mocked collaborators",
+              "12 passed"
+            ],
+            [
+              "ReservationAuthorizationTests",
+              "MockMvc, security filter, controller and service",
+              "10 passed"
+            ],
+            [
+              "ReservationApprovalPersistenceTests",
+              "Real PostgreSQL and Spring transactions: commit and two rollbacks",
+              "3 passed"
+            ],
+            [
+              "ConsultationReservationBackendApplicationTests",
+              "Application context startup",
+              "1 passed"
+            ],
+            [
+              "Total",
+              "Complete backend suite",
+              "26 tests, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS"
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Completed at 2026-10-19 18:25:54 +02:00 in 13.235 seconds. The three new tests also passed independently. Requires Java 21 and local PostgreSQL on localhost:5432 with the project defaults. The restricted environment blocked the database connection; successful runs used approved access outside it."
+        },
+        {
+          "type": "paragraph",
+          "content": "Integration tests create a random c05_test_… schema, apply real Flyway migrations and remove the schema afterwards. Fixtures are committed before calling the service. Tests do not run inside automatically rolled-back test transactions. Verification reads SQL in a fresh transaction."
+        },
+        {
+          "type": "paragraph",
+          "content": "Spies inject RuntimeException after flushing real database writes. The history test persists and flushes the changed reservation and audit record. The notification test calls the real create method and flushes all three writes. After failure, fresh SQL reads must show the original PENDING, null confirmedAt and unchanged history/notification counts. The positive test checks commit and correct actor/recipient. This does not simulate connection loss or concurrency."
+        },
+        {
+          "type": "paragraph",
+          "content": "Reports for all four classes are generated in backend/target/surefire-reports/ and are not versioned. The earlier 22-test run covered selected suites without database verification; 26 is the current complete result."
+        }
+      ]
+    },
+    {
+      "id": "c05-evidence-4",
+      "title": "3. Design ↔ implementation comparison and resolution",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["DD decision", "Implemented?", "Evidence", "Action"],
+          "rows": [
+            [
+              "Identity/role before reservation read",
+              "YES",
+              "ReservationService.approve; missingActor…, student…",
+              "Keep existing change; current tests passed."
+            ],
+            [
+              "Missing ID/request means 400",
+              "YES",
+              "approve; missingId…, missingRequest…",
+              "Keep explicit validation."
+            ],
+            [
+              "Only owner and PENDING may approve",
+              "YES",
+              "approve; foreignTeacher…, ownerCannotApprove…",
+              "Keep; rejection leaves state/history/notifications unchanged."
+            ],
+            [
+              "Reservation owns status and confirmedAt",
+              "YES",
+              "Reservation.confirm; ownerApproves…",
+              "Keep; service checks preconditions."
+            ],
+            [
+              "Service coordinates history/notification and propagates technical errors",
+              "YES",
+              "ownerApproves…; historyFailure…; notificationFailure…",
+              "Keep; tests check content and collaborator calls."
+            ],
+            [
+              "All changes persist together or none do",
+              "YES — for the tested scenarios",
+              "ReservationApprovalPersistenceTests: successful commit and two rollback cases",
+              "Keep production transaction; three new integration tests passed."
+            ],
+            [
+              "ReservationService decides approval",
+              "YES",
+              "approve performs checks; UserService.get loads actor",
+              "Clarified DD text that previously implied shared decision ownership."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "One approval strategy currently exists, so rules remain in one service. A separate policy class is unnecessary for this scope. The diagram shows repository interfaces and service dependencies."
+        }
+      ]
+    },
+    {
+      "id": "c05-evidence-5",
+      "title": "4. Integration verification and remaining risks",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "Concurrent approvals are not serialized by locking or entity versioning and may create duplicate history/notifications. A sequential 409 test does not test concurrency.",
+            "Rollback is now verified against PostgreSQL for injected RuntimeExceptions after database writes. Connection loss and other failure types are outside this test scope.",
+            "Reservation.confirm() relies on service checks. Any new caller must respect the same contract."
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "The following cases in ReservationApprovalPersistenceTests passed:"
+        },
+        {
+          "type": "table",
+          "headers": ["DD decision", "What must hold?", "Level", "Test (PASS)"],
+          "rows": [
+            [
+              "D4–D6: successful atomic persistence",
+              "CONFIRMED, timestamp and one new history/notification with correct actor/recipient",
+              "Integration: Spring proxy + PostgreSQL",
+              "successfulApprovalCommitsStateHistoryAndNotification"
+            ],
+            [
+              "D6: notification failure is atomic",
+              "DB remains PENDING, confirmedAt=null; original history/notification counts",
+              "Integration: Spring proxy + PostgreSQL",
+              "notificationFailureRollsBackApprovalAndHistory"
+            ],
+            [
+              "D6: history failure is atomic",
+              "Confirmation is not persisted and no notification appears",
+              "Integration: Spring proxy + PostgreSQL",
+              "historyFailureRollsBackApproval"
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Integration rationale: Spring and the database implement the common transaction. Mocks cannot prove commit or rollback. Reload data after the called transaction ends, as specified in the design. These tests supplement the existing exception-propagation unit tests."
+        }
+      ]
+    },
+    {
+      "id": "c05-evidence-6",
+      "title": "5. Assignment completeness",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Required output", "Status"],
+          "rows": [
+            ["One unit linked to requirements and scenario", "Complete; design section 1"],
+            ["3–7 responsibilities and owners", "Complete; sections 2–3"],
+            ["Interfaces and contracts", "Complete; sections 4 and 6–7"],
+            ["Structural UML and detailed sequence", "Included; sections 5 and 8"],
+            ["Significant operations, algorithm and states", "Complete; sections 6–7"],
+            [
+              "At least 5 derived tests and two level rationales",
+              "Complete; 12 cases in evidence section 1"
+            ],
+            ["Executed unit/component tests", "Complete; all 26 backend tests passed."],
+            [
+              "Design ↔ implementation comparison",
+              "Complete; includes database commit and rollback."
+            ],
+            [
+              "Atomic persistence evidence on failure",
+              "Complete; both PostgreSQL rollback cases passed."
+            ],
+            ["Commit/tag", "v0.3-c05"]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c05-evidence-7",
+      "title": "6. Commit/tag and next steps",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Commit/tag: v0.3-c05"
+        },
+        {
+          "type": "paragraph",
+          "content": "Design, implementation and verification of the selected scope are complete. Concurrent approval remains an explicit risk requiring a separate design decision."
+        }
+      ]
+    }
+  ]
+}

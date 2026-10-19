@@ -97,11 +97,13 @@ public class ReservationService {
       UUID reservationId,
       AuthenticatedUser authenticatedActor,
       ReservationTransitionRequest request) {
-    Reservation reservation = get(reservationId);
     if (authenticatedActor == null)
       throw new ApiException(HttpStatus.UNAUTHORIZED, "Authentication is required.");
     if (authenticatedActor.activeRole() != UserRole.TEACHER)
       throw new ApiException(HttpStatus.FORBIDDEN, "Only a teacher can approve a reservation.");
+    if (reservationId == null || request == null)
+      throw new ApiException(HttpStatus.BAD_REQUEST, "Reservation ID and request are required.");
+    Reservation reservation = get(reservationId);
     AppUser teacher = users.get(authenticatedActor.id());
     if (!reservation.getSlot().getTeacher().getId().equals(teacher.getId()))
       throw new ApiException(HttpStatus.FORBIDDEN, "Only the slot's teacher can approve it.");
