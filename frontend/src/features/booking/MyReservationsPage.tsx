@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../../api/client'
+import HistoryPeriodFilter, {
+  filterHistoryByPeriod,
+  type HistoryPeriod,
+} from '../../components/HistoryPeriodFilter'
 import type { Language, TFunction } from '../../i18n'
 import { localeFor } from '../../i18n'
 import type { Reservation, Session, Toast } from '../../types/api'
@@ -115,6 +119,7 @@ export default function MyReservationsPage({
 }: Props) {
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [showHistory, setShowHistory] = useState(false)
+  const [historyPeriod, setHistoryPeriod] = useState<HistoryPeriod>('lastWeek')
   const [loading, setLoading] = useState(true)
   const [now, setNow] = useState(() => Date.now())
 
@@ -163,6 +168,11 @@ export default function MyReservationsPage({
     )
   }, [now, reservations])
 
+  const filteredHistoricalReservations = useMemo(
+    () => filterHistoryByPeriod(historicalReservations, historyPeriod, now),
+    [historyPeriod, historicalReservations, now],
+  )
+
   return (
     <main>
       <section className="card">
@@ -185,25 +195,27 @@ export default function MyReservationsPage({
         <div className="section-title">
           <div>
             <h2>{t('history')}</h2>
-            <p>
-              {historicalReservations.length} {t('records')}
-            </p>
           </div>
-          <button
-            className="history-toggle"
-            type="button"
-            aria-label={showHistory ? t('hideHistory') : t('showHistory')}
-            aria-expanded={showHistory}
-            onClick={() => setShowHistory((current) => !current)}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d={showHistory ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
-            </svg>
-          </button>
+          <div className="history-controls">
+            {showHistory && (
+              <HistoryPeriodFilter value={historyPeriod} onChange={setHistoryPeriod} t={t} />
+            )}
+            <button
+              className="history-toggle"
+              type="button"
+              aria-label={showHistory ? t('hideHistory') : t('showHistory')}
+              aria-expanded={showHistory}
+              onClick={() => setShowHistory((current) => !current)}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d={showHistory ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
+              </svg>
+            </button>
+          </div>
         </div>
         {showHistory && (
           <ReservationList
-            reservations={historicalReservations}
+            reservations={filteredHistoricalReservations}
             empty={t('emptyHistory')}
             language={language}
             t={t}

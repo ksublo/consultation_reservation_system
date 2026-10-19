@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import logo from '../assets/vsb-logo.png'
+import logo from '../assets/consultation-reservations-wordmark.png'
 import type { Language, TFunction } from '../i18n'
 import type { Notification, UserRole } from '../types/api'
 
@@ -92,7 +92,6 @@ function BackIcon() {
 
 export default function Navigation({
   activeRole,
-  title,
   onDocumentation,
   isDocumentation,
   userLogin,
@@ -199,8 +198,7 @@ export default function Navigation({
     <header className="site-navigation">
       <div className="navigation-content">
         <div className="brand">
-          <img src={logo} alt="VŠB Technical University of Ostrava" />
-          <span className="navigation-label">{title ?? t('appTitle')}</span>
+          <img src={logo} alt="Consultation Reservations" />
         </div>
 
         {renderNavigation('primary-navigation')}
