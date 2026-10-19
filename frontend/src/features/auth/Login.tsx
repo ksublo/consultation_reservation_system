@@ -51,19 +51,21 @@ export default function Login({ role, onLogin, t }: LoginProps) {
           {role === 'STUDENT' ? t('student').toLocaleLowerCase() : t('teacher').toLocaleLowerCase()}
         </h1>
         <form onSubmit={submit}>
-          <label htmlFor="login">{t('login')}</label>
-          <input
-            id="login"
-            required
-            maxLength={7}
-            pattern="[A-Za-z]{3}[0-9]{4}"
-            autoComplete="username webauthn"
-            value={login}
-            onChange={(event) => setLogin(event.target.value)}
-            placeholder="BLO0021"
-          />
+          <div className="labeled-field login-field">
+            <label htmlFor="login">{t('login')}</label>
+            <input
+              id="login"
+              required
+              maxLength={7}
+              pattern="[A-Za-z]{3}[0-9]{4}"
+              autoComplete="username webauthn"
+              value={login}
+              onChange={(event) => setLogin(event.target.value)}
+              placeholder="ABC0001"
+            />
+          </div>
           {settingUpPasskey && (
-            <>
+            <div className="labeled-field login-field">
               <label htmlFor="password">{t('passwordForPasskeySetup')}</label>
               <input
                 id="password"
@@ -73,8 +75,7 @@ export default function Login({ role, onLogin, t }: LoginProps) {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
               />
-              <p className="login-hint">{t('passkeySetupHint')}</p>
-            </>
+            </div>
           )}
           <button className="reserve-button" disabled={busy}>
             {busy
@@ -84,7 +85,7 @@ export default function Login({ role, onLogin, t }: LoginProps) {
                 : t('signInWithPasskey')}
           </button>
           <button
-            className="secondary-button"
+            className="passkey-setup-link"
             type="button"
             disabled={busy}
             onClick={() => {
@@ -95,6 +96,7 @@ export default function Login({ role, onLogin, t }: LoginProps) {
           >
             {settingUpPasskey ? t('cancelPasskeySetup') : t('setUpPasskey')}
           </button>
+          <p className="login-hint">{t('passkeySetupHint')}</p>
           {error && <span className="login-error">{error}</span>}
         </form>
       </section>

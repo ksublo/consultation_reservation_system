@@ -210,7 +210,7 @@ public class ReservationService {
 
   @Transactional(readOnly = true)
   public List<ReservationResponse> forUser(UUID userId) {
-    return reservations.findUpcomingForUser(userId, OffsetDateTime.now()).stream()
+    return reservations.findAllForUser(userId).stream()
         .map(ReservationResponse::from)
         .toList();
   }

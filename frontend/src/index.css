@@ -218,14 +218,17 @@ form label {
 .login-card form label {
   @apply mt-2 text-sm font-semibold text-slate-700;
 }
-.login-card form input {
-  @apply w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100;
+.login-card form .login-field label {
+  @apply mt-0 text-xs font-bold text-vsb-dark;
 }
-.login-card .secondary-button {
-  @apply w-full rounded-xl border border-teal-200 bg-white px-4 py-3 font-semibold text-teal-800 hover:bg-teal-50 disabled:opacity-60;
+.login-card form input {
+  @apply w-full;
+}
+.login-card .passkey-setup-link {
+  @apply justify-self-center border-0 bg-transparent px-2 py-1 text-sm font-semibold text-vsb underline-offset-4 hover:underline disabled:opacity-60;
 }
 .login-hint {
-  @apply text-sm text-slate-600;
+  @apply -mt-2 text-center text-xs leading-5 text-slate-500;
 }
 main.login-page {
   position: static !important;
@@ -363,13 +366,13 @@ main.login-page {
   @apply block border-b border-teal-100 bg-white px-0 py-0;
 }
 .navigation-content {
-  @apply mx-auto flex h-20 w-full max-w-7xl flex-nowrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8;
+  @apply mx-auto flex h-24 w-full max-w-7xl flex-nowrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8;
 }
 .site-navigation .brand {
   @apply flex min-w-0 items-center gap-3;
 }
 .site-navigation .brand img {
-  @apply h-11 w-auto shrink-0 sm:h-12;
+  @apply h-16 w-auto shrink-0 sm:h-20;
 }
 .site-navigation .brand strong {
   @apply truncate text-xs font-extrabold tracking-wide text-vsb sm:text-sm;
@@ -538,6 +541,17 @@ main.login-page {
 }
 .bulk-slot-button {
   @apply rounded-full border border-vsb px-4 py-2 text-sm font-bold text-vsb transition hover:bg-teal-50;
+}
+@media (max-width: 639px) {
+  .my-slots-heading {
+    @apply flex-col items-stretch;
+  }
+  .my-slots-heading h2 {
+    @apply self-start;
+  }
+  .bulk-slot-button {
+    @apply w-full;
+  }
 }
 .modal-backdrop {
   @apply fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/50 p-4 sm:p-6;
@@ -722,7 +736,13 @@ main.login-page {
 }
 .request-head,
 .request-row {
-  @apply grid min-w-200 grid-cols-[1.1fr_1.2fr_1.5fr_1fr_auto] gap-4 border-b border-slate-100 p-4 text-sm;
+  @apply grid min-w-200 gap-4 border-b border-slate-100 p-4 text-sm;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1.8fr) max-content max-content;
+}
+.request-head > *,
+.request-row > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .request-head {
   @apply bg-slate-50 text-xs font-bold uppercase text-slate-500;
@@ -780,17 +800,48 @@ main.login-page {
 .reservation-history {
   @apply mt-4;
 }
+.history-period-filter {
+  @apply flex flex-wrap items-center justify-end gap-1.5;
+}
+.history-controls {
+  @apply ml-auto flex min-w-0 items-center justify-end gap-2;
+}
+.history-period-button {
+  @apply whitespace-nowrap rounded-full border border-slate-200 bg-white px-2.5 py-2 text-xs font-semibold text-slate-600 hover:border-vsb hover:bg-teal-50 hover:text-vsb sm:px-3 sm:text-sm;
+}
+.history-period-button[aria-pressed='true'] {
+  @apply border-vsb bg-vsb text-white hover:bg-vsb-hover hover:text-white;
+}
 .history-toggle {
   @apply grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-slate-600 hover:border-vsb hover:bg-teal-50 hover:text-vsb;
 }
 .history-toggle svg {
   @apply h-5 w-5 fill-none stroke-current stroke-2;
 }
+@media (max-width: 639px) {
+  .reservation-history > .section-title {
+    @apply flex-wrap gap-y-2;
+  }
+  .reservation-history .history-controls {
+    @apply w-full;
+  }
+  .reservation-history .history-period-filter {
+    @apply flex-1;
+  }
+}
 .student-reservations {
   @apply mt-5 grid gap-3;
 }
 .student-reservation {
-  @apply grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm md:grid-cols-[1.3fr_1.5fr_auto] md:items-start;
+  @apply grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm md:items-start;
+}
+@media (min-width: 768px) {
+  .student-reservation {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.5fr) 13rem;
+  }
+}
+.student-reservation > * {
+  min-width: 0;
 }
 .student-reservation strong,
 .student-reservation b {
@@ -1056,6 +1107,53 @@ main.login-page {
 }
 .request-row p {
   @apply leading-6 text-slate-700;
+}
+
+@media (max-width: 639px) {
+  .request-table {
+    overflow-x: visible;
+  }
+  .request-head {
+    display: none;
+  }
+  .request-row {
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    padding: 1rem;
+    background: white;
+  }
+  .request-cell {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .request-cell::before {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: #64748b;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .request-cell[data-label]::before {
+    content: attr(data-label);
+  }
+  .request-consultation {
+    grid-column: 1 / -1;
+  }
+  .request-status,
+  .request-actions {
+    align-self: center;
+  }
+  .request-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
 }
 .student-reservation,
 .teacher-item,

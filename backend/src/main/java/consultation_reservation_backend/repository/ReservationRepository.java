@@ -16,12 +16,10 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
   @Query(
       """
             select reservation from Reservation reservation
-            where (reservation.student.id = :userId or reservation.slot.teacher.id = :userId)
-              and reservation.slot.startsAt >= :from
+            where reservation.student.id = :userId or reservation.slot.teacher.id = :userId
             order by reservation.createdAt desc
             """)
-  List<Reservation> findUpcomingForUser(
-      @Param("userId") UUID userId, @Param("from") OffsetDateTime from);
+  List<Reservation> findAllForUser(@Param("userId") UUID userId);
 
   long countByStudentIdAndStatus(UUID studentId, ReservationStatus status);
 
