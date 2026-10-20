@@ -2,6 +2,19 @@
 
 Monorepo containing the application frontend and backend.
 
+## Spuštění aplikace přes Docker
+
+Nainstalujte a spusťte Docker Desktop. V kořenové složce projektu pak spusťte:
+
+```sh
+docker compose up --build
+```
+
+Docker spustí PostgreSQL databázi, backend i frontend. Aplikace bude dostupná na
+<http://localhost:5173> a backend na <http://localhost:8080>. Zastavení všech
+služeb provedete příkazem `docker compose down`. Podrobnější nastavení je v
+[DOCKER.md](DOCKER.md).
+
 | Folder | Technology | Purpose |
 | --- | --- | --- |
 | `frontend` | React + Vite | Web user interface |
