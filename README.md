@@ -1,63 +1,106 @@
-# Consultation Reservation
+# Rezervační systém konzultací
 
-Monorepo containing the application frontend and backend.
+Webová aplikace pro rezervaci konzultačních termínů na univerzitě. Studenti si vybírají dostupné termíny a žádají o konzultaci; pedagogové termíny vytvářejí a žádosti schvalují.
 
-## Spuštění aplikace přes Docker
+## Obsah
 
-Nainstalujte a spusťte Docker Desktop. V kořenové složce projektu pak spusťte:
+- [Technologie a části aplikace](#technologie-a-části-aplikace)
+- [Rychlé spuštění](#rychlé-spuštění)
+- [Vývoj](#vývoj)
+- [Dokumentace](#dokumentace)
+
+## Technologie a části aplikace
+
+| Část | Technologie | Umístění | Účel |
+| --- | --- | --- | --- |
+| Uživatelské rozhraní | React, Vite a TypeScript | `frontend/` | Přihlášení, nabídka termínů a správa rezervací |
+| Serverové rozhraní | Java 21, Spring Boot a Maven | `backend/` | REST API, ověřování uživatelů a pravidla rezervací |
+| Databáze | PostgreSQL a Flyway | `backend/src/main/resources/db/migration/` | Ukládání dat a správa databázového schématu |
+| Dokumentace | Markdown a JSON | `docs/`, `frontend/src/features/docs/` | Projektové podklady a dokumentace zobrazovaná v aplikaci |
+
+## Rychlé spuštění
+
+Nejjednodušší je spustit všechny služby pomocí Docker Compose. Je potřeba mít nainstalovaný a spuštěný Docker Desktop.
 
 ```sh
 docker compose up --build
 ```
 
-Docker spustí PostgreSQL databázi, backend i frontend. Aplikace bude dostupná na
-<http://localhost:5173> a backend na <http://localhost:8080>. Zastavení všech
-služeb provedete příkazem `docker compose down`. Podrobnější nastavení je v
-[DOCKER.md](DOCKER.md).
+Po spuštění jsou dostupné:
 
-| Folder | Technology | Purpose |
-| --- | --- | --- |
-| `frontend` | React + Vite | Web user interface |
-| `backend` | Spring Boot | REST API |
+| Služba | Adresa |
+| --- | --- |
+| Aplikace | <http://localhost:5173> |
+| Backend API | <http://localhost:8080> |
+| PostgreSQL | `localhost:5432` |
 
-## Development
+Služby zastavíte příkazem `docker compose down`. Podrobnosti ke konfiguraci a práci s databázovým svazkem jsou v [návodu k Dockeru](DOCKER.md).
 
-Start the frontend with `npm install` and `npm run dev` inside `frontend`.
+## Vývoj
 
-Configure PostgreSQL using `backend/.env.example`, then start the backend with
-`./mvnw spring-boot:run --spring.profiles.active=local` (or
-`mvnw.cmd spring-boot:run --spring.profiles.active=local` on Windows).
-
-## Code formatting
-
-The frontend uses Prettier:
+### Frontend
 
 ```sh
 cd frontend
+npm install
+npm run dev
+```
+
+Další dostupné příkazy:
+
+```sh
+npm run build
+npm test
+npm run lint
+npm run typecheck
 npm run format
 npm run format:check
 ```
 
-The backend uses Google Java Format through the Spotify Maven plugin:
+### Backend
+
+Nastavte připojení k PostgreSQL podle `backend/.env.example` a z adresáře `backend/` spusťte:
 
 ```sh
-cd backend
+./mvnw spring-boot:run --spring.profiles.active=local
+```
+
+Ve Windows použijte `mvnw.cmd` místo `./mvnw`. Formátování a kontrolu formátování zajišťuje Google Java Format:
+
+```sh
 mvn fmt:format
 mvn fmt:check
 ```
 
-## CP1 walking skeleton
+## Dokumentace
 
-**End-to-end cesta:**
+Dokumentace je rozdělená podle účelu. Projektové podklady a záznamy jsou v kořenové složce `docs/`; texty jednotlivých částí, které se zobrazují přímo ve webové aplikaci, jsou samostatně ve `frontend/src/features/docs/`.
 
-`POST /api/reservations` → validace → uložení do PostgreSQL → odpověď `201 Created` s ID rezervace → automatická kontrola
+### Projektové podklady (`docs/`)
 
-1. Student odešle požadavek na `POST /api/reservations` s `slotId`, `studentId`, `reasonTitle` a `reasonDescription`.
-2. Backend ověří povinná data, existenci studenta a termínu, dostupnost termínu, budoucí čas termínu a nepřítomnost kolizní aktivní rezervace.
-3. Backend uloží rezervaci do tabulky `reservations` se stavem `PENDING` a zapíše vytvoření do `reservation_history`.
-4. API vrátí odpověď `201 Created` včetně nového `reservationId`.
-5. Automatický integrační test vytvoří rezervaci přes API, ověří stavový kód `201`, existenci vráceného ID a načtení stejné rezervace z PostgreSQL databáze.
+| Soubor nebo složka | Obsah |
+| --- | --- |
+| [`docs/intent-and-change.md`](docs/intent-and-change.md) | Záměr projektu, jeho uživatelé, hlavní pojmy a operace |
+| [`docs/architecture-and-decisions.md`](docs/architecture-and-decisions.md) | Architektura, datový model a technická rozhodnutí včetně ADR |
+| [`docs/evidence-and-evolution.md`](docs/evidence-and-evolution.md) | Ověřovací důkazy, výsledky etap a vývoj projektu |
+| [`docs/deployment-development.md`](docs/deployment-development.md) | Postup nasazení větve `development` |
+| [`docs/diagrams/`](docs/diagrams/) | Zdrojové a vykreslené diagramy, například životní cyklus rezervace |
+| [`DOCKER.md`](DOCKER.md) | Lokální spuštění služeb a nastavení Docker Compose |
 
-Pedagog při vytváření termínu povolí online, osobní nebo obě formy konzultace. Student vybírá formu jen v případě, že jsou povolené obě. Zvolená forma se uloží k rezervaci a backend ověřuje její dostupnost pro daný termín. U osobní formy se zobrazuje kabinet pedagoga. Kabinety jsou sdílené mezi pedagogy; demonstrační přiřazení vytváří migrace V12. Online odkaz zatím aplikace nezadává. Migrace V13 nastavuje u stávajících termínů obě formy.
+### Dokumentace v aplikaci (`frontend/src/features/docs/`)
 
-Tato cesta bude po C03 spustitelná s PostgreSQL databází a představuje CP1 walking skeleton před C04.
+Obsah je uložen jako JSON soubory s českou a anglickou verzí pro každou část. V aplikaci se zobrazuje pomocí společného modelu a vykreslovače.
+
+```text
+frontend/src/features/docs/
+├── README.md              # Struktura obsahu a pravidla pro jeho rozšíření
+├── documentation-model.ts # Typy a validace dokumentů
+├── DocumentationPage.tsx  # Společné zobrazení a navigace
+├── c01/                   # C01
+├── c02/                   # C02
+├── c03a/                  # C03, část A
+├── c03b/                  # C03, část B
+└── c05/                   # C05
+```
+
+V každé složce části jsou soubory `cs.json` a `en.json`. Podrobný popis datového formátu a přidání nové části je v [`frontend/src/features/docs/README.md`](frontend/src/features/docs/README.md). Dokumentace C05 přebírá vybrané informace z projektových podkladů v `docs/`; při jejich změně je potřeba upravit také českou a anglickou kopii.
