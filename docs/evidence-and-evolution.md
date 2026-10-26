@@ -22,11 +22,17 @@
 
 **Shrnutí dopadu změny:** Rezervace se po vytvoření nepotvrzuje automaticky. Čeká na rozhodnutí pedagoga ve stavu `PENDING`; schválení mění stav na `CONFIRMED` a oba aktivní stavy blokují termín proti další rezervaci.
 
+**Doplnění po hodnocení R1:** OP-01 nyní stanoví nejméně tříhodinový předstih při vytvoření rezervace a OP-02 nezobrazuje sloty s kratším předstihem. API dostupnosti používá stejnou hranici jako `ReservationService.create()`; přesně tři hodiny před začátkem jsou přípustné.
+
+**Doplnění po hodnocení R4/R5:** Vytvoření rezervace nyní odvozuje studenta z `AuthenticatedUser`; `ReservationAuthorizationTests` ověřuje, že ID v těle požadavku nemůže změnit vlastníka rezervace. `ReservationCreationPersistenceTests` prošel proti PostgreSQL a pokrývá obsazený termín (409), překryv (409) a povolené sousední intervaly z obou stran. Dne 2026-10-26 prošla celá backendová sada: 31 testů, 0 selhání, 0 chyb.
+
+**Doplnění po hodnocení A2/A4 a C04:** Zrušení slotu s aktivní rezervací už nemění lifecycle v `ConsultationSlotService`. Oba endpointy slotu předávají ověřeného aktéra do `ReservationService`, který kontroluje vlastníka a jednotně zapisuje stav, historii a oznámení v jedné transakci. Quality concern, criterion, measurement, hranice testů a decision jsou výslovně označené v existující části C03B L2. Dne 26. 10. 2026 prošlo všech 14 testů `ReservationAuthorizationTests`, včetně regresí podvrženého aktéra a oprávněného zrušení slotu s aktivní rezervací.
+
 **Zbývající předpoklad / neznámá:** Zamítnutí rezervace a automatické vypršení čekající žádosti nejsou v této verzi implementované. Tým také před odevzdáním doplní finální datum, jména schvalujících osob a případný tag release.
 
 **Architektonické drivery přenesené do C03:** Transakční ochrana exkluzivity termínu, konzistentní stavový model rezervace a auditní historie všech změn stavu.
 
-**Commit / tag aplikace:** Dokumentace C02 byla vytvořena v commitu `3afbab3`; baseline C02 je označena tagem `v0.2-c02`.
+**Commit / tag aplikace:** Dokumentace C02 byla vytvořena v commitu `3afbab3`; tag `v0.2-c02` (`963b660`) označuje historický snapshot C02. Integrovaná baseline společná pro aktuální dokumentaci, kód a testy při hodnocení: `main@85a28cb` (`Update readme`).
 
 ## C03 — Oprava identity při schválení a rušení (2026-10-08)
 
@@ -63,7 +69,7 @@
 
 **Spuštění opravené verze:** `docker compose up -d --build backend frontend` úspěšně sestavilo a restartovalo obě části aplikace. Backend dokončil start s PostgreSQL; frontend odpověděl HTTP 200.
 
-**Commit opravy:** změny zatím v pracovní kopii, bez nového commitu/tagu.
+**Commit / tag integrované baseline:** `main@85a28cb` (`Update readme`) obsahuje dokumentaci, kód a testy C03; historický stav před opravou identity je `45bf7bd7fd9c4a9f284a7e8d5a5fd9bf125017b8`. Nový commit/tag opravy identity zatím nebyl vytvořen.
 
 ## Evidence C03B: přijatá architektura → běžící implementace
 
@@ -81,7 +87,7 @@
 
 **Artefakty:** Bilingvní C03A a C03B jsou dostupné v aplikaci v dokumentaci; zdroje každé části a jazyka jsou samostatně ve složkách `frontend/src/features/docs/c03a/` a `frontend/src/features/docs/c03b/`. Orientační materiály jsou v `docs/c03-a/` a `docs/c03-b/`.
 
-**Commit / tag aplikace:** Doplní tým při odevzdání.
+**Commit / tag integrované baseline:** `main@85a28cb` (`Update readme`) obsahuje dokumentaci, kód a testy C03B. Samostatný tag C03B nebyl vytvořen.
 
 ## C05 DD Verification Evidence
 
@@ -183,10 +189,10 @@ Následující případy v ReservationApprovalPersistenceTests **prošly**:
 | Spuštění unit/component testů | Hotovo, 26 testů prošlo v aktuální revizi |
 | Porovnání návrhu a implementace | Hotovo; zahrnuje databázový commit a rollback |
 | Doklad atomického uložení při chybě | Hotovo; oba rollback testy proti PostgreSQL prošly |
-| Commit/tag | `v0.3-c05` |
+| C05 snapshot tag | `v0.3-c05` (`87a4c5a`, historický snapshot); integrovaná baseline: `main@85a28cb` |
 
 ### 6. Commit/tag a další postup
 
-**Commit/tag:** `v0.3-c05`
+**Commit / tag:** `v0.3-c05` (`87a4c5a`) identifies the historical C05 design/evidence snapshot. The integrated baseline shared by C05 documentation, code and tests at assessment time is `main@85a28cb` (`Update readme`).
 
 Návrh, implementace vybraného scénáře i její ověření jsou pro uvedený rozsah hotové. Souběžné schvalování zůstává přiznaným návrhovým rizikem a vyžaduje samostatné rozhodnutí.

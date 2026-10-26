@@ -3,8 +3,6 @@ package consultation_reservation_backend.service;
 import consultation_reservation_backend.api.*;
 import consultation_reservation_backend.domain.*;
 import consultation_reservation_backend.repository.ConsultationSlotRepository;
-import consultation_reservation_backend.repository.ReservationHistoryRepository;
-import consultation_reservation_backend.repository.ReservationRepository;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
@@ -19,24 +17,17 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class ConsultationSlotService {
+  private static final int RESERVATION_CUTOFF_HOURS = 3;
   private static final LocalTime WORKDAY_START = LocalTime.of(7, 15);
   private static final LocalTime WORKDAY_END = LocalTime.of(19, 15);
   private static final ZoneId CONSULTATION_TIME_ZONE = ZoneId.of("Europe/Prague");
   private static final List<Long> ALLOWED_DURATIONS = List.of(15L, 30L, 45L, 60L, 90L);
   private final ConsultationSlotRepository slots;
   private final UserService users;
-  private final ReservationRepository reservations;
-  private final ReservationHistoryRepository history;
 
-  public ConsultationSlotService(
-      ConsultationSlotRepository slots,
-      UserService users,
-      ReservationRepository reservations,
-      ReservationHistoryRepository history) {
+  public ConsultationSlotService(ConsultationSlotRepository slots, UserService users) {
     this.slots = slots;
     this.users = users;
-    this.reservations = reservations;
-    this.history = history;
   }
 
   public SlotResponse create(CreateSlotRequest request) {
@@ -77,60 +68,16 @@ public class ConsultationSlotService {
   }
 
   public List<SlotResponse> available(OffsetDateTime from) {
+    OffsetDateTime earliestStart = OffsetDateTime.now().plusHours(RESERVATION_CUTOFF_HOURS);
+    if (from != null && from.isAfter(earliestStart)) earliestStart = from;
     return slots
         .findAvailable(
             SlotStatus.ACTIVE,
-            from == null ? OffsetDateTime.now() : from,
+            earliestStart,
             List.of(ReservationStatus.PENDING, ReservationStatus.CONFIRMED))
         .stream()
         .map(SlotResponse::from)
         .toList();
-  }
-
-  public void cancel(UUID slotId, UUID teacherId) {
-    ConsultationSlot slot =
-        slots
-            .findById(slotId)
-            .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Slot not found."));
-    if (!slot.getTeacher().getId().equals(teacherId))
-      throw new ApiException(HttpStatus.FORBIDDEN, "Only the slot owner can cancel it.");
-    if (reservations
-        .findBySlotIdAndStatusIn(
-            slot.getId(), List.of(ReservationStatus.PENDING, ReservationStatus.CONFIRMED))
-        .isPresent()) throw new ApiException(HttpStatus.CONFLICT, "Obsazený termín nelze zrušit.");
-    slot.cancel();
-  }
-
-  public void cancelWithActiveReservation(UUID slotId, ActorRequest request) {
-    ConsultationSlot slot =
-        slots
-            .findById(slotId)
-            .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Slot not found."));
-    AppUser teacher = users.get(request.actorUserId());
-    if (!slot.getTeacher().getId().equals(teacher.getId()))
-      throw new ApiException(HttpStatus.FORBIDDEN, "Only the slot owner can cancel it.");
-    Reservation reservation =
-        reservations
-            .findBySlotIdAndStatusIn(
-                slot.getId(), List.of(ReservationStatus.PENDING, ReservationStatus.CONFIRMED))
-            .orElse(null);
-    if (reservation != null) {
-      if (slot.getStartsAt().isBefore(OffsetDateTime.now().plusHours(3)))
-        throw new ApiException(
-            HttpStatus.CONFLICT,
-            "Reservations cannot be cancelled less than 3 hours before the consultation starts.");
-      ReservationStatus previous = reservation.getStatus();
-      reservation.cancel(teacher, request.note());
-      history.save(
-          new ReservationHistory(
-              reservation,
-              ReservationAction.CANCELLED,
-              previous,
-              ReservationStatus.CANCELLED,
-              teacher,
-              request.note()));
-    }
-    slot.cancel();
   }
 
   private void validateDuration(CreateSlotRequest request) {

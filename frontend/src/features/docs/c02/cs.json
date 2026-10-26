@@ -32,7 +32,7 @@
         {
           "type": "code",
           "language": "text",
-          "content": "Cíl / hodnota pro uživatele:\nStudent vytvoří žádost o konzultaci pro konkrétní termín pedagoga.\n\nSpouštěcí událost:\nPřihlášený student odešle vybraný consultation slot, název a popis konzultace.\n\nPozorovatelný požadavek:\nREQ-01: Systém vytvoří jednu Reservation ve stavu PENDING pro existující aktivní budoucí slot, pokud jsou splněna doménová pravidla.\n\nPředpoklady:\n- Student existuje a je oprávněn vytvořit rezervaci.\n- Slot existuje, je ACTIVE a začíná v budoucnosti.\n\nStav po úspěšném provedení:\n- existuje jedna nová Reservation;\n- Reservation.status = PENDING;\n- je uložen záznam CREATED v reservation_history.\n\nZměna stavu:\n[none] → PENDING\n\nOdkaz na doménová pravidla / invarianty:\nBR-02 Exkluzivita slotu; BR-04 Pravidla termínů a studenta.\n\nHlavní úspěšný scénář:\n1. Student odešle slot, název a popis.\n2. Systém ověří studenta, termín a relevantní pravidla.\n3. Systém uloží Reservation ve stavu PENDING.\n4. Systém uloží historii CREATED a vrátí 201 Created s identifikátorem a stavem.\n\nAlternativní / chybové výsledky:\n- neznámý student nebo slot → zamítnutí; rezervace nevznikne;\n- neaktivní, minulý nebo již blokovaný slot → zamítnutí; rezervace nevznikne;\n- překročení limitu PENDING nebo překryv termínů studenta → zamítnutí; rezervace nevznikne.\n\nPříklady ověření:\n- aktivní budoucí slot + validní student → jedna PENDING rezervace;\n- již blokovaný slot → odmítnuto;\n- student s překrývající se aktivní rezervací → odmítnuto.\n\nZdůvodnění / zdroj:\nStudent vyjadřuje zájem o konzultaci; pedagog ji následně rozhodne potvrdit nebo zrušit."
+          "content": "Cíl / hodnota pro uživatele:\nStudent vytvoří žádost o konzultaci pro konkrétní termín pedagoga.\n\nSpouštěcí událost:\nPřihlášený student odešle vybraný consultation slot, název a popis konzultace.\n\nPozorovatelný požadavek:\nREQ-01: Systém vytvoří jednu Reservation ve stavu PENDING pro existující aktivní slot, který začíná nejméně za 3 hodiny, pokud jsou splněna doménová pravidla.\n\nPředpoklady:\n- Student existuje a je oprávněn vytvořit rezervaci.\n- Přihlášený aktér má roli STUDENT; identita studenta se odvozuje z ověřené relace, nikoli z těla požadavku.\n- Slot existuje, je ACTIVE a začíná nejméně 3 hodiny po aktuálním čase.\n\nStav po úspěšném provedení:\n- existuje jedna nová Reservation;\n- Reservation.status = PENDING;\n- je uložen záznam CREATED v reservation_history.\n\nZměna stavu:\n[none] → PENDING\n\nOdkaz na doménová pravidla / invarianty:\nBR-02 Exkluzivita slotu; BR-04 Pravidla termínů a studenta.\n\nHlavní úspěšný scénář:\n1. Student odešle slot, název a popis.\n2. Systém ověří studenta, termín a relevantní pravidla.\n3. Systém uloží Reservation ve stavu PENDING.\n4. Systém uloží historii CREATED a vrátí 201 Created s identifikátorem a stavem.\n\nAlternativní / chybové výsledky:\n- neznámý student nebo slot → zamítnutí; rezervace nevznikne;\n- neaktivní, minulý nebo již blokovaný slot → zamítnutí; rezervace nevznikne;\n- slot začíná za méně než 3 hodiny → zamítnutí; rezervace nevznikne;\n- překročení limitu PENDING nebo překryv termínů studenta → zamítnutí; rezervace nevznikne.\n\nPříklady ověření:\n- aktivní slot začínající za nejméně 3 hodiny + validní student → jedna PENDING rezervace;\n- slot začínající za méně než 3 hodiny → odmítnuto;\n- již blokovaný slot → odmítnuto;\n- student s překrývající se aktivní rezervací → odmítnuto.\n\nZdůvodnění / zdroj:\nStudent vyjadřuje zájem o konzultaci; pedagog ji následně rozhodne potvrdit nebo zrušit."
         }
       ]
     },
@@ -47,7 +47,7 @@
         {
           "type": "code",
           "language": "text",
-          "content": "Cíl / hodnota pro uživatele:\nStudent i pedagog zjistí, které konzultační termíny lze rezervovat.\n\nSpouštěcí událost:\nUživatel otevře kalendář nebo požádá API o dostupné termíny.\n\nPozorovatelný požadavek:\nREQ-02: Systém vrátí ACTIVE budoucí slot jako dostupný pouze tehdy, pokud pro něj neexistuje Reservation ve stavu PENDING ani CONFIRMED.\n\nPředpoklady:\n- Požadavek pracuje s existujícími consultation slots.\n\nStav po úspěšném provedení:\n- vrátí se seznam dostupných slotů;\n- Reservation ani ConsultationSlot se nemění.\n\nZměna stavu:\nŽádná.\n\nOdkaz na doménová pravidla / invarianty:\nBR-01 Intervalová sémantika; BR-02 Exkluzivita slotu.\n\nHlavní úspěšný scénář:\n1. Uživatel požádá o dostupné termíny.\n2. Systém vybere ACTIVE budoucí sloty.\n3. Systém vyřadí sloty blokované PENDING nebo CONFIRMED rezervací.\n4. Systém vrátí zbývající dostupné sloty.\n\nAlternativní / chybové výsledky:\n- minulý slot → není vrácen jako dostupný;\n- CANCELLED slot → není vrácen jako dostupný;\n- PENDING nebo CONFIRMED rezervace → slot není vrácen jako dostupný.\n\nPříklady ověření:\n- ACTIVE budoucí slot bez rezervace → dostupný;\n- slot s PENDING rezervací → nedostupný;\n- slot s CONFIRMED rezervací → nedostupný.\n\nZdůvodnění / zdroj:\nUživatel potřebuje vybírat jen termíny, které nemohou vést ke kolizi rezervace."
+          "content": "Cíl / hodnota pro uživatele:\nStudent i pedagog zjistí, které konzultační termíny lze rezervovat.\n\nSpouštěcí událost:\nUživatel otevře kalendář nebo požádá API o dostupné termíny.\n\nPozorovatelný požadavek:\nREQ-02: Systém vrátí ACTIVE slot jako dostupný pouze tehdy, pokud začíná nejméně za 3 hodiny a neexistuje pro něj Reservation ve stavu PENDING ani CONFIRMED.\n\nPředpoklady:\n- Požadavek pracuje s existujícími consultation slots.\n\nStav po úspěšném provedení:\n- vrátí se seznam dostupných slotů;\n- Reservation ani ConsultationSlot se nemění.\n\nZměna stavu:\nŽádná.\n\nOdkaz na doménová pravidla / invarianty:\nBR-01 Intervalová sémantika; BR-02 Exkluzivita slotu; nejméně 3 hodiny do začátku při vytvoření rezervace.\n\nHlavní úspěšný scénář:\n1. Uživatel požádá o dostupné termíny.\n2. Systém vybere ACTIVE sloty začínající nejméně za 3 hodiny.\n3. Systém vyřadí sloty blokované PENDING nebo CONFIRMED rezervací.\n4. Systém vrátí zbývající dostupné sloty.\n\nAlternativní / chybové výsledky:\n- slot začínající za méně než 3 hodiny → není vrácen jako dostupný;\n- CANCELLED slot → není vrácen jako dostupný;\n- PENDING nebo CONFIRMED rezervace → slot není vrácen jako dostupný.\n\nPříklady ověření:\n- ACTIVE slot začínající nejméně za 3 hodiny a bez rezervace → dostupný;\n- slot začínající za méně než 3 hodiny → nedostupný;\n- slot s PENDING nebo CONFIRMED rezervací → nedostupný.\n\nZdůvodnění / zdroj:\nUživatel potřebuje vybírat jen termíny, na které může vytvořit rezervaci a které nemohou vést ke kolizi."
         }
       ]
     },
@@ -97,7 +97,7 @@
         {
           "type": "note",
           "variant": "info",
-          "content": "Týmově potvrzeno pro finální baseline v0.2: PENDING zůstává blokující stav. Automatické testy sousedních intervalů [start, end) jsou doplněné."
+          "content": "Týmově potvrzeno pro finální baseline v0.2: PENDING zůstává blokující stav. Intervaly [start, end) jsou nyní ověřené integračním testem ReservationCreationPersistenceTests: překryv a obsazený slot jsou odmítnuty, sousední sloty před i za rezervací jsou povolené."
         }
       ]
     },
@@ -242,8 +242,8 @@
         {
           "type": "list",
           "items": [
-            "Create: validní student a budoucí ACTIVE slot → 201 a PENDING; obsazený slot nebo porušení limitu → 409.",
-            "Availability: ACTIVE budoucí slot bez aktivní rezervace → zobrazen; PENDING/CONFIRMED, minulý či zrušený slot → nezobrazen.",
+            "Create: validní student a ACTIVE slot začínající nejméně za 3 hodiny → 201 a PENDING; slot s kratším předstihem, obsazený slot nebo porušení limitu → 409.",
+            "Availability: ACTIVE slot začínající nejméně za 3 hodiny a bez aktivní rezervace → zobrazen; kratší předstih, PENDING/CONFIRMED, minulý či zrušený slot → nezobrazen.",
             "Approve: vlastník slotu schválí PENDING → CONFIRMED; cizí aktér → 403.",
             "Cancel: oprávněný aktér nejméně 3 hodiny před začátkem → CANCELLED; kratší čas nebo neplatný stav → 4xx bez změny."
           ]
@@ -251,7 +251,7 @@
         {
           "type": "code",
           "language": "specification",
-          "content": "Evidence C02\nPřijatá baseline: v0.1 + změna v0.2 popsaná výše.\nNesoulad vyřešený při revizi: PENDING je explicitně blokující stav ve specifikaci, frontendu, API i databázovém indexu.\nZbývající známé omezení: zamítnutí a automatické vypršení žádosti nejsou součástí aktuální implementace.\nDrivery pro C03: transakční ochrana exkluzivity slotu, stavový model a audit změn.\nCommit/tag: doplní tým při odevzdání."
+          "content": "Evidence C02\nPřijatá baseline: v0.1 + změna v0.2 popsaná výše.\nNesoulad vyřešený při revizi: PENDING je explicitně blokující stav ve specifikaci, frontendu, API i databázovém indexu.\nZbývající známé omezení: zamítnutí a automatické vypršení žádosti nejsou součástí aktuální implementace.\nDrivery pro C03: transakční ochrana exkluzivity slotu, stavový model a audit změn.\nHistorický snapshot: v0.2-c02 (963b660). Integrovaná baseline docs/code/tests při hodnocení: main@85a28cb (Update readme)."
         }
       ]
     },

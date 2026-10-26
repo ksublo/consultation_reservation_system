@@ -38,8 +38,15 @@ public class ReservationService {
     this.notifications = notifications;
   }
 
-  public ReservationResponse create(CreateReservationRequest request) {
-    AppUser student = users.get(request.studentId());
+  public ReservationResponse create(
+      AuthenticatedUser authenticatedActor, CreateReservationRequest request) {
+    if (authenticatedActor == null)
+      throw new ApiException(HttpStatus.UNAUTHORIZED, "Authentication is required.");
+    if (authenticatedActor.activeRole() != UserRole.STUDENT)
+      throw new ApiException(HttpStatus.FORBIDDEN, "Only a student can create a reservation.");
+    if (request == null)
+      throw new ApiException(HttpStatus.BAD_REQUEST, "Reservation request is required.");
+    AppUser student = users.get(authenticatedActor.id());
     if (!student.hasRole(UserRole.STUDENT))
       throw new ApiException(HttpStatus.FORBIDDEN, "Only a student can create a reservation.");
     ConsultationSlot slot =
@@ -50,9 +57,9 @@ public class ReservationService {
     if (slot.getStatus() != SlotStatus.ACTIVE || !slot.getStartsAt().isAfter(now))
       throw new ApiException(HttpStatus.CONFLICT, "This slot is not available.");
     if ((request.consultationMode() == ConsultationMode.ONLINE && !slot.isOnlineAvailable())
-        || (request.consultationMode() == ConsultationMode.OFFLINE
-            && !slot.isOfflineAvailable()))
-      throw new ApiException(HttpStatus.CONFLICT, "This consultation mode is not available for the slot.");
+        || (request.consultationMode() == ConsultationMode.OFFLINE && !slot.isOfflineAvailable()))
+      throw new ApiException(
+          HttpStatus.CONFLICT, "This consultation mode is not available for the slot.");
     if (slot.getStartsAt().isBefore(now.plusHours(RESERVATION_CUTOFF_HOURS)))
       throw new ApiException(
           HttpStatus.CONFLICT,
@@ -144,10 +151,43 @@ public class ReservationService {
       UUID reservationId,
       AuthenticatedUser authenticatedActor,
       ReservationTransitionRequest request) {
-    Reservation reservation = get(reservationId);
     if (authenticatedActor == null)
       throw new ApiException(HttpStatus.UNAUTHORIZED, "Authentication is required.");
+    if (request == null)
+      throw new ApiException(HttpStatus.BAD_REQUEST, "Cancellation request is required.");
+    Reservation reservation = get(reservationId);
     AppUser actor = users.get(authenticatedActor.id());
+    return cancelReservation(reservation, authenticatedActor, actor, request);
+  }
+
+  public void cancelSlot(UUID slotId, AuthenticatedUser authenticatedActor) {
+    AppUser teacher = requireTeacher(authenticatedActor);
+    ConsultationSlot slot = getSlot(slotId);
+    requireSlotOwner(slot, teacher);
+    if (reservations.findBySlotIdAndStatusIn(slot.getId(), ACTIVE).isPresent())
+      throw new ApiException(HttpStatus.CONFLICT, "An occupied slot cannot be cancelled.");
+    slot.cancel();
+  }
+
+  public void cancelSlotWithReservation(
+      UUID slotId, AuthenticatedUser authenticatedActor, ReservationTransitionRequest request) {
+    AppUser teacher = requireTeacher(authenticatedActor);
+    if (request == null)
+      throw new ApiException(HttpStatus.BAD_REQUEST, "Cancellation request is required.");
+    ConsultationSlot slot = getSlot(slotId);
+    requireSlotOwner(slot, teacher);
+    reservations
+        .findBySlotIdAndStatusIn(slot.getId(), ACTIVE)
+        .ifPresent(
+            reservation -> cancelReservation(reservation, authenticatedActor, teacher, request));
+    slot.cancel();
+  }
+
+  private ReservationResponse cancelReservation(
+      Reservation reservation,
+      AuthenticatedUser authenticatedActor,
+      AppUser actor,
+      ReservationTransitionRequest request) {
     boolean isStudent =
         authenticatedActor.activeRole() == UserRole.STUDENT
             && reservation.getStudent().getId().equals(actor.getId());
@@ -210,16 +250,36 @@ public class ReservationService {
     return ReservationResponse.from(reservation);
   }
 
+  private AppUser requireTeacher(AuthenticatedUser authenticatedActor) {
+    if (authenticatedActor == null)
+      throw new ApiException(HttpStatus.UNAUTHORIZED, "Authentication is required.");
+    if (authenticatedActor.activeRole() != UserRole.TEACHER)
+      throw new ApiException(HttpStatus.FORBIDDEN, "Only the slot's teacher can cancel it.");
+    AppUser teacher = users.get(authenticatedActor.id());
+    if (!teacher.hasRole(UserRole.TEACHER))
+      throw new ApiException(HttpStatus.FORBIDDEN, "Only the slot's teacher can cancel it.");
+    return teacher;
+  }
+
+  private void requireSlotOwner(ConsultationSlot slot, AppUser teacher) {
+    if (!slot.getTeacher().getId().equals(teacher.getId()))
+      throw new ApiException(HttpStatus.FORBIDDEN, "Only the slot's teacher can cancel it.");
+  }
+
   @Transactional(readOnly = true)
   public List<ReservationResponse> forUser(UUID userId) {
-    return reservations.findAllForUser(userId).stream()
-        .map(ReservationResponse::from)
-        .toList();
+    return reservations.findAllForUser(userId).stream().map(ReservationResponse::from).toList();
   }
 
   private Reservation get(UUID id) {
     return reservations
         .findById(id)
         .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Reservation not found."));
+  }
+
+  private ConsultationSlot getSlot(UUID id) {
+    return slots
+        .findById(id)
+        .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Slot not found."));
   }
 }

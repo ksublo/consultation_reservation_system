@@ -624,7 +624,7 @@
               "Doklad atomického uložení při chybě",
               "Hotovo; oba rollback testy proti PostgreSQL prošly"
             ],
-            ["Commit/tag", "v0.3-c05"]
+            ["Historický snapshot / integrovaná baseline", "v0.3-c05 (87a4c5a) / main@85a28cb"]
           ]
         }
       ]
@@ -635,7 +635,7 @@
       "blocks": [
         {
           "type": "paragraph",
-          "content": "Commit/tag: v0.3-c05"
+          "content": "Historický snapshot C05: v0.3-c05 (87a4c5a). Integrovaná baseline dokumentace, kódu a testů při hodnocení: main@85a28cb (Update readme)."
         },
         {
           "type": "paragraph",

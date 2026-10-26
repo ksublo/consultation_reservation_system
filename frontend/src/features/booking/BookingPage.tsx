@@ -211,7 +211,6 @@ export default function BookingPage({
     try {
       await api.reserve(session.token, {
         slotId,
-        studentId: session.userId,
         reasonTitle,
         reasonDescription,
         consultationMode,

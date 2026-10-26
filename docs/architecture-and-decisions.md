@@ -195,6 +195,18 @@ Testovali jsme na dočasných účtech a rezervacích, které jsme potom odstran
 
 **Rozsah:** schválení a rušení rezervací. Vytváření rezervací, správa termínů a ostatní endpointy nejsou touto opravou revidované; další použití klientských ID vyžaduje samostatnou kontrolu. Tato dílčí oprava nepředstavuje dokončení všech bodů C03.
 
+### ADR-01 — navazující sjednocení vlastníka změn lifecycle (2026-10-26)
+
+Následná revize A2/A4 rozšířila původní rozhodnutí na všechny cesty změny lifecycle. `ReservationController.create()` předává `AuthenticatedUser` a `ReservationService.create()` odvozuje studenta z přihlášení. Oba endpointy rušení slotu nyní předávají ověřeného aktéra do `ReservationService`; pokud slot obsahuje aktivní rezervaci, její přechod, kontrola oprávnění, časová hranice, historie a oznámení proběhnou stejnou cestou jako při samostatném zrušení. Změna rezervace i slotu proběhne v jedné transakci. `ConsultationSlotService` již neprovádí přechod rezervace.
+
+| Oblast | Sjednocené chování | Ověření |
+| --- | --- | --- |
+| Vytvoření rezervace | Aktér z `AuthenticatedUser`; žádné ID studenta z těla | `ReservationAuthorizationTests` |
+| Zrušení slotu bez aktivní rezervace | Aktér a vlastník ověření v `ReservationService` | API regresní test |
+| Zrušení slotu s aktivní rezervací | Lifecycle, historie a oznámení zpracuje `ReservationService` | API regresní test |
+
+Původní záznam výše zůstává historickým rozsahem rozhodnutí z 8. 10.; toto doplnění zaznamenává jeho rozšíření a sjednocení implementace.
+
 ## C05 Detailed Design
 
 ### 1. Vybraná jednotka a cíl návrhu

@@ -343,26 +343,20 @@ export const api = {
         body: JSON.stringify({ teacherId, startsAt, endsAt, onlineAvailable, offlineAvailable }),
       }),
     ),
-  cancelSlot: async (token: string, slotId: string, actorUserId: string): Promise<void> => {
+  cancelSlot: async (token: string, slotId: string): Promise<void> => {
     await readJson<void>(
       await fetch(`${API_ROOT}/slots/${slotId}/cancel`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authorization(token) },
-        body: JSON.stringify({ actorUserId }),
+        headers: authorization(token),
       }),
     )
   },
-  cancelSlotWithReservation: async (
-    token: string,
-    slotId: string,
-    actorUserId: string,
-    note: string,
-  ): Promise<void> => {
+  cancelSlotWithReservation: async (token: string, slotId: string, note: string): Promise<void> => {
     await readJson<void>(
       await fetch(`${API_ROOT}/slots/${slotId}/cancel-with-reservation`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authorization(token) },
-        body: JSON.stringify({ actorUserId, note }),
+        body: JSON.stringify({ note }),
       }),
     )
   },
@@ -412,7 +406,6 @@ export const api = {
     token: string,
     payload: {
       slotId: string
-      studentId: string
       reasonTitle: string
       reasonDescription: string
       consultationMode: 'ONLINE' | 'OFFLINE'

@@ -45,7 +45,7 @@ Pro stejný konzultační termín nemohou existovat dvě aktivní rezervace. Rez
 
 ## Domain-specific business rule
 
-Konzultační termíny lze vytvářet pouze v pracovní dny mezi 07:15 a 19:15. Student může mít maximálně pět čekajících rezervací a nesmí si rezervovat čas, který se překrývá s jeho jinou aktivní rezervací.
+Konzultační termíny lze vytvářet pouze v pracovní dny mezi 07:15 a 19:15. Rezervaci lze vytvořit nejméně tři hodiny před začátkem termínu; dostupné termíny s kratším předstihem se nenabízejí. Student může mít maximálně pět čekajících rezervací a nesmí si rezervovat čas, který se překrývá s jeho jinou aktivní rezervací.
 
 ## External / system boundary
 
