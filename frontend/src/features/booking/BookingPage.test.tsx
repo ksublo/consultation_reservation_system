@@ -98,7 +98,6 @@ describe('BookingPage reservation flow', () => {
     await waitFor(() => {
       expect(api.reserve).toHaveBeenCalledWith(session.token, {
         slotId: slot.id,
-        studentId: session.userId,
         reasonTitle: 'Databázový návrh',
         reasonDescription: 'Potřebuji probrat návrh tabulek.',
         consultationMode: 'OFFLINE',

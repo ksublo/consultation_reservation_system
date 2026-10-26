@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import consultation_reservation_backend.api.ConsultationSlotController;
 import consultation_reservation_backend.api.ReservationController;
 import consultation_reservation_backend.config.SecurityConfig;
 import consultation_reservation_backend.domain.*;
@@ -22,9 +23,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(ReservationController.class)
+@WebMvcTest({ReservationController.class, ConsultationSlotController.class})
 @Import({SecurityConfig.class, BearerTokenFilter.class, ReservationService.class})
 class ReservationAuthorizationTests {
   @Autowired MockMvc mvc;
@@ -34,6 +36,7 @@ class ReservationAuthorizationTests {
   @MockitoBean ConsultationSlotRepository slots;
   @MockitoBean ReservationHistoryRepository history;
   @MockitoBean NotificationService notifications;
+  @MockitoBean ConsultationSlotService consultationSlots;
   AppUser teacher, student, outsider;
   Reservation reservation;
   UUID token;
@@ -120,6 +123,104 @@ class ReservationAuthorizationTests {
     assertEquals(ReservationStatus.CONFIRMED, reservation.getStatus());
     assertNotNull(reservation.getConfirmedAt());
     verify(history).save(any(ReservationHistory.class));
+    verify(notifications)
+        .create(eq(student), eq(reservation), anyString(), anyString(), anyString());
+  }
+
+  @Test
+  void reservationCreationUsesAuthenticatedStudentInsteadOfBodyStudentId() throws Exception {
+    login(student, UserRole.STUDENT);
+    var start = OffsetDateTime.now().plusDays(1);
+    var slot = new ConsultationSlot(teacher, start, start.plusHours(1));
+    when(slots.findById(slot.getId())).thenReturn(Optional.of(slot));
+    when(reservations.findBySlotIdAndStatusIn(eq(slot.getId()), anyList()))
+        .thenReturn(Optional.empty());
+    when(reservations.countByStudentIdAndStatus(eq(student.getId()), any())).thenReturn(0L);
+    when(reservations.findOverlappingForStudent(eq(student.getId()), any(), any(), anyList()))
+        .thenReturn(java.util.List.of());
+    when(reservations.saveAndFlush(any(Reservation.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    mvc.perform(
+            post("/api/reservations")
+                .header("Authorization", "Bearer " + token)
+                .contentType("application/json")
+                .content(
+                    "{\"slotId\":\""
+                        + slot.getId()
+                        + "\",\"studentId\":\""
+                        + outsider.getId()
+                        + "\",\"reasonTitle\":\"Question\",\"reasonDescription\":\"Details\",\"consultationMode\":\"ONLINE\"}"))
+        .andExpect(status().isCreated());
+
+    var created = org.mockito.ArgumentCaptor.forClass(Reservation.class);
+    verify(reservations).saveAndFlush(created.capture());
+    assertEquals(student.getId(), created.getValue().getStudent().getId());
+    var historyEntry = org.mockito.ArgumentCaptor.forClass(ReservationHistory.class);
+    verify(history).save(historyEntry.capture());
+    assertSame(student, ReflectionTestUtils.getField(historyEntry.getValue(), "actor"));
+    verify(users).get(student.getId());
+    verify(users, never()).get(outsider.getId());
+  }
+
+  @Test
+  void studentCannotSpoofSlotOwnerWhenCancellingSlotWithReservation() throws Exception {
+    login(student, UserRole.STUDENT);
+    var slot = reservation.getSlot();
+    when(slots.findById(slot.getId())).thenReturn(Optional.of(slot));
+
+    mvc.perform(
+            post("/api/slots/" + slot.getId() + "/cancel-with-reservation")
+                .header("Authorization", "Bearer " + token)
+                .contentType("application/json")
+                .content("{\"actorUserId\":\"" + teacher.getId() + "\",\"note\":\"Cancelled\"}"))
+        .andExpect(status().isForbidden());
+
+    assertEquals(ReservationStatus.PENDING, reservation.getStatus());
+    assertEquals(SlotStatus.ACTIVE, slot.getStatus());
+    verifyNoInteractions(history, notifications);
+    verify(users, never()).get(teacher.getId());
+  }
+
+  @Test
+  void teacherCannotSpoofSlotOwnerWhenCancellingOpenSlot() throws Exception {
+    login(outsider, UserRole.TEACHER);
+    var slot = reservation.getSlot();
+    when(slots.findById(slot.getId())).thenReturn(Optional.of(slot));
+
+    mvc.perform(
+            post("/api/slots/" + slot.getId() + "/cancel")
+                .header("Authorization", "Bearer " + token)
+                .contentType("application/json")
+                .content("{\"actorUserId\":\"" + teacher.getId() + "\"}"))
+        .andExpect(status().isForbidden());
+
+    assertEquals(SlotStatus.ACTIVE, slot.getStatus());
+    verify(users).get(outsider.getId());
+    verify(users, never()).get(teacher.getId());
+    verifyNoInteractions(history, notifications);
+  }
+
+  @Test
+  void slotOwnerCancelsReservationThroughReservationService() throws Exception {
+    login(teacher, UserRole.TEACHER);
+    var slot = reservation.getSlot();
+    when(slots.findById(slot.getId())).thenReturn(Optional.of(slot));
+    when(reservations.findBySlotIdAndStatusIn(eq(slot.getId()), anyList()))
+        .thenReturn(Optional.of(reservation));
+
+    mvc.perform(
+            post("/api/slots/" + slot.getId() + "/cancel-with-reservation")
+                .header("Authorization", "Bearer " + token)
+                .contentType("application/json")
+                .content("{\"note\":\"Teacher cancelled the slot\"}"))
+        .andExpect(status().isNoContent());
+
+    assertEquals(ReservationStatus.CANCELLED, reservation.getStatus());
+    assertEquals(SlotStatus.CANCELLED, slot.getStatus());
+    var historyEntry = org.mockito.ArgumentCaptor.forClass(ReservationHistory.class);
+    verify(history).save(historyEntry.capture());
+    assertSame(teacher, ReflectionTestUtils.getField(historyEntry.getValue(), "actor"));
     verify(notifications)
         .create(eq(student), eq(reservation), anyString(), anyString(), anyString());
   }

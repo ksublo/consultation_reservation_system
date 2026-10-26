@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/reservations")
@@ -21,8 +21,10 @@ public class ReservationController {
 
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
-  public ReservationResponse create(@Valid @RequestBody CreateReservationRequest request) {
-    return reservations.create(request);
+  public ReservationResponse create(
+      @AuthenticationPrincipal AuthenticatedUser actor,
+      @Valid @RequestBody CreateReservationRequest request) {
+    return reservations.create(actor, request);
   }
 
   @PostMapping("/{reservationId}/approve")

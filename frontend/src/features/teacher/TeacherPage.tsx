@@ -373,7 +373,7 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
 
   async function cancelOpenSlot(slot: ConsultationSlot) {
     try {
-      await api.cancelSlot(session.token, slot.id, session.userId)
+      await api.cancelSlot(session.token, slot.id)
       onToast({ type: 'success', message: t('slotCancelled') })
       await load()
     } catch (error) {
@@ -391,7 +391,6 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
       await api.cancelSlotWithReservation(
         session.token,
         slotToCancel.id,
-        session.userId,
         t('teacherCancellationNote'),
       )
       setSlotToCancel(null)

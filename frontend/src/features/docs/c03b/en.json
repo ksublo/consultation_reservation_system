@@ -422,7 +422,7 @@
         {
           "type": "note",
           "variant": "info",
-          "content": "The target diagram assigns verified actor identity to create/approve/cancel. The current approve/cancel controller passes AuthenticatedUser; create currently loads the student by studentId in the request. Keep this difference as a delta in section J instead of treating the TO-BE diagram as a description of today’s implementation."
+          "content": "The controller passes AuthenticatedUser for create/approve/cancel. ReservationService derives the student for a new reservation from the verified identity and does not use a student ID from the request body."
         }
       ]
     },
@@ -483,7 +483,7 @@
         {
           "type": "note",
           "variant": "info",
-          "content": "A separate ConsultationSlotService.cancelWithActiveReservation() endpoint can cancel a slot with an active reservation through another path. Review it separately from the standard OP-04 operation at ReservationController.cancel()."
+          "content": "The slot-management route for cancelling a slot with an active reservation remains, but ReservationService now performs the reservation transition, audit and notification together with the standard cancel operation."
         }
       ]
     },
@@ -600,7 +600,7 @@
         },
         {
           "type": "paragraph",
-          "content": "New verification on 12 October 2026: ReservationAuthorizationTests — 10 tests, 0 failures, 0 errors. The suite exercises the real filter, controller and ReservationService; AuthService, UserService, repositories and NotificationService are mocked. This verifies authorization and normal transitions, not database commit/rollback, actual notification persistence or concurrency."
+          "content": "Verification on 26 October 2026: ReservationAuthorizationTests — 14 tests, 0 failures, 0 errors. The suite exercises the real filter, both controllers and ReservationService; AuthService, UserService, repositories and NotificationService are mocked. It also covers create identity derivation and slot-cancellation delegation to ReservationService. It does not prove database commit/rollback or concurrency."
         },
         {
           "type": "table",
@@ -659,8 +659,8 @@
           "rows": [
             [
               "Before the fix, reservation approval/cancellation used actor identity from the request body; current approve/cancel use AuthenticatedUser from the verified session.",
-              "Approve/cancel actor always comes from verified identity; the service checks role, slot ownership, and state.",
-              "KEEP + VERIFY — implemented and covered by regression tests; C03A retains the historical description."
+              "Create/approve/cancel actors come from verified identity; slot-cancellation endpoints also delegate reservation transitions to ReservationService.",
+              "KEEP + VERIFY — 14 API regression tests cover the listed identity paths; mocked persistence does not prove database atomicity or concurrency. C03A remains historical."
             ],
             [
               "ReservationService coordinates state changes, history, and in-app notifications in a transaction.",
@@ -678,14 +678,14 @@
               "KEEP — accepted downside in ADR-01."
             ],
             [
-              "Create loads the student using studentId in CreateReservationRequest; the create controller does not pass AuthenticatedUser to the service.",
-              "To derive the Create actor fully from the signed-in identity, Create would use the verified session.",
-              "CHANGE / separate security task — this is a difference in Create, not an unfixed approve/cancel defect."
+              "Create previously loaded the student using studentId from the request body.",
+              "The actor must come from the verified signed-in identity.",
+              "FIXED + VERIFY — the controller now passes AuthenticatedUser; ReservationService uses its ID and role. An API regression test verifies that a spoofed body studentId cannot change reservation ownership."
             ],
             [
-              "The side endpoint ConsultationSlotService.cancelWithActiveReservation uses ActorRequest and does not create the same notification as ReservationService.cancel.",
-              "Active reservation cancellation should use the same verified identity, rules, and notification behavior.",
-              "CHANGE / separate task — this side path is not the same as OP-04 through ReservationController."
+              "The slot-cancellation route with an active reservation previously used ActorRequest and bypassed ReservationService.",
+              "Every active reservation cancellation should use the same service, authorization, rules, history and notification.",
+              "FIXED + VERIFY — both slot-cancellation paths now call ReservationService; identity comes from AuthenticatedUser."
             ]
           ]
         },
@@ -783,8 +783,23 @@
               "ReservationAuthorizationTests.unauthenticatedRequestIsRejected."
             ],
             [
+              "A student forges studentId while creating a reservation.",
+              "The reservation belongs to the signed-in student; the body ID is ignored.",
+              "ReservationAuthorizationTests.reservationCreationUsesAuthenticatedStudentInsteadOfBodyStudentId."
+            ],
+            [
+              "A student forges the owner ID when cancelling a slot with a reservation.",
+              "HTTP 403; the slot and reservation remain unchanged.",
+              "ReservationAuthorizationTests.studentCannotSpoofSlotOwnerWhenCancellingSlotWithReservation."
+            ],
+            [
+              "The owner cancels a slot with an active reservation.",
+              "HTTP 204; state, slot, history, and notification are committed together.",
+              "ReservationAuthorizationTests.slotOwnerCancelsReservationThroughReservationService."
+            ],
+            [
               "Student submits the form for a valid future slot; frontend refreshes availability.",
-              "Request contains slotId, studentId, and consultation details; form is cleared.",
+              "Request contains slotId and consultation details; the backend derives student identity from the signed-in session; form is cleared.",
               "BookingPage.test.tsx — successful submission test; API is mocked."
             ],
             [
@@ -813,7 +828,7 @@
         {
           "type": "code",
           "language": "Rule",
-          "content": "Only a signed-in, authorized slot owner may approve a reservation.\nReservationService must verify AuthenticatedUser, active role, slot ownership,\nand source state PENDING before changing state. On rejection, state, history,\nand notification must remain unchanged."
+          "content": "C04 quality concern — security and audit integrity: create, approve and cancel use verified identity; a client ID cannot change reservation ownership or the history actor.\nCriterion: unauthenticated request → 401; wrong role or foreign owner → 403 with no state, history or notification change. Create stores under the signed-in student ID; both slot-cancellation routes delegate active reservation changes to ReservationService.\nDecision: KEEP ADR-01 for these paths. The table below records measurement and the limits of the 14 API tests; mocked persistence does not prove database commit/rollback or concurrency."
         },
         {
           "type": "table",
@@ -822,12 +837,12 @@
             [
               "ReservationAuthorizationTests.",
               "Run the backend tests. Requests pass through BearerTokenFilter and ReservationController to ReservationService; mocks verify denied paths do not change state or create history/notifications.",
-              "10 test methods cover approval, cancellation, forged identity, role, ownership, state, and unauthenticated requests. This is not a static architecture test or a real database test."
+              "14 test methods cover approval, cancellation, create identity, forged identity, role, ownership, state, and unauthenticated requests. This is not a static architecture test or a real database test."
             ],
             [
               "Controller-to-service code review.",
               "Verify @AuthenticationPrincipal in ReservationController and the AuthenticatedUser source in approve/cancel; verify service guards happen before confirm()/cancel().",
-              "Confirms current ownership of the decision; the side endpoint ConsultationSlotService.cancelWithActiveReservation needs separate review."
+              "Confirms current ownership of the decision; the slot-cancellation route with an active reservation delegates to ReservationService."
             ]
           ]
         }
@@ -878,14 +893,14 @@
             [
               "7. Close the evidence.",
               "Remaining limitations, uncertainty, and exact commit/tag.",
-              "docs/evidence-and-evolution.md; the team fills the commit/tag at submission."
+              "Integrated docs/code/tests baseline at assessment: main@2b1e404 (update README). No separate C03B tag was created."
             ]
           ]
         },
         {
           "type": "note",
           "variant": "info",
-          "content": "Known scope limits: frontend BookingPage tests use a mocked API; backend authorization tests use persistence substitutes; a real PostgreSQL concurrency scenario is not included in those tests. Create identity and the side slot-cancellation endpoint are separate delta items in section J, not evidence of an approve/cancel defect."
+          "content": "Verification scope: frontend BookingPage tests use a mocked API; backend authorization tests use persistence substitutes and do not prove database commit or concurrency. ReservationAuthorizationTests cover create/approve/cancel and both slot-cancellation routes."
         }
       ]
     }

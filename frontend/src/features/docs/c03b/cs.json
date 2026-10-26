@@ -418,7 +418,7 @@
         {
           "type": "note",
           "variant": "info",
-          "content": "Cílový diagram označuje vlastníka rozhodnutí pro create/approve/cancel jako práci s ověřenou identitou. Aktuální controller approve/cancel předává AuthenticatedUser; create dnes načítá studenta podle studentId v požadavku. Tento rozdíl je třeba držet jako delta v části J, ne zaměňovat diagram TO-BE za popis dnešní implementace."
+          "content": "Controller předává AuthenticatedUser pro create/approve/cancel. ReservationService při vytvoření rezervace odvozuje studenta z ověřené identity a ID studenta z těla požadavku nepoužívá."
         }
       ]
     },
@@ -479,7 +479,7 @@
         {
           "type": "note",
           "variant": "info",
-          "content": "Vedlejší endpoint ConsultationSlotService.cancelWithActiveReservation() umí zrušit slot s aktivní rezervací jinou cestou. Je potřeba jej posuzovat odděleně od standardní operace ReservationController.cancel()."
+          "content": "Endpoint pro zrušení slotu s aktivní rezervací zůstává součástí správy termínů, ale rozhodnutí o zrušení rezervace, audit i oznámení nyní provádí ReservationService společně s běžnou operací cancel()."
         }
       ]
     },
@@ -596,7 +596,7 @@
         },
         {
           "type": "paragraph",
-          "content": "Nové ověření 12. 10. 2026: ReservationAuthorizationTests — 10 testů, 0 selhání, 0 chyb. Sada ověřuje skutečný filtr, controller a ReservationService; AuthService, UserService, repository a NotificationService jsou nahrazené mocky. Výsledek potvrzuje oprávnění a běžné přechody, nikoli databázový commit/rollback, skutečné uložení oznámení nebo souběh."
+          "content": "Ověření 26. 10. 2026: ReservationAuthorizationTests — 14 testů, 0 selhání, 0 chyb. Sada ověřuje skutečný filtr, oba controllery a ReservationService; AuthService, UserService, repository a NotificationService jsou nahrazené mocky. Pokrývá také odvození identity při create a delegování zrušení slotu do ReservationService. Neprokazuje databázový commit/rollback ani souběh."
         },
         {
           "type": "table",
@@ -655,8 +655,8 @@
           "rows": [
             [
               "Schválení a standardní zrušení rezervace před opravou používaly identitu z request body; aktuální approve/cancel používají AuthenticatedUser z ověřené relace.",
-              "Aktér approve/cancel vždy pochází z ověřené identity; služba ověří roli, vlastnictví a stav.",
-              "KEEP + VERIFY — oprava je implementovaná a ověřená regresními testy; historický popis zůstává v C03A jako historie."
+              "Aktér create/approve/cancel pochází z ověřené identity; endpointy rušení slotu také delegují do ReservationService.",
+              "KEEP + VERIFY — 14 API regresních testů pokrývá popsané cesty identity; mockovaná persistence neprokazuje databázovou atomicitu ani souběh. Historický popis zůstává v C03A."
             ],
             [
               "ReservationService koordinuje změnu stavu, historii a interní oznámení v transakci.",
@@ -674,14 +674,14 @@
               "KEEP — přijatý negativní důsledek ADR-01."
             ],
             [
-              "Create načítá studenta podle studentId v CreateReservationRequest; create controller nepředává AuthenticatedUser do služby.",
-              "Pro úplné odvození aktéra z přihlášené identity by create muselo použít ověřenou relaci.",
-              "CHANGE / samostatný bezpečnostní úkol — toto je rozdíl v operaci Create, nikoli neopravená chyba approve/cancel."
+              "Create dříve načítalo studenta podle studentId z těla požadavku.",
+              "Aktér musí být odvozen z ověřené přihlášené identity.",
+              "FIXED + VERIFY — controller nyní předává AuthenticatedUser; ReservationService používá jeho ID a role. Regresní API test ověřuje, že podvržené studentId v těle nemění vlastníka rezervace."
             ],
             [
-              "Vedlejší ConsultationSlotService.cancelWithActiveReservation používá ActorRequest a nemá stejné oznámení jako standardní ReservationService.cancel.",
-              "Zrušení aktivní rezervace má používat stejnou ověřenou identitu, pravidla a oznamovací chování.",
-              "CHANGE / samostatný úkol — tato vedlejší cesta není totéž co OP-04 přes ReservationController."
+              "Endpoint pro zrušení slotu s aktivní rezervací dříve používal ActorRequest a obcházel ReservationService.",
+              "Každé zrušení aktivní rezervace má projít stejnou službou, autorizací, pravidly, historií a oznámením.",
+              "FIXED + VERIFY — obě cesty zrušení slotu nyní volají ReservationService; přihlášená identita je převzatá z AuthenticatedUser."
             ]
           ]
         },
@@ -779,8 +779,23 @@
               "ReservationAuthorizationTests.unauthenticatedRequestIsRejected."
             ],
             [
+              "Student podvrhne studentId při vytvoření rezervace.",
+              "Rezervace patří přihlášenému studentovi; ID z těla se nepoužije.",
+              "ReservationAuthorizationTests.reservationCreationUsesAuthenticatedStudentInsteadOfBodyStudentId."
+            ],
+            [
+              "Student podvrhne ID vlastníka při rušení slotu s rezervací.",
+              "HTTP 403; slot i rezervace zůstanou beze změny.",
+              "ReservationAuthorizationTests.studentCannotSpoofSlotOwnerWhenCancellingSlotWithReservation."
+            ],
+            [
+              "Vlastník ruší slot s aktivní rezervací.",
+              "HTTP 204; stav, slot, historie a oznámení se uloží společně.",
+              "ReservationAuthorizationTests.slotOwnerCancelsReservationThroughReservationService."
+            ],
+            [
               "Student odešle formulář s platným budoucím termínem; frontend pak obnoví dostupnost.",
-              "Požadavek odejde se slotId, studentId a údaji konzultace; formulář se vyčistí.",
+              "Požadavek odejde se slotId a údaji konzultace; identitu studenta odvodí backend z přihlášení; formulář se vyčistí.",
               "BookingPage.test.tsx — test úspěšného odeslání; API je mockované."
             ],
             [
@@ -809,7 +824,7 @@
         {
           "type": "code",
           "language": "Pravidlo",
-          "content": "Pouze přihlášený a oprávněný vlastník smí schválit rezervaci.\nReservationService musí před změnou ověřit AuthenticatedUser, aktivní roli,\nvlastnictví slotu a zdrojový stav PENDING. Při odmítnutí se nesmí změnit stav,\nhistorie ani oznámení."
+          "content": "C04 quality concern — bezpečnost a integrita auditu: create, approve a cancel používají ověřenou identitu; klientské ID nesmí změnit vlastníka ani aktéra historie.\nCriterion: nepřihlášený požadavek → 401; nesprávná role nebo cizí vlastník → 403 bez změny stavu, historie a oznámení. Create ukládá pod ID přihlášeného studenta; oba endpointy rušení slotu delegují aktivní rezervaci do ReservationService.\nDecision: KEEP ADR-01 v rozsahu těchto cest. Measurement a hranice 14 API testů jsou uvedené v tabulce níže; mockovaná persistence neprokazuje databázový commit/rollback ani souběh."
         },
         {
           "type": "table",
@@ -818,12 +833,12 @@
             [
               "ReservationAuthorizationTests.",
               "Spustit backendové testy. Testy posílají požadavky přes BearerTokenFilter a ReservationController do ReservationService; mocky ověřují, že zakázaná cesta nemění stav ani nevytvoří historii nebo oznámení.",
-              "10 testovacích metod pokrývá schválení, zrušení, podvrženou identitu, roli, vlastníka, stav a nepřihlášený požadavek. Nejde o statický architektonický test ani test reálné databáze."
+              "14 testovacích metod pokrývá schválení, zrušení, identitu při create, podvrženou identitu, roli, vlastníka, stav a nepřihlášený požadavek. Nejde o statický architektonický test ani test reálné databáze."
             ],
             [
               "Kontrola kódu controller → service.",
               "Ověřit @AuthenticationPrincipal v ReservationController a zdroj AuthenticatedUser v approve/cancel; zkontrolovat guardy služby před confirm()/cancel().",
-              "Potvrzuje vlastnictví rozhodnutí v aktuální implementaci; side endpoint ConsultationSlotService.cancelWithActiveReservation vyžaduje samostatné posouzení."
+              "Potvrzuje vlastnictví rozhodnutí v aktuální implementaci; endpoint zrušení slotu s aktivní rezervací deleguje do ReservationService."
             ]
           ]
         }
@@ -874,14 +889,14 @@
             [
               "7. Uzavření evidence.",
               "Zbývající omezení, nejistoty a přesný commit/tag.",
-              "docs/evidence-and-evolution.md; commit/tag doplňte při odevzdání."
+              "Integrovaná baseline docs/code/tests při hodnocení: main@2b1e404 (update README). Samostatný tag C03B nebyl vytvořen."
             ]
           ]
         },
         {
           "type": "note",
           "variant": "info",
-          "content": "Známé rozsahové limity: frontendové BookingPage testy používají mockované API; backendové authorization testy používají náhrady persistence; reálný PostgreSQL concurrency scénář není součástí těchto testů. Create identita a vedlejší rušení slotu jsou oddělené řádky delta v části J, ne důkaz chyby standardního approve/cancel."
+          "content": "Rozsah ověření: frontendové BookingPage testy používají mockované API; backendové authorization testy používají náhrady persistence a neprokazují databázový commit ani souběh. ReservationAuthorizationTests ověřují create/approve/cancel i obě cesty zrušení slotu."
         }
       ]
     }
