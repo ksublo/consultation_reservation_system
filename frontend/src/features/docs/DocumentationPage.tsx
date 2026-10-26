@@ -5,25 +5,27 @@ import csC02 from './c02/cs.json'
 import csC03A from './c03a/cs.json'
 import csC03B from './c03b/cs.json'
 import csC05 from './c05/cs.json'
+import csC06 from './c06/cs.json'
 import enC01 from './c01/en.json'
 import enC02 from './c02/en.json'
 import enC03A from './c03a/en.json'
 import enC03B from './c03b/en.json'
 import enC05 from './c05/en.json'
+import enC06 from './c06/en.json'
 import {
   parseDocumentation,
   type Documentation,
   type DocumentationBlock,
 } from './documentation-model'
 
-type DocsSection = 'c01' | 'c02' | 'c03a' | 'c03b' | 'c05'
+type DocsSection = 'c01' | 'c02' | 'c03a' | 'c03b' | 'c05' | 'c06'
 
 interface DocumentationPageProps {
   language: Language
   t: TFunction
 }
 
-const tabs: DocsSection[] = ['c01', 'c02', 'c03a', 'c03b', 'c05']
+const tabs: DocsSection[] = ['c01', 'c02', 'c03a', 'c03b', 'c05', 'c06']
 const bundledImages = import.meta.glob('../../assets/docs/*', {
   eager: true,
   query: '?url',
@@ -145,6 +147,7 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
         c03a: parseDocumentation(csC03A, 'C03A / cs'),
         c03b: parseDocumentation(csC03B, 'C03B / cs'),
         c05: parseDocumentation(csC05, 'C05 / cs'),
+        c06: parseDocumentation(csC06, 'C06 / cs'),
       },
       en: {
         c01: parseDocumentation(enC01, 'C01 / en'),
@@ -152,6 +155,7 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
         c03a: parseDocumentation(enC03A, 'C03A / en'),
         c03b: parseDocumentation(enC03B, 'C03B / en'),
         c05: parseDocumentation(enC05, 'C05 / en'),
+        c06: parseDocumentation(enC06, 'C06 / en'),
       },
     }),
     [],
@@ -164,7 +168,7 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
           {tabs.map((item) => (
             <button
               key={item}
-              className={tab === item ? 'active' : ''}
+              className={`${tab === item ? 'active' : ''} ${item === 'c06' ? 'c6-tab' : ''}`.trim()}
               type="button"
               role="tab"
               aria-selected={tab === item}
