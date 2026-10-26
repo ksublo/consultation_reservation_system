@@ -616,7 +616,7 @@
               "Atomic persistence evidence on failure",
               "Complete; both PostgreSQL rollback cases passed."
             ],
-            ["Historical snapshot / integrated baseline", "v0.3-c05 (87a4c5a) / main@85a28cb"]
+            ["Historical snapshot / integrated baseline", "v0.3-c05 (87a4c5a) / main@2b1e404"]
           ]
         }
       ]
@@ -627,7 +627,7 @@
       "blocks": [
         {
           "type": "paragraph",
-          "content": "Historical C05 snapshot: v0.3-c05 (87a4c5a). Integrated documentation, code and tests baseline at assessment: main@85a28cb (Update readme)."
+          "content": "Historical C05 snapshot: v0.3-c05 (87a4c5a). Integrated documentation, code and tests baseline at assessment: main@2b1e404 (update README)."
         },
         {
           "type": "paragraph",
