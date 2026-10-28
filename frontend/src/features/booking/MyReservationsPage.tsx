@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../../api/client'
+import CancellationDetailsDialog from '../../components/CancellationDetailsDialog'
+import CancellationDialog from '../../components/CancellationDialog'
 import HistoryPeriodFilter, {
   filterHistoryByPeriod,
   type HistoryPeriod,
@@ -30,6 +32,7 @@ function ReservationList({
   empty,
   language,
   onCancel,
+  onShowCancellationDetails,
   t,
   now,
 }: {
@@ -37,6 +40,7 @@ function ReservationList({
   empty: string
   language: Language
   onCancel?: (reservation: Reservation) => void
+  onShowCancellationDetails?: (reservation: Reservation) => void
   t: TFunction
   now: number
 }) {
@@ -102,6 +106,17 @@ function ReservationList({
                   ×
                 </button>
               )}
+              {reservation.status === 'CANCELLED' && onShowCancellationDetails && (
+                <button
+                  className="cancellation-details-button"
+                  type="button"
+                  title={t('cancellationDetails')}
+                  aria-label={t('cancellationDetails')}
+                  onClick={() => onShowCancellationDetails(reservation)}
+                >
+                  ✎
+                </button>
+              )}
             </div>
           </article>
         )
@@ -122,6 +137,9 @@ export default function MyReservationsPage({
   const [historyPeriod, setHistoryPeriod] = useState<HistoryPeriod>('lastWeek')
   const [loading, setLoading] = useState(true)
   const [now, setNow] = useState(() => Date.now())
+  const [reservationToCancel, setReservationToCancel] = useState<Reservation | null>(null)
+  const [cancellationDetails, setCancellationDetails] = useState<Reservation | null>(null)
+  const [cancelling, setCancelling] = useState(false)
 
   async function load() {
     try {
@@ -143,9 +161,12 @@ export default function MyReservationsPage({
     void load()
   }, [refreshSignal])
 
-  async function cancelReservation(reservation: Reservation) {
+  async function cancelReservation(note: string) {
+    if (!reservationToCancel) return
+    setCancelling(true)
     try {
-      await api.cancelReservation(session.token, reservation.id, t('cancellationNote'))
+      await api.cancelReservation(session.token, reservationToCancel.id, note)
+      setReservationToCancel(null)
       onToast({ type: 'success', message: t('reservationCancelled') })
       await load()
     } catch (error) {
@@ -153,6 +174,8 @@ export default function MyReservationsPage({
         type: 'error',
         message: error instanceof Error ? error.message : t('reservationCancelFailed'),
       })
+    } finally {
+      setCancelling(false)
     }
   }
 
@@ -186,7 +209,7 @@ export default function MyReservationsPage({
           reservations={activeReservations}
           empty={t('noActiveReservations')}
           language={language}
-          onCancel={(reservation) => void cancelReservation(reservation)}
+          onCancel={setReservationToCancel}
           t={t}
           now={now}
         />
@@ -218,11 +241,25 @@ export default function MyReservationsPage({
             reservations={filteredHistoricalReservations}
             empty={t('emptyHistory')}
             language={language}
+            onShowCancellationDetails={setCancellationDetails}
             t={t}
             now={now}
           />
         )}
       </section>
+      <CancellationDialog
+        reservation={reservationToCancel}
+        isSubmitting={cancelling}
+        onClose={() => setReservationToCancel(null)}
+        onConfirm={(note) => void cancelReservation(note)}
+        t={t}
+      />
+      <CancellationDetailsDialog
+        language={language}
+        reservation={cancellationDetails}
+        onClose={() => setCancellationDetails(null)}
+        t={t}
+      />
     </main>
   )
 }

@@ -439,7 +439,7 @@
         {
           "type": "code",
           "language": "Přehled diagramu",
-          "content": "[Reservation]\nobsahuje stavy:\n- PENDING — čeká na schválení, blokuje termín\n- CONFIRMED — potvrzená, blokuje termín\n- CANCELLED — zrušená, termín neblokuje\n\n[Vytvoření] ---> [PENDING]\n[PENDING] -- schválí vlastník termínu --> [CONFIRMED]\n[PENDING / CONFIRMED] -- oprávněné zrušení --> [CANCELLED]\n\nZrušení: nejméně 3 hodiny před začátkem.\nU CONFIRMED je povinný důvod zrušení."
+          "content": "[Reservation]\nobsahuje stavy:\n- PENDING — čeká na schválení, blokuje termín\n- CONFIRMED — potvrzená, blokuje termín\n- CANCELLED — zrušená, termín neblokuje\n\n[Vytvoření] ---> [PENDING]\n[PENDING] -- schválí vlastník termínu --> [CONFIRMED]\n[PENDING / CONFIRMED] -- oprávněné zrušení --> [CANCELLED]\n\nZrušení: nejméně 3 hodiny před začátkem.\nDůvod zrušení je volitelný; pokud je uveden, uloží se do historie a zobrazí druhému účastníkovi."
         },
         {
           "type": "table",
@@ -466,13 +466,13 @@
               "PENDING → CANCELLED — čekající žádost se zruší nebo zamítne.",
               "ReservationService.cancel() rozhodne; Reservation.cancel() změní stav.",
               "Student vlastnící žádost nebo pedagog vlastnící slot.",
-              "Vztah aktéra, dosavadní stav a nejméně tři hodiny do začátku. Pedagogovo zrušení PENDING se v oznámení popíše jako zamítnutí; stav REJECTED neexistuje."
+              "Vztah aktéra, dosavadní stav a nejméně tři hodiny do začátku. Systém uloží historii a notifikaci druhému účastníkovi; stav REJECTED neexistuje."
             ],
             [
               "CONFIRMED → CANCELLED — potvrzená konzultace se zruší.",
               "ReservationService.cancel() rozhodne; Reservation.cancel() změní stav.",
               "Student vlastnící rezervaci nebo pedagog vlastnící slot.",
-              "Vztah aktéra, časovou hranici a povinný důvod storna."
+              "Vztah aktéra, časovou hranici a případný důvod storna. Pokud je uveden, uloží se do historie a notifikace."
             ]
           ]
         },

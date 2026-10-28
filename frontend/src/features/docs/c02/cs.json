@@ -149,7 +149,7 @@
         {
           "type": "code",
           "language": "Přehled diagramu",
-          "content": "[Reservation]\nobsahuje stavy:\n- PENDING — čeká na schválení, blokuje termín\n- CONFIRMED — potvrzená, blokuje termín\n- CANCELLED — zrušená, termín neblokuje\n\n[Vytvoření] ---> [PENDING]\n[PENDING] -- schválí vlastník termínu --> [CONFIRMED]\n[PENDING / CONFIRMED] -- oprávněné zrušení --> [CANCELLED]\n\nZrušení: nejméně 3 hodiny před začátkem.\nU CONFIRMED je povinný důvod zrušení."
+          "content": "[Reservation]\nobsahuje stavy:\n- PENDING — čeká na schválení, blokuje termín\n- CONFIRMED — potvrzená, blokuje termín\n- CANCELLED — zrušená, termín neblokuje\n\n[Vytvoření] ---> [PENDING]\n[PENDING] -- schválí vlastník termínu --> [CONFIRMED]\n[PENDING / CONFIRMED] -- oprávněné zrušení --> [CANCELLED]\n\nZrušení: nejméně 3 hodiny před začátkem.\nDůvod zrušení je volitelný; pokud je uveden, uloží se do historie a zobrazí druhému účastníkovi."
         }
       ]
     },
@@ -170,7 +170,7 @@
         {
           "type": "code",
           "language": "Přehled diagramu",
-          "content": "[Uživatel vybere operaci]\n    +--> [Dostupnost] --> [Budoucí aktivní termíny bez aktivní rezervace]\n    +--> [Vytvoření] ---> [Kontrola studenta, termínu, limitu a překryvů]\n    |                         +-- splněno --> [PENDING + historie]\n    |                         +-- nesplněno -> [Odmítnutí]\n    +--> [Schválení] ---> [Vlastník termínu + PENDING]\n    |                         +-- splněno --> [CONFIRMED + historie]\n    |                         +-- nesplněno -> [Odmítnutí]\n    +--> [Zrušení] -----> [Oprávnění, stav, časová hranice a důvod]\n                              +-- splněno --> [CANCELLED + historie]\n                              +-- nesplněno -> [Odmítnutí]"
+          "content": "[Uživatel vybere operaci]\n    +--> [Dostupnost] --> [Budoucí aktivní termíny bez aktivní rezervace]\n    +--> [Vytvoření] ---> [Kontrola studenta, termínu, limitu a překryvů]\n    |                         +-- splněno --> [PENDING + historie]\n    |                         +-- nesplněno -> [Odmítnutí]\n    +--> [Schválení] ---> [Vlastník termínu + PENDING]\n    |                         +-- splněno --> [CONFIRMED + historie]\n    |                         +-- nesplněno -> [Odmítnutí]\n    +--> [Zrušení] -----> [Oprávnění, stav, časová hranice a volitelný důvod]\n                              +-- splněno --> [CANCELLED + historie]\n                              +-- nesplněno -> [Odmítnutí]"
         }
       ]
     },

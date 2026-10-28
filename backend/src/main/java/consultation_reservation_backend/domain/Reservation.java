@@ -106,6 +106,14 @@ public class Reservation {
     return cancelledAt;
   }
 
+  public AppUser getCancelledByUser() {
+    return cancelledByUser;
+  }
+
+  public String getCancellationNote() {
+    return cancellationNote;
+  }
+
   public void confirm() {
     this.status = ReservationStatus.CONFIRMED;
     this.confirmedAt = OffsetDateTime.now();
