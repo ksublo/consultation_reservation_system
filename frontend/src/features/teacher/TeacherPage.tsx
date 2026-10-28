@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api } from '../../api/client'
+import CancellationDetailsDialog from '../../components/CancellationDetailsDialog'
+import CancellationDialog from '../../components/CancellationDialog'
+import CancellationReasonField from '../../components/CancellationReasonField'
 import HistoryPeriodFilter, {
   filterHistoryByPeriod,
   type HistoryPeriod,
@@ -145,6 +148,10 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
   const [bulkError, setBulkError] = useState('')
   const [now, setNow] = useState(() => Date.now())
   const [slotToCancel, setSlotToCancel] = useState<ConsultationSlot | null>(null)
+  const [requestToCancel, setRequestToCancel] = useState<Reservation | null>(null)
+  const [cancellationDetails, setCancellationDetails] = useState<Reservation | null>(null)
+  const [requestCancellationNote, setRequestCancellationNote] = useState('')
+  const [cancellingRequest, setCancellingRequest] = useState(false)
   const [showRequestHistory, setShowRequestHistory] = useState(false)
   const [requestHistoryPeriod, setRequestHistoryPeriod] = useState<HistoryPeriod>('lastWeek')
 
@@ -191,7 +198,7 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
     [historicalRequests, now, requestHistoryPeriod],
   )
 
-  const reservationToCancel = slotToCancel
+  const reservationForSlotCancellation = slotToCancel
     ? requests.find(
         (request) =>
           request.slotId === slotToCancel.id &&
@@ -358,9 +365,12 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
     }
   }
 
-  async function cancelReservation(request: Reservation) {
+  async function cancelReservation(note: string) {
+    if (!requestToCancel) return
+    setCancellingRequest(true)
     try {
-      await api.cancelReservation(session.token, request.id, t('cancellationNote'))
+      await api.cancelReservation(session.token, requestToCancel.id, note)
+      setRequestToCancel(null)
       onToast({ type: 'success', message: t('reservationCancelled') })
       await load()
     } catch (error) {
@@ -368,6 +378,8 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
         type: 'error',
         message: error instanceof Error ? error.message : t('reservationCancelFailed'),
       })
+    } finally {
+      setCancellingRequest(false)
     }
   }
 
@@ -391,9 +403,10 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
       await api.cancelSlotWithReservation(
         session.token,
         slotToCancel.id,
-        t('teacherCancellationNote'),
+        requestCancellationNote.trim(),
       )
       setSlotToCancel(null)
+      setRequestCancellationNote('')
       onToast({ type: 'success', message: t('slotCancelled') })
       await load()
     } catch (error) {
@@ -462,10 +475,21 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
                   className="cancel-icon"
                   title={canCancel ? t('cancel') : t('cancelTooLate')}
                   disabled={!canCancel}
-                  onClick={() => void cancelReservation(request)}
+                  onClick={() => setRequestToCancel(request)}
                 >
                   ×
                 </button>
+                {request.status === 'CANCELLED' && (
+                  <button
+                    className="cancellation-details-button"
+                    type="button"
+                    title={t('cancellationDetails')}
+                    aria-label={t('cancellationDetails')}
+                    onClick={() => setCancellationDetails(request)}
+                  >
+                    ✎
+                  </button>
+                )}
               </div>
             </div>
           )
@@ -473,6 +497,24 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
       </div>
     )
   }
+
+  const cancellationModals = (
+    <>
+      <CancellationDialog
+        reservation={requestToCancel}
+        isSubmitting={cancellingRequest}
+        onClose={() => setRequestToCancel(null)}
+        onConfirm={(note) => void cancelReservation(note)}
+        t={t}
+      />
+      <CancellationDetailsDialog
+        language={language}
+        reservation={cancellationDetails}
+        onClose={() => setCancellationDetails(null)}
+        t={t}
+      />
+    </>
+  )
 
   if (view === 'requests') {
     return (
@@ -521,6 +563,7 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
             </>
           )}
         </section>
+        {cancellationModals}
       </main>
     )
   }
@@ -607,7 +650,14 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
                 <button
                   className={occupied ? 'slot occupied' : 'slot'}
                   key={slot.id}
-                  onClick={() => (occupied ? setSlotToCancel(slot) : void cancelOpenSlot(slot))}
+                  onClick={() => {
+                    if (occupied) {
+                      setRequestCancellationNote('')
+                      setSlotToCancel(slot)
+                      return
+                    }
+                    void cancelOpenSlot(slot)
+                  }}
                 >
                   <span>
                     {time.format(new Date(slot.startsAt))}–{time.format(new Date(slot.endsAt))}
@@ -682,17 +732,31 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
           >
             <h2 id="cancel-occupied-slot-title">{t('cancelOccupiedSlotTitle')}</h2>
             <p>{t('cancelOccupiedSlotMessage')}</p>
-            {reservationToCancel && (
+            {reservationForSlotCancellation && (
               <div className="modal-student">
                 <strong>
-                  {reservationToCancel.studentFirstName} {reservationToCancel.studentLastName}
+                  {reservationForSlotCancellation.studentFirstName}{' '}
+                  {reservationForSlotCancellation.studentLastName}
                 </strong>
-                <span>{reservationToCancel.studentLogin}</span>
-                <span>{reservationToCancel.studentEmail}</span>
+                <span>{reservationForSlotCancellation.studentLogin}</span>
+                <span>{reservationForSlotCancellation.studentEmail}</span>
               </div>
             )}
+            <CancellationReasonField
+              id="slot-cancellation-note"
+              note={requestCancellationNote}
+              onChange={(event) => setRequestCancellationNote(event.target.value)}
+              t={t}
+            />
             <div className="modal-actions">
-              <button type="button" className="text-button" onClick={() => setSlotToCancel(null)}>
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => {
+                  setRequestCancellationNote('')
+                  setSlotToCancel(null)
+                }}
+              >
                 {t('back')}
               </button>
               <button
@@ -900,6 +964,7 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
           </section>
         </div>
       )}
+      {cancellationModals}
     </main>
   )
 }

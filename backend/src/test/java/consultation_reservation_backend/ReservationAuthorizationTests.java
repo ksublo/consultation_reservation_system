@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 import consultation_reservation_backend.api.ConsultationSlotController;
 import consultation_reservation_backend.api.ReservationController;
@@ -246,9 +247,41 @@ class ReservationAuthorizationTests {
   @Test
   void studentCancelsOwnReservation() throws Exception {
     login(student, UserRole.STUDENT);
-    request("cancel", "{\"note\":\"Cannot attend\"}").andExpect(status().isOk());
+    request("cancel", "{\"note\":\"Cannot attend\"}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("CANCELLED"))
+        .andExpect(jsonPath("$.cancelledByName").value("student Test"))
+        .andExpect(jsonPath("$.cancellationNote").value("Cannot attend"))
+        .andExpect(jsonPath("$.cancelledAt").isNotEmpty());
     assertEquals(ReservationStatus.CANCELLED, reservation.getStatus());
     verify(history).save(any(ReservationHistory.class));
+    var message = org.mockito.ArgumentCaptor.forClass(String.class);
+    verify(notifications)
+        .create(
+            eq(teacher),
+            eq(reservation),
+            eq("RESERVATION_CANCELLED"),
+            eq("Rezervace byla zrušena"),
+            message.capture());
+    assertTrue(message.getValue().contains("zrušil konzultaci dne"));
+    assertTrue(message.getValue().contains("Důvod: Cannot attend."));
+  }
+
+  @Test
+  void confirmedReservationCanBeCancelledWithoutReason() throws Exception {
+    login(teacher, UserRole.TEACHER);
+    reservation.confirm();
+
+    request("cancel", "{}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("CANCELLED"))
+        .andExpect(jsonPath("$.cancelledByName").value("owner Test"))
+        .andExpect(jsonPath("$.cancellationNote").doesNotExist());
+
+    assertEquals(ReservationStatus.CANCELLED, reservation.getStatus());
+    verify(history).save(any(ReservationHistory.class));
+    verify(notifications)
+        .create(eq(student), eq(reservation), eq("RESERVATION_CANCELLED"), anyString(), anyString());
   }
 
   @Test

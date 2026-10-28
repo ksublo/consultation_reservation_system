@@ -563,6 +563,29 @@ main.login-page {
 .confirmation-modal {
   @apply max-w-md;
 }
+.cancellation-modal .labeled-field,
+.confirmation-modal .labeled-field {
+  @apply mt-5 grid gap-2 text-sm font-bold text-slate-700;
+}
+.cancellation-modal textarea,
+.confirmation-modal textarea {
+  @apply min-h-24 w-full resize-y font-normal;
+}
+.cancellation-note-hint {
+  @apply mt-2 text-sm text-slate-500;
+}
+.cancellation-details {
+  @apply mt-5 grid gap-4;
+}
+.cancellation-details div {
+  @apply grid gap-1 rounded-xl bg-slate-50 p-3;
+}
+.cancellation-details dt {
+  @apply text-xs font-extrabold uppercase tracking-wide text-slate-500;
+}
+.cancellation-details dd {
+  @apply m-0 text-sm text-ink;
+}
 .bulk-slot-modal {
   @apply my-auto max-h-[92vh] max-w-2xl overflow-y-auto;
 }
@@ -754,7 +777,8 @@ main.login-page {
   @apply mt-1 text-slate-600;
 }
 .approve-icon,
-.cancel-icon {
+.cancel-icon,
+.cancellation-details-button {
   @apply grid h-9 w-9 place-items-center rounded-full text-lg font-bold;
 }
 .approve-icon {
@@ -762,6 +786,9 @@ main.login-page {
 }
 .cancel-icon {
   @apply bg-rose-100 text-rose-700;
+}
+.cancellation-details-button {
+  @apply bg-sky-100 text-sky-700 hover:bg-sky-200;
 }
 .approve-icon:disabled,
 .cancel-icon:disabled {

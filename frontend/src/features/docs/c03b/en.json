@@ -443,7 +443,7 @@
         {
           "type": "code",
           "language": "Diagram overview",
-          "content": "[Reservation]\ncontains states:\n- PENDING — awaiting approval, blocks the slot\n- CONFIRMED — approved, blocks the slot\n- CANCELLED — cancelled, releases the slot\n\n[Creation] ---> [PENDING]\n[PENDING] -- slot owner approves --> [CONFIRMED]\n[PENDING / CONFIRMED] -- authorized cancellation --> [CANCELLED]\n\nCancellation: at least 3 hours before the start.\nCancelling CONFIRMED requires a reason."
+          "content": "[Reservation]\ncontains states:\n- PENDING — awaiting approval, blocks the slot\n- CONFIRMED — approved, blocks the slot\n- CANCELLED — cancelled, releases the slot\n\n[Creation] ---> [PENDING]\n[PENDING] -- slot owner approves --> [CONFIRMED]\n[PENDING / CONFIRMED] -- authorized cancellation --> [CANCELLED]\n\nCancellation: at least 3 hours before the start.\nThe cancellation reason is optional; when provided, it is stored in the history and shown to the other participant."
         },
         {
           "type": "table",
@@ -470,13 +470,13 @@
               "PENDING → CANCELLED — a pending request is cancelled or declined.",
               "ReservationService.cancel() decides; Reservation.cancel() changes the state.",
               "The student who owns the request or the teacher who owns the slot.",
-              "Actor relationship, current state, and at least three hours before start. A teacher cancellation of PENDING is described as a decline in the notification; there is no REJECTED status."
+              "Actor relationship, current state, and at least three hours before start. The system stores history and notifies the other participant; there is no REJECTED status."
             ],
             [
               "CONFIRMED → CANCELLED — a confirmed consultation is cancelled.",
               "ReservationService.cancel() decides; Reservation.cancel() changes the state.",
               "The student who owns the reservation or the teacher who owns the slot.",
-              "Actor relationship, time cutoff, and required cancellation reason."
+              "Actor relationship, time cutoff, and an optional cancellation reason. When provided, it is stored in the history and notification."
             ]
           ]
         },
