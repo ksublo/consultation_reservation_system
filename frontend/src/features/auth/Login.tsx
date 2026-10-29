@@ -12,7 +12,7 @@ interface LoginProps {
 export default function Login({ role, onLogin, t }: LoginProps) {
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
-  const [settingUpPasskey, setSettingUpPasskey] = useState(false)
+  const [mode, setMode] = useState<'passkey' | 'password' | 'setup'>('password')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -25,9 +25,12 @@ export default function Login({ role, onLogin, t }: LoginProps) {
     }
     setBusy(true)
     try {
-      const session = settingUpPasskey
-        ? await api.registerPasskey(login, password, role)
-        : await api.loginWithPasskey(login, role)
+      const session =
+        mode === 'setup'
+          ? await api.registerPasskey(login, password, role)
+          : mode === 'password'
+            ? await api.loginWithPassword(login, password, role)
+            : await api.loginWithPasskey(login, role)
       setPassword('')
       onLogin(session)
     } catch (requestError) {
@@ -64,7 +67,7 @@ export default function Login({ role, onLogin, t }: LoginProps) {
               placeholder="ABC0001"
             />
           </div>
-          {settingUpPasskey && (
+          {mode !== 'passkey' && (
             <div className="labeled-field login-field">
               <label htmlFor="password">{t('passwordForPasskeySetup')}</label>
               <input
@@ -80,9 +83,11 @@ export default function Login({ role, onLogin, t }: LoginProps) {
           <button className="reserve-button" disabled={busy}>
             {busy
               ? t('pleaseWait')
-              : settingUpPasskey
+              : mode === 'setup'
                 ? t('createPasskey')
-                : t('signInWithPasskey')}
+                : mode === 'password'
+                  ? t('signIn')
+                  : t('signInWithPasskey')}
           </button>
           <button
             className="passkey-setup-link"
@@ -91,12 +96,26 @@ export default function Login({ role, onLogin, t }: LoginProps) {
             onClick={() => {
               setError('')
               setPassword('')
-              setSettingUpPasskey((current) => !current)
+              setMode((current) => (current === 'passkey' ? 'password' : 'passkey'))
             }}
           >
-            {settingUpPasskey ? t('cancelPasskeySetup') : t('setUpPasskey')}
+            {mode === 'password' ? t('signInWithPasskey') : t('signInWithPassword')}
           </button>
-          <p className="login-hint">{t('passkeySetupHint')}</p>
+          {mode !== 'password' && (
+            <button
+              className="passkey-setup-link"
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                setError('')
+                setPassword('')
+                setMode((current) => (current === 'setup' ? 'passkey' : 'setup'))
+              }}
+            >
+              {mode === 'setup' ? t('cancelPasskeySetup') : t('setUpPasskey')}
+            </button>
+          )}
+          {mode === 'setup' && <p className="login-hint">{t('passkeySetupHint')}</p>}
           {error && <span className="login-error">{error}</span>}
         </form>
       </section>
