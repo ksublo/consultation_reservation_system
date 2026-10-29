@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../../api/client'
-import HistoryPeriodFilter, {
-  filterHistoryByPeriod,
-  type HistoryPeriod,
-} from '../../components/HistoryPeriodFilter'
+import HistoryPeriodFilter from '../../components/HistoryPeriodFilter'
+import { filterHistoryByPeriod, type HistoryPeriod } from '../../components/history-period'
 import type { Language, TFunction } from '../../i18n'
 import { localeFor } from '../../i18n'
 import type { Reservation, Session, Toast } from '../../types/api'

@@ -270,7 +270,11 @@ async function loginWithPasskey(login: string, role: UserRole): Promise<Session>
   )
 }
 
-async function loginWithPassword(login: string, password: string, role: UserRole): Promise<Session> {
+async function loginWithPassword(
+  login: string,
+  password: string,
+  role: UserRole,
+): Promise<Session> {
   return readJson<Session>(
     await fetch(`${API_ROOT}/auth/password/login`, {
       method: 'POST',

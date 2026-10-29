@@ -87,7 +87,7 @@ export default function Login({ role, onLogin, t }: LoginProps) {
                 ? t('createPasskey')
                 : mode === 'password'
                   ? t('signIn')
-                : t('signInWithPasskey')}
+                  : t('signInWithPasskey')}
           </button>
           <button
             className="passkey-setup-link"
@@ -96,7 +96,7 @@ export default function Login({ role, onLogin, t }: LoginProps) {
             onClick={() => {
               setError('')
               setPassword('')
-              setMode((current) => current === 'passkey' ? 'password' : 'passkey')
+              setMode((current) => (current === 'passkey' ? 'password' : 'passkey'))
             }}
           >
             {mode === 'password' ? t('signInWithPasskey') : t('signInWithPassword')}
@@ -109,7 +109,7 @@ export default function Login({ role, onLogin, t }: LoginProps) {
               onClick={() => {
                 setError('')
                 setPassword('')
-                setMode((current) => current === 'setup' ? 'passkey' : 'setup')
+                setMode((current) => (current === 'setup' ? 'passkey' : 'setup'))
               }}
             >
               {mode === 'setup' ? t('cancelPasskeySetup') : t('setUpPasskey')}
