@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api } from '../../api/client'
 import type { Language, TFunction } from '../../i18n'
 import { localeFor } from '../../i18n'
-import type { ConsultationSlot, Session, Teacher, Toast } from '../../types/api'
+import type { ConsultationSlot, Reservation, Session, Teacher, Toast } from '../../types/api'
 
 const timeZone = 'Europe/Prague'
 const weekdays = {
@@ -32,6 +32,17 @@ const normalizeSearchText = (value: string) =>
     .replace(/\p{Diacritic}/gu, '')
     .toLocaleLowerCase('cs-CZ')
     .trim()
+
+function academicYearStartYear(value: Date) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: 'numeric',
+  }).formatToParts(value)
+  const year = Number(parts.find((part) => part.type === 'year')?.value)
+  const month = Number(parts.find((part) => part.type === 'month')?.value)
+  return month >= 9 ? year : year - 1
+}
 
 interface BookingPageProps {
   session: Session
@@ -74,6 +85,24 @@ export default function BookingPage({
   const [reasonDescription, setReasonDescription] = useState('')
   const [consultationMode, setConsultationMode] = useState<'ONLINE' | 'OFFLINE'>('OFFLINE')
   const [loading, setLoading] = useState(true)
+  const [reservations, setReservations] = useState<Reservation[]>([])
+  const [reservationsLoading, setReservationsLoading] = useState(true)
+  const [dashboardNow, setDashboardNow] = useState(() => Date.now())
+
+  async function loadReservations() {
+    try {
+      const data = await api.getReservations(session.token, session.userId)
+      setReservations(data.filter((item) => item.studentId === session.userId))
+      setDashboardNow(Date.now())
+    } catch (error) {
+      onToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : t('loadMyReservationsFailed'),
+      })
+    } finally {
+      setReservationsLoading(false)
+    }
+  }
 
   async function loadSlots() {
     try {
@@ -95,7 +124,13 @@ export default function BookingPage({
   }
   useEffect(() => {
     void loadSlots()
+    void loadReservations()
   }, [refreshSignal])
+
+  useEffect(() => {
+    const interval = window.setInterval(() => void loadReservations(), 30000)
+    return () => window.clearInterval(interval)
+  }, [session.token, session.userId])
 
   const teachers = useMemo(
     () =>
@@ -185,7 +220,7 @@ export default function BookingPage({
       )[0]
     const firstDate = first ? slotDateKey(first.startsAt) : ''
     setTeacherId(id)
-    setTeacherQuery('')
+    setTeacherQuery(teachers.find((item) => item.id === id)?.name ?? '')
     setSelectedDate(firstDate)
     setSlotId('')
     if (firstDate) setMonth(monthFor(firstDate))
@@ -221,6 +256,7 @@ export default function BookingPage({
       setReasonDescription('')
       setConsultationMode('OFFLINE')
       await loadSlots()
+      await loadReservations()
     } catch (error) {
       const isSlotConflict =
         error instanceof Error &&
@@ -247,6 +283,48 @@ export default function BookingPage({
       await loadSlots()
     }
   }
+
+  const currentAcademicYear = academicYearStartYear(new Date(dashboardNow))
+  const academicYearReservations = reservations.filter(
+    (reservation) => academicYearStartYear(new Date(reservation.startsAt)) === currentAcademicYear,
+  )
+  const reservationStats = {
+    total: academicYearReservations.length,
+    approved: academicYearReservations.filter(
+      (item) => item.status === 'CONFIRMED' && new Date(item.endsAt).getTime() >= dashboardNow,
+    ).length,
+    pending: academicYearReservations.filter(
+      (item) => item.status === 'PENDING' && new Date(item.endsAt).getTime() >= dashboardNow,
+    ).length,
+    cancelled: academicYearReservations.filter(
+      (item) => item.status === 'CANCELLED' && new Date(item.startsAt).getTime() >= dashboardNow,
+    ).length,
+    completed: academicYearReservations.filter(
+      (item) => item.status === 'CONFIRMED' && new Date(item.endsAt).getTime() < dashboardNow,
+    ).length,
+    unsuccessful: academicYearReservations.filter(
+      (item) =>
+        (item.status === 'CANCELLED' && new Date(item.startsAt).getTime() < dashboardNow) ||
+        (item.status === 'PENDING' && new Date(item.endsAt).getTime() < dashboardNow),
+    ).length,
+  }
+  const teacherCounts = [
+    ...academicYearReservations
+      .reduce((counts, reservation) => {
+        const current = counts.get(reservation.teacherId)
+        counts.set(reservation.teacherId, {
+          id: reservation.teacherId,
+          name: reservation.teacherName,
+          count: (current?.count ?? 0) + 1,
+        })
+        return counts
+      }, new Map<string, { id: string; name: string; count: number }>())
+      .values(),
+  ].sort(
+    (left, right) =>
+      right.count - left.count ||
+      left.name.localeCompare(right.name, language === 'cs' ? 'cs-CZ' : 'en'),
+  )
 
   return (
     <main>
@@ -310,6 +388,65 @@ export default function BookingPage({
           )}
         </div>
       </section>
+      {!teacher && (
+        <section className="student-dashboard" aria-labelledby="student-dashboard-title">
+          <div className="student-dashboard-heading">
+            <div>
+              <span className="label">{t('studentDashboardEyebrow')}</span>
+              <h2 id="student-dashboard-title">{t('studentDashboardTitle')}</h2>
+            </div>
+            <span className="academic-year-badge">
+              {currentAcademicYear}/{currentAcademicYear + 1} · {t('academicYear')}
+            </span>
+          </div>
+          {reservationsLoading ? (
+            <p className="muted">{t('loading')}</p>
+          ) : academicYearReservations.length === 0 ? (
+            <p className="dashboard-empty">{t('noAcademicYearConsultations')}</p>
+          ) : null}
+          <div className="dashboard-stat-grid">
+            {(
+              [
+                ['total', 'dashboardTotal', '✦'],
+                ['approved', 'dashboardApproved', '✓'],
+                ['pending', 'dashboardPending', '◷'],
+                ['cancelled', 'dashboardCancelled', '×'],
+                ['completed', 'dashboardCompleted', '★'],
+                ['unsuccessful', 'dashboardUnsuccessful', '↗'],
+              ] as const
+            ).map(([key, label, icon]) => (
+              <article className={`dashboard-stat dashboard-stat-${key}`} key={key}>
+                <div className="dashboard-stat-heading">
+                  <span className="dashboard-stat-icon" aria-hidden="true">
+                    {icon}
+                  </span>
+                  <span className="dashboard-stat-label">{t(label)}</span>
+                </div>
+                <strong>{reservationStats[key]}</strong>
+              </article>
+            ))}
+          </div>
+          {!reservationsLoading && teacherCounts.length >= 3 && (
+            <section className="top-teachers" aria-labelledby="top-teachers-title">
+              <div>
+                <h3 id="top-teachers-title">{t('topTeachers')}</h3>
+                <p>{t('topTeachersHint')}</p>
+              </div>
+              <div className="top-teacher-list">
+                {teacherCounts.slice(0, 3).map((teacher, index) => (
+                  <article className="top-teacher" key={teacher.id}>
+                    <span className={`top-teacher-rank rank-${index + 1}`}>{index + 1}</span>
+                    <strong>{teacher.name}</strong>
+                    <span>
+                      {teacher.count} {t('consultationCount')}
+                    </span>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+        </section>
+      )}
       {teacher ? (
         <div className="booking-grid">
           <section className="card">
