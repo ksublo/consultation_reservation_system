@@ -270,6 +270,16 @@ async function loginWithPasskey(login: string, role: UserRole): Promise<Session>
   )
 }
 
+async function loginWithPassword(login: string, password: string, role: UserRole): Promise<Session> {
+  return readJson<Session>(
+    await fetch(`${API_ROOT}/auth/password/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login, password, role }),
+    }),
+  )
+}
+
 async function registerPasskey(login: string, password: string, role: UserRole): Promise<Session> {
   const credentials = requireWebAuthn()
   const ceremony = await readJson<PasskeyCeremonyOptions>(
@@ -310,6 +320,7 @@ export const api = {
     apiLanguage = language
   },
   loginWithPasskey,
+  loginWithPassword,
   registerPasskey,
   logout: async (token: string): Promise<void> => {
     await fetch(`${API_ROOT}/auth/logout`, { method: 'POST', headers: authorization(token) })

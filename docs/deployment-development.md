@@ -52,7 +52,7 @@ Po prvním úspěšném nasazení zkopírujte veřejnou URL Render služby a vlo
 
 ## Samostatná databáze a demonstrační data
 
-Flyway v Supabase vytvoří také tabulky pro passkeys. Každý demo účet si při prvním přihlášení založí passkey pomocí demo hesla `password`; heslo se použije jen při tomto jednorázovém nastavení a běžné přihlášení už používá passkey.
+Flyway v Supabase vytvoří také tabulky pro passkeys. Přihlásit se lze passkey nebo přímo loginem a heslem. Každý demo účet si může passkey založit pomocí demo hesla `password`; passkey tak zůstává pohodlnou možností, zatímco přihlášení heslem funguje i v nepodporovaném prohlížeči nebo zařízení.
 
 ## Omezení bezplatných plánů
 
