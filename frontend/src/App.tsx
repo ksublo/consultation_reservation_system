@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { api } from './api/client'
 import ErrorBoundary from './components/ErrorBoundary'
 import ErrorPage from './components/ErrorPage'
-import DocumentationPage from './features/docs/DocumentationPage'
 import Navigation from './components/Navigation'
 import Login from './features/auth/Login'
 import BookingPage from './features/booking/BookingPage'
@@ -11,6 +10,8 @@ import TeacherPage from './features/teacher/TeacherPage'
 import type { Notification, Session, Toast, UserRole } from './types/api'
 import { createTranslator, type Language } from './i18n'
 import './index.css'
+
+const DocumentationPage = lazy(() => import('./features/docs/DocumentationPage'))
 
 function storedSession(): Session | null {
   const stored = sessionStorage.getItem('session')
@@ -114,7 +115,15 @@ export default function App() {
             t={t}
           />
           {publicView === 'docs' ? (
-            <DocumentationPage language={language} t={t} />
+            <Suspense
+              fallback={
+                <main>
+                  <p className="muted">{t('loading')}</p>
+                </main>
+              }
+            >
+              <DocumentationPage language={language} t={t} />
+            </Suspense>
           ) : (
             <main className="login-page">
               <section className="login-card">

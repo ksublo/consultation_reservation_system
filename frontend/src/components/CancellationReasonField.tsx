@@ -10,18 +10,16 @@ interface Props {
 
 export default function CancellationReasonField({ id, note, onChange, t }: Props) {
   return (
-    <>
-      <label className="labeled-field" htmlFor={id}>
-        {t('cancellationReason')}
-        <textarea
-          id={id}
-          value={note}
-          maxLength={1000}
-          placeholder={t('cancellationReasonPlaceholder')}
-          onChange={onChange}
-        />
-      </label>
+    <div className="cancellation-reason-field">
+      <label htmlFor={id}>{t('cancellationReason')}</label>
+      <textarea
+        id={id}
+        value={note}
+        maxLength={1000}
+        placeholder={t('cancellationReasonPlaceholder')}
+        onChange={onChange}
+      />
       <p className="cancellation-note-hint">{t('cancellationReasonOptional')}</p>
-    </>
+    </div>
   )
 }

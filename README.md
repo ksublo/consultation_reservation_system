@@ -95,7 +95,33 @@ Obsah je uložen jako JSON soubory s českou a anglickou verzí pro každou čá
 frontend/src/features/docs/
 ├── README.md              # Struktura obsahu a pravidla pro jeho rozšíření
 ├── documentation-model.ts # Typy a validace dokumentů
-├── DocumentationPage.tsx  # Společné zobrazení a navigace
+├── DocumentationPage.tsx  # Sp
++            + actor.getFirstName()
++            + " "
++            + actor.getLastName()
++            + " zrušil konzultaci dne "
++            + APPOINTMENT_TIME.format(reservation.getSlot().getStartsAt())
++            + "."
++            + (request.note() == null || request.note().isBlank()
++                ? ""
++                : " Důvod: " + request.note().trim() + ".");
+     notifications.create(
+         recipient,
+         reservation,
+         "RESERVATION_CANCELLED",
+-        previous == ReservationStatus.PENDING && !isStudent
+-            ? "Žádost byla zamítnuta"
+-            : "Rezervace byla zrušena",
++        "Rezervace byla zrušena",
+         message);
+     return ReservationResponse.from(reservation);
+netopus@netopus-ROG-Strix-G713QM:~/consultation_reservation_system$ 
+netopus@netopus-ROG-Strix-G713QM:~/consultation_reservation_system$ git status
+On branch feat/explain_cancel
+Your branch is up to date with 'origin/feat/explain_cancel'.
+
+nothing to commit, working tree clean
+netopus@netopus-ROG-Strix-G713QM:~/consultation_reservation_system$ olečné zobrazení a navigace
 ├── c01/                   # C01
 ├── c02/                   # C02
 ├── c03a/                  # C03, část A

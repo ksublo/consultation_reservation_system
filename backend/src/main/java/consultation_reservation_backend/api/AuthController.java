@@ -71,6 +71,12 @@ public class AuthController {
     this.mapper = mapper;
   }
 
+  @PostMapping("/password/login")
+  public LoginResponse authenticatePassword(@Valid @RequestBody LoginRequest request) {
+    AppUser user = findUser(request.login());
+    return auth.loginWithPassword(user, request.password(), request.role());
+  }
+
   @PostMapping("/passkey/register/options")
   public CeremonyOptions registrationOptions(@Valid @RequestBody LoginRequest request) {
     expireOldFlows();

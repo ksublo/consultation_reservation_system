@@ -35,6 +35,22 @@ public class AuthService {
         role);
   }
 
+  public LoginResponse loginWithPassword(AppUser user, String password, UserRole role) {
+    if (!matchesPassword(user, password))
+      throw new ApiException(HttpStatus.UNAUTHORIZED, "Neplatný login nebo heslo.");
+    if (!user.hasRole(role))
+      throw new ApiException(HttpStatus.FORBIDDEN, "Tento účet nemá zvolenou roli.");
+    AuthSession session = sessions.save(new AuthSession(user, role));
+    return new LoginResponse(
+        session.getId().toString(),
+        user.getId(),
+        user.getLogin(),
+        user.getFirstName(),
+        user.getLastName(),
+        user.getRoles(),
+        role);
+  }
+
   public boolean matchesPassword(AppUser user, String password) {
     return passwordEncoder.matches(password, user.getPasswordHash());
   }
