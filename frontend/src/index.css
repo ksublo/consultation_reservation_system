@@ -58,7 +58,7 @@ main {
   @apply text-xs font-extrabold tracking-widest text-vsb;
 }
 .teacher-panel h2 {
-  @apply mt-1 text-xl font-bold text-ink;
+  @apply mt-1 text-xl font-bold leading-tight text-ink;
 }
 .teacher-select {
   @apply grid gap-1 text-xs font-bold text-slate-500;
@@ -387,7 +387,7 @@ main.login-page {
   @apply ml-auto flex shrink-0 items-center gap-2;
 }
 .navigation-actions .user-role {
-  @apply hidden whitespace-nowrap text-sm font-medium text-slate-600 sm:block;
+  @apply hidden whitespace-nowrap text-sm font-semibold leading-5 text-slate-600 sm:block;
 }
 .language-switch {
   @apply flex shrink-0 rounded-full border border-slate-200 bg-white p-1;
@@ -400,6 +400,8 @@ main.login-page {
 }
 .navigation-actions .user-role b {
   @apply font-bold text-ink;
+  font-size: inherit;
+  line-height: inherit;
 }
 .icon-button {
   @apply grid h-10 w-10 place-items-center rounded-full border bg-white p-0 transition-colors;
@@ -418,11 +420,11 @@ main.login-page {
 }
 .site-navigation .navigation-label,
 .navigation-actions .user-role {
-  @apply text-sm font-medium tracking-normal text-slate-600;
+  @apply text-sm font-semibold leading-5 tracking-normal text-slate-600;
 }
 /* Only the application title copies the pre-existing Student label styling. */
 .site-navigation .navigation-label {
-  @apply text-sm font-medium tracking-normal text-slate-600;
+  @apply text-sm font-semibold leading-5 tracking-normal text-slate-600;
 }
 .section-title > div {
   @apply flex items-baseline gap-2;
@@ -1071,7 +1073,7 @@ main.login-page {
     display: flex;
   }
   .site-navigation .primary-navigation {
-    gap: 0.25rem;
+    gap: 0.5rem;
   }
   .site-navigation .desktop-controls {
     gap: 1rem;
@@ -1462,39 +1464,43 @@ main.login-page {
 }
 
 .student-dashboard {
-  margin: 1.25rem 0 1.5rem;
-  padding: clamp(1.25rem, 3vw, 2rem);
+  margin: 1.5rem 0 1.75rem;
+  padding: 1.25rem;
   overflow: hidden;
-  border: 1px solid #dceeea;
-  border-radius: 1.75rem;
+  border: 1px solid #cfe9e4;
+  border-radius: 2rem;
   background:
-    radial-gradient(ellipse at 100% 0%, rgb(0 164 153 / 0.12), transparent 38%),
-    linear-gradient(135deg, #fff 0%, #f5fbfa 100%);
-  box-shadow: 0 14px 36px rgb(16 42 67 / 0.06);
+    radial-gradient(circle at 100% 0%, rgb(0 164 153 / 0.14), transparent 34%),
+    linear-gradient(145deg, #ffffff 0%, #f4fbfa 100%);
+  box-shadow: 0 16px 40px rgb(16 42 67 / 0.07);
+}
+@media (min-width: 640px) {
+  .student-dashboard {
+    padding: 1.5rem;
+  }
 }
 .student-dashboard-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.1rem;
+  border-bottom: 1px solid rgb(207 233 228 / 0.8);
 }
 .student-dashboard-heading h2 {
   margin: 0.35rem 0 0;
   color: #102a43;
-  font-size: clamp(1.25rem, 2.4vw, 1.75rem);
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: normal;
+  line-height: 1.25;
 }
 .academic-year-badge {
   flex: 0 0 auto;
-  padding: 0.55rem 0.85rem;
-  border: 1px solid #cde8e3;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.8);
-  color: #007f78;
+  color: #64748b;
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 .dashboard-empty {
   margin: 0 0 1rem;
@@ -1508,38 +1514,41 @@ main.login-page {
 .dashboard-stat-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.65rem;
+  gap: 0.85rem;
 }
 .dashboard-stat {
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.55rem;
-  min-height: 8rem;
-  padding: 0.7rem 0.55rem;
-  text-align: center;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 8.75rem;
+  padding: 1rem;
   overflow: hidden;
-  border: 1px solid #e7edf2;
-  border-radius: 1.25rem;
-  background: rgb(255 255 255 / 0.92);
-  box-shadow: 0 4px 14px rgb(16 42 67 / 0.035);
+  border: 1px solid #e3edf0;
+  border-radius: 1.35rem;
+  background: rgb(255 255 255 / 0.96);
+  box-shadow: 0 5px 16px rgb(16 42 67 / 0.04);
   transition:
     transform 160ms ease,
     box-shadow 160ms ease;
 }
+.dashboard-stat::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 0.22rem;
+  content: '';
+  background: #00a499;
+}
 .dashboard-stat-heading {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  width: fit-content;
+  gap: 0.65rem;
   max-width: 100%;
-  padding: 0.35rem 0.65rem;
-  border-radius: 0.8rem;
-  background: #e8f7f4;
-  text-align: center;
+  padding: 0;
 }
 .dashboard-stat:hover {
   transform: translateY(-2px);
@@ -1547,63 +1556,64 @@ main.login-page {
 }
 .dashboard-stat-icon {
   display: grid;
-  width: 1.7rem;
-  height: 1.7rem;
+  width: 2.15rem;
+  height: 2.15rem;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 0;
-  background: transparent;
+  border-radius: 0.75rem;
+  background: #e8f7f4;
   color: #008b82;
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 900;
 }
 .dashboard-stat-label {
   color: #52657c;
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 800;
   line-height: 1.35;
-  text-align: center;
 }
 .dashboard-stat strong {
-  align-self: center;
+  align-self: flex-start;
   color: #102a43;
-  font-size: 1.9rem;
+  font-size: 2.35rem;
   font-weight: 900;
-  line-height: 1;
-  text-align: center;
+  letter-spacing: -0.06em;
+  line-height: 0.9;
 }
 .dashboard-stat-approved .dashboard-stat-icon,
 .dashboard-stat-completed .dashboard-stat-icon {
   color: #238148;
 }
 .dashboard-stat-pending .dashboard-stat-icon {
+  background: #fff5df;
   color: #a66a00;
 }
 .dashboard-stat-cancelled .dashboard-stat-icon,
 .dashboard-stat-unsuccessful .dashboard-stat-icon {
+  background: #fff0ee;
   color: #c34c42;
 }
 .dashboard-stat-approved .dashboard-stat-heading,
 .dashboard-stat-completed .dashboard-stat-heading {
-  background: #e9f7ed;
+  background: transparent;
 }
 .dashboard-stat-pending .dashboard-stat-heading {
-  background: #fff5df;
+  background: transparent;
 }
 .dashboard-stat-cancelled .dashboard-stat-heading,
 .dashboard-stat-unsuccessful .dashboard-stat-heading {
-  background: #fff0ee;
+  background: transparent;
 }
 .top-teachers {
   display: grid;
   grid-template-columns: minmax(12rem, 0.7fr) minmax(0, 2fr);
   align-items: center;
   gap: 1rem;
-  margin-top: 1rem;
-  padding: 1rem 1.1rem;
-  border: 1px solid #e2eeec;
-  border-radius: 1.25rem;
-  background: rgb(255 255 255 / 0.78);
+  margin-top: 1.25rem;
+  padding: 1.15rem;
+  border: 1px solid #d9ebe8;
+  border-radius: 1.35rem;
+  background: rgb(255 255 255 / 0.84);
 }
 .top-teachers h3 {
   margin: 0;
@@ -1628,9 +1638,10 @@ main.login-page {
   column-gap: 0.55rem;
   row-gap: 0.15rem;
   min-width: 0;
-  padding: 0.65rem 0.7rem;
-  border-radius: 0.9rem;
-  background: #f7fafb;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid #edf2f3;
+  border-radius: 1rem;
+  background: #ffffff;
 }
 .top-teacher-rank {
   display: grid;

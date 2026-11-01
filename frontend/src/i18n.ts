@@ -49,7 +49,7 @@ const messages = {
     dashboardUnsuccessful: 'Neuskutečněné / zamítnuté',
     noAcademicYearConsultations:
       'Zatím tu nemáš žádné konzultace. Až si nějakou rezervuješ, uvidíš ji v tomto přehledu.',
-    topTeachers: 'Tvoji nejčastější učitelé',
+    topTeachers: 'Učitelé, se kterými konzultuješ nejčastěji',
     topTeachersHint: 'Podle počtu konzultací v tomto akademickém roce',
     consultationCount: 'konzultací',
     enterTeacherName: 'Zadejte jméno a příjmení',
@@ -230,7 +230,7 @@ const messages = {
     dashboardUnsuccessful: 'Not held / rejected',
     noAcademicYearConsultations:
       'No consultations yet. Once you book one, it will appear in this overview.',
-    topTeachers: 'Your most visited teachers',
+    topTeachers: 'Teachers you consult most often',
     topTeachersHint: 'By consultation count this academic year',
     consultationCount: 'consultations',
     enterTeacherName: 'Enter first and last name',
