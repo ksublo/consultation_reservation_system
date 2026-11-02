@@ -25,7 +25,9 @@ public record ReservationResponse(
     OffsetDateTime endsAt,
     OffsetDateTime createdAt,
     OffsetDateTime confirmedAt,
-    OffsetDateTime cancelledAt) {
+    OffsetDateTime cancelledAt,
+    String cancelledByName,
+    String cancellationNote) {
   public static ReservationResponse from(Reservation r) {
     return new ReservationResponse(
         r.getId(),
@@ -48,6 +50,10 @@ public record ReservationResponse(
         r.getSlot().getEndsAt(),
         r.getCreatedAt(),
         r.getConfirmedAt(),
-        r.getCancelledAt());
+        r.getCancelledAt(),
+        r.getCancelledByUser() == null
+            ? null
+            : r.getCancelledByUser().getFirstName() + " " + r.getCancelledByUser().getLastName(),
+        r.getCancellationNote());
   }
 }

@@ -4,6 +4,8 @@ import consultation_reservation_backend.api.*;
 import consultation_reservation_backend.domain.*;
 import consultation_reservation_backend.repository.*;
 import consultation_reservation_backend.security.AuthenticatedUser;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +21,8 @@ public class ReservationService {
       List.of(ReservationStatus.PENDING, ReservationStatus.CONFIRMED);
   private static final int RESERVATION_CUTOFF_HOURS = 3;
   private static final int MAX_PENDING_RESERVATIONS = 5;
+  private static final DateTimeFormatter APPOINTMENT_TIME =
+      DateTimeFormatter.ofPattern("d. M. uuuu 'v' HH:mm").withZone(ZoneId.of("Europe/Prague"));
   private final ReservationRepository reservations;
   private final ConsultationSlotRepository slots;
   private final ReservationHistoryRepository history;
@@ -206,10 +210,6 @@ public class ReservationService {
       throw new ApiException(
           HttpStatus.CONFLICT,
           "Reservations cannot be cancelled less than 3 hours before the consultation starts.");
-    if (reservation.getStatus() == ReservationStatus.CONFIRMED
-        && (request.note() == null || request.note().isBlank()))
-      throw new ApiException(
-          HttpStatus.BAD_REQUEST, "Cancelling a confirmed reservation requires a reason.");
     ReservationStatus previous = reservation.getStatus();
     reservation.cancel(actor, request.note());
     history.save(
@@ -222,30 +222,21 @@ public class ReservationService {
             request.note()));
     AppUser recipient = isStudent ? reservation.getSlot().getTeacher() : reservation.getStudent();
     String message =
-        previous == ReservationStatus.PENDING && !isStudent
-            ? "Pedagog "
-                + actor.getFirstName()
-                + " "
-                + actor.getLastName()
-                + " vaši žádost o konzultaci zamítl."
-            : isStudent
-                ? "Student "
-                    + actor.getFirstName()
-                    + " "
-                    + actor.getLastName()
-                    + " zrušil rezervaci."
-                : "Pedagog "
-                    + actor.getFirstName()
-                    + " "
-                    + actor.getLastName()
-                    + " zrušil potvrzenou konzultaci.";
+        "Uživatel "
+            + actor.getFirstName()
+            + " "
+            + actor.getLastName()
+            + " zrušil konzultaci dne "
+            + APPOINTMENT_TIME.format(reservation.getSlot().getStartsAt())
+            + "."
+            + (request.note() == null || request.note().isBlank()
+                ? ""
+                : " Důvod: " + request.note().trim() + ".");
     notifications.create(
         recipient,
         reservation,
         "RESERVATION_CANCELLED",
-        previous == ReservationStatus.PENDING && !isStudent
-            ? "Žádost byla zamítnuta"
-            : "Rezervace byla zrušena",
+        "Rezervace byla zrušena",
         message);
     return ReservationResponse.from(reservation);
   }

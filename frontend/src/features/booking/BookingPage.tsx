@@ -87,6 +87,7 @@ export default function BookingPage({
   const [loading, setLoading] = useState(true)
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [reservationsLoading, setReservationsLoading] = useState(true)
+  const [reserving, setReserving] = useState(false)
   const [dashboardNow, setDashboardNow] = useState(() => Date.now())
 
   async function loadReservations() {
@@ -243,6 +244,7 @@ export default function BookingPage({
       onToast({ type: 'error', message: t('reservationCutoffFailed') })
       return
     }
+    setReserving(true)
     try {
       await api.reserve(session.token, {
         slotId,
@@ -281,6 +283,8 @@ export default function BookingPage({
         durationMs: isSlotConflict ? 10000 : undefined,
       })
       await loadSlots()
+    } finally {
+      setReserving(false)
     }
   }
 
@@ -610,8 +614,14 @@ export default function BookingPage({
                   placeholder={t('reasonDescriptionPlaceholder')}
                 />
               </div>
-              <button className="reserve-button" type="submit">
-                {t('reserveConsultation')}
+              <button
+                className="reserve-button"
+                type="submit"
+                disabled={reserving}
+                aria-busy={reserving}
+              >
+                {reserving && <span className="button-spinner" aria-hidden="true" />}
+                {reserving ? t('pleaseWait') : t('reserveConsultation')}
               </button>
             </form>
           </section>

@@ -149,7 +149,7 @@
         {
           "type": "code",
           "language": "Diagram overview",
-          "content": "[Reservation]\ncontains states:\n- PENDING — awaiting approval, blocks the slot\n- CONFIRMED — approved, blocks the slot\n- CANCELLED — cancelled, releases the slot\n\n[Creation] ---> [PENDING]\n[PENDING] -- slot owner approves --> [CONFIRMED]\n[PENDING / CONFIRMED] -- authorized cancellation --> [CANCELLED]\n\nCancellation: at least 3 hours before the start.\nCancelling CONFIRMED requires a reason."
+          "content": "[Reservation]\ncontains states:\n- PENDING — awaiting approval, blocks the slot\n- CONFIRMED — approved, blocks the slot\n- CANCELLED — cancelled, releases the slot\n\n[Creation] ---> [PENDING]\n[PENDING] -- slot owner approves --> [CONFIRMED]\n[PENDING / CONFIRMED] -- authorized cancellation --> [CANCELLED]\n\nCancellation: at least 3 hours before the start.\nThe cancellation reason is optional; when provided, it is stored in the history and shown to the other participant."
         }
       ]
     },
@@ -170,7 +170,7 @@
         {
           "type": "code",
           "language": "Diagram overview",
-          "content": "[User selects an operation]\n    +--> [Availability] --> [Future active slots without active reservations]\n    +--> [Creation] ------> [Check student, slot, limit and overlaps]\n    |                          +-- valid --> [PENDING + history]\n    |                          +-- invalid -> [Reject]\n    +--> [Approval] ------> [Slot owner + PENDING]\n    |                          +-- valid --> [CONFIRMED + history]\n    |                          +-- invalid -> [Reject]\n    +--> [Cancellation] --> [Authorization, status, cutoff and reason]\n                               +-- valid --> [CANCELLED + history]\n                               +-- invalid -> [Reject]"
+          "content": "[User selects an operation]\n    +--> [Availability] --> [Future active slots without active reservations]\n    +--> [Creation] ------> [Check student, slot, limit and overlaps]\n    |                          +-- valid --> [PENDING + history]\n    |                          +-- invalid -> [Reject]\n    +--> [Approval] ------> [Slot owner + PENDING]\n    |                          +-- valid --> [CONFIRMED + history]\n    |                          +-- invalid -> [Reject]\n    +--> [Cancellation] --> [Authorization, status, cutoff and optional reason]\n                               +-- valid --> [CANCELLED + history]\n                               +-- invalid -> [Reject]"
         }
       ]
     },

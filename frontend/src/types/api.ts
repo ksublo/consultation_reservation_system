@@ -72,4 +72,6 @@ export interface Reservation {
   createdAt: string
   confirmedAt: string | null
   cancelledAt: string | null
+  cancelledByName: string | null
+  cancellationNote: string | null
 }
