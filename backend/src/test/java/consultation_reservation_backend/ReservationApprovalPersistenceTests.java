@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import consultation_reservation_backend.api.ReservationTransitionRequest;
+import consultation_reservation_backend.api.ApiException;
 import consultation_reservation_backend.domain.*;
 import consultation_reservation_backend.repository.ReservationHistoryRepository;
 import consultation_reservation_backend.security.AuthenticatedUser;
@@ -12,6 +13,12 @@ import consultation_reservation_backend.service.NotificationService;
 import consultation_reservation_backend.service.ReservationService;
 import jakarta.persistence.EntityManager;
 import java.time.OffsetDateTime;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.UUID;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.AfterAll;
@@ -208,6 +215,56 @@ class ReservationApprovalPersistenceTests {
     assertSame(failure, assertThrows(IllegalStateException.class, this::approve));
     assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
     assertEquals(before, snapshot());
+  }
+
+  @Test
+  void concurrentApprovalsCommitOnlyOneLifecycleTransition() throws Exception {
+    CountDownLatch firstNotification = new CountDownLatch(1);
+    CountDownLatch releaseFirst = new CountDownLatch(1);
+    CountDownLatch secondNotification = new CountDownLatch(1);
+    AtomicInteger notificationCalls = new AtomicInteger();
+    doAnswer(
+            invocation -> {
+              if (notificationCalls.incrementAndGet() == 1) {
+                firstNotification.countDown();
+                assertTrue(releaseFirst.await(5, TimeUnit.SECONDS));
+              } else {
+                secondNotification.countDown();
+              }
+              return invocation.callRealMethod();
+            })
+        .when(notifications)
+        .create(any(), any(), any(), any(), any());
+
+    ExecutorService executor = Executors.newFixedThreadPool(2);
+    try {
+      Future<Boolean> first = executor.submit(this::approveUnlessConflict);
+      assertTrue(firstNotification.await(5, TimeUnit.SECONDS));
+      Future<Boolean> second = executor.submit(this::approveUnlessConflict);
+      boolean secondReachedNotificationBeforeFirstCommit =
+          secondNotification.await(300, TimeUnit.MILLISECONDS);
+      releaseFirst.countDown();
+
+      assertTrue(first.get(5, TimeUnit.SECONDS));
+      assertFalse(second.get(5, TimeUnit.SECONDS));
+      assertFalse(
+          secondReachedNotificationBeforeFirstCommit,
+          "The second approval must wait for the first transaction and then see CONFIRMED.");
+      assertEquals(new Snapshot("CONFIRMED", snapshot().confirmedAt(), 2, 2), snapshot());
+    } finally {
+      releaseFirst.countDown();
+      executor.shutdownNow();
+    }
+  }
+
+  private boolean approveUnlessConflict() {
+    try {
+      approve();
+      return true;
+    } catch (ApiException exception) {
+      if (exception.getStatus().value() == 409) return false;
+      throw exception;
+    }
   }
 
   @AfterAll

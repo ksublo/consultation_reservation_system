@@ -6,11 +6,13 @@ import csC02 from './c02/cs.json'
 import csC03A from './c03a/cs.json'
 import csC03B from './c03b/cs.json'
 import csC05 from './c05/cs.json'
+import csC07 from './c07/cs.json'
 import enC01 from './c01/en.json'
 import enC02 from './c02/en.json'
 import enC03A from './c03a/en.json'
 import enC03B from './c03b/en.json'
 import enC05 from './c05/en.json'
+import enC07 from './c07/en.json'
 import c06Source from './c06/C06_Assessment_consultation_reservation_system.md?raw'
 import {
   parseDocumentation,
@@ -18,7 +20,7 @@ import {
   type DocumentationBlock,
 } from './documentation-model'
 
-type DocsSection = 'c01' | 'c02' | 'c03a' | 'c03b' | 'c05' | 'c06'
+type DocsSection = 'c01' | 'c02' | 'c03a' | 'c03b' | 'c05' | 'c06' | 'c07'
 type StructuredDocsSection = Exclude<DocsSection, 'c06'>
 
 interface DocumentationPageProps {
@@ -26,7 +28,7 @@ interface DocumentationPageProps {
   t: TFunction
 }
 
-const tabs: DocsSection[] = ['c01', 'c02', 'c03a', 'c03b', 'c05', 'c06']
+const tabs: DocsSection[] = ['c01', 'c02', 'c03a', 'c03b', 'c05', 'c06', 'c07']
 const bundledImages = import.meta.glob('../../assets/docs/*', {
   eager: true,
   query: '?url',
@@ -106,7 +108,7 @@ function ContentBlock({ block, language }: { block: DocumentationBlock; language
         </div>
       )
     case 'paragraph':
-      return <p>{block.content}</p>
+      return <p>{renderInlineMarkdown(block.content)}</p>
     case 'list':
       return (
         <ul>
@@ -305,7 +307,7 @@ function C06Document() {
 }
 
 export default function DocumentationPage({ language, t }: DocumentationPageProps) {
-  const [tab, setTab] = useState<DocsSection>('c01')
+  const [tab, setTab] = useState<DocsSection>('c07')
   const documents = useMemo<Record<Language, Record<StructuredDocsSection, Documentation>>>(
     () => ({
       cs: {
@@ -314,6 +316,7 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
         c03a: parseDocumentation(csC03A, 'C03A / cs'),
         c03b: parseDocumentation(csC03B, 'C03B / cs'),
         c05: parseDocumentation(csC05, 'C05 / cs'),
+        c07: parseDocumentation(csC07, 'C07 / cs'),
       },
       en: {
         c01: parseDocumentation(enC01, 'C01 / en'),
@@ -321,6 +324,7 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
         c03a: parseDocumentation(enC03A, 'C03A / en'),
         c03b: parseDocumentation(enC03B, 'C03B / en'),
         c05: parseDocumentation(enC05, 'C05 / en'),
+        c07: parseDocumentation(enC07, 'C07 / en'),
       },
     }),
     [],
@@ -333,7 +337,7 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
           {tabs.map((item) => (
             <button
               key={item}
-              className={`${tab === item ? 'active' : ''} ${item === 'c06' ? 'c6-tab' : ''}`.trim()}
+              className={`${tab === item ? 'active' : ''} ${item === 'c06' ? 'c6-tab' : ''} ${item === 'c07' ? 'c7-tab' : ''}`.trim()}
               type="button"
               role="tab"
               aria-selected={tab === item}
@@ -343,7 +347,7 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
             </button>
           ))}
         </div>
-        <article className="docs-content">
+        <article className={`docs-content ${tab === 'c07' ? 'docs-c07' : ''}`}>
           <div className="docs-document">
             {tab !== 'c06' && <p className="docs-eyebrow">{t('documentation')}</p>}
             {current ? (
@@ -351,7 +355,7 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
                 <h1>{current.title}</h1>
                 <div className="docs-blocks">
                   {current.sections.map((section) => (
-                    <section key={section.id} className="docs-block">
+                    <section key={section.id} className={`docs-block docs-block-${section.id}`}>
                       <h2>{section.title}</h2>
                       {section.blocks.map((block, index) => (
                         <ContentBlock

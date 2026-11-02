@@ -1,0 +1,437 @@
+{
+  "title": "C07 · Dokumentace projektu, rizika a review",
+  "sections": [
+    {
+      "id": "status",
+      "title": "Stav projektu",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Consultation Reservation — rezervační systém konzultací. Výchozí commit pro C07 review: `main@3c25e78` (3c25e78c245d11f4c5dcbe7095f4dc0810761b25), 2. 11. 2026; ověřený working tree navíc obsahuje opravu R-01. C06 hodnotilo historickou baseline `main@2b1e404`. Celkový stav: **AMBER / AT RISK**."
+        },
+        {
+          "type": "table",
+          "headers": ["Položka", "Stav projektu"],
+          "rows": [
+            ["Baseline C06", "main@2b1e404; assessment findings F1–F3"],
+            [
+              "Opravy findings",
+              "F1, F2 a F3 přijaty; implementační změny jsou v aktuálním kódu a evidenci"
+            ],
+            [
+              "Důkazy na aktuální baseline",
+              "Backend 37/37, frontend 10/10, lint, typecheck, build i izolovaný Docker smoke prošly 2. 11. 2026 na ověřeném working tree založeném na main@3c25e78; změny C07 jsou zahrnuté."
+            ],
+            [
+              "Hlavní otevřená nejistota",
+              "Nezávislá lidská kontrola čistého Docker spuštění Fatimou a zápis konkrétních termínů/zástupnosti do týmového plánu."
+            ],
+            [
+              "Řídicí rozhodnutí",
+              "Fatima zkontroluje přiložené logy a potvrdí review; tým doplní konkrétní termíny a zastupitelnost do svého plánu."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "warning",
+          "content": "Historické výsledky jsou označené datem. Test ani opatření neoznačujeme jako ověřené na aktuální baseline bez odpovídajícího běhu."
+        }
+      ]
+    },
+    {
+      "id": "team-contributions",
+      "title": "Členové týmu a doložené příspěvky",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Přiřazení níže vychází z autorství commitů v repozitáři. Popisuje doložené změny; samo o sobě netvrdí, že autor pracoval na každé části bez spolupráce ostatních."
+        },
+        {
+          "type": "table",
+          "headers": ["Člen týmu", "Doložená práce v projektu", "Evidence"],
+          "rows": [
+            [
+              "Kseniia Blokhina",
+              "Opravy po C06: backendová autorizace a lifecycle rezervací, integrační testy vytvoření a regresní testy; následné úpravy dokumentace C06 a frontendu.",
+              "Commit 8ca6684 (26. 10. 2026): backend, testy, C06 assessment a projektová evidence. Commit cfc618e (27. 10. 2026): C06 frontend a úpravy dokumentace."
+            ],
+            [
+              "Fatima Tangatarova",
+              "C05 návrh a ověřovací evidence; česká a anglická dokumentace C06 ve frontendu; následně změny rušení rezervací, UI a regresní testy.",
+              "Commit 004bef1 (19. 10. 2026): C05 návrh, testy a dokumentace. Commit a938fd2 (26. 10. 2026): C06 frontendová dokumentace. Commit 3c25e78 (2. 11. 2026): rušení a související testy."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Jména jsou převzatá z autorství commitů; u budoucích úkolů jsou uvedená jako navržené odpovědnosti, které si tým může potvrdit."
+        }
+      ]
+    },
+    {
+      "id": "c06",
+      "title": "C06 · Vypořádání nálezů",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "C06 posuzovalo baseline `main@2b1e404`. Tři potvrzené findings byly přijaty a jejich opravy jsou doložené v implementaci a projektové evidenci."
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Finding",
+            "Rozhodnutí",
+            "Odůvodnění / provedená změna",
+            "Důkaz a aktuální stav"
+          ],
+          "rows": [
+            [
+              "F1 — vytvoření rezervace s podvrženým studentId",
+              "ACCEPTED",
+              "Controller předává ověřeného AuthenticatedUser. ReservationService vyžaduje roli STUDENT a vlastníka bere z přihlášené identity; studentId již není součástí požadavku.",
+              "ReservationAuthorizationTests ověřuje, že podvržené ID nemění vlastníka ani auditního aktéra. Test znovu spustit na reporting baseline."
+            ],
+            [
+              "F2 — chybějící automatický důkaz pro overlap",
+              "ACCEPTED",
+              "Doplněn ReservationCreationPersistenceTests proti PostgreSQL: obsazený slot a překryv se odmítnou, sousední intervaly z obou stran jsou povolené.",
+              "Evidence-and-evolution.md zaznamenává úspěšný běh 31 backendových testů dne 26. 10. 2026. Jde o historický výsledek; běh na 3c25e78 není doložen."
+            ],
+            [
+              "F3 — vedlejší endpoint obcházel lifecycle při rušení slotu",
+              "ACCEPTED",
+              "Oba endpointy rušení slotu používají ověřeného aktéra a předávají přechod rezervace do ReservationService včetně oprávnění, cutoffu, důvodu, historie a oznámení.",
+              "ReservationAuthorizationTests obsahuje regresní případy podvržené identity i úspěšné cesty vlastníka. Znovu spustit na aktuální baseline."
+            ],
+            [
+              "B1, R1, R4, R5, A2, A4, Q1, Q3",
+              "ACCEPTED; opraveno v dokumentaci/kódu",
+              "Sjednocena baseline; doplněn tříhodinový předstih, identita create, test evidence, lifecycle ownership a rozsah quality měření.",
+              "Podrobný záznam v frontend/src/features/docs/c06/C06_Assessment_consultation_reservation_system.md a docs/evidence-and-evolution.md."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "technical-review",
+      "title": "A · Technická obhajoba",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Hlavní argumentační linie: požadavek na rezervaci a její lifecycle → ověřená identita a pravidla přechodu → `ReservationService` → persistence, historie a oznámení → důkazy testů a reakce na C06."
+        },
+        {
+          "type": "table",
+          "headers": ["Krok", "Obsah projektu", "Konkrétní evidence", "Omezení / co předvést"],
+          "rows": [
+            [
+              "1. Scope & accepted behavior",
+              "REQ-01/BR-04: přihlášený student vytváří rezervaci; PENDING a CONFIRMED blokují slot; aktivní překryv studenta je zakázán; intervaly jsou [start,end). Režim musí být slotem podporovaný; create má 3h cutoff a limit 5 PENDING žádostí.",
+              "frontend/src/features/docs/c02/cs.json: OP-01, BR-01–04; ReservationService.create().",
+              "Předvést pozitivní vytvoření, obsazený slot, překryv a sousední interval. Nevydávat expiration PENDING za implementovanou funkci."
+            ],
+            [
+              "2. Architecture",
+              "React → Spring Boot API → ReservationService → PostgreSQL. ReservationService vlastní lifecycle, historií a oznámení; PostgreSQL chrání exkluzivitu aktivního slotu.",
+              "docs/architecture-and-decisions.md ADR-01; backend/src/main/java/consultation_reservation_backend/service/ReservationService.java; V1 migration.",
+              "Ukázat existující diagram a porovnat jej s baseline 3c25e78. Potvrdit transakční hranici."
+            ],
+            [
+              "3. Detailed design",
+              "approve(): AuthenticatedUser + role TEACHER + vlastnictví + stav PENDING → CONFIRMED, history, notification. cancel(): autorizovaný student nebo vlastník slotu, cutoff, důvod, history, notification.",
+              "C05 DD; ReservationService.approve(), cancel(), cancelSlotWithReservation().",
+              "Ukázat chybové větve 401/403/404/409 i úspěšnou cestu; neprezentovat souběžné schválení jako ověřené."
+            ],
+            [
+              "4. Verification",
+              "Creation persistence, autorizace, approval persistence a cancellation persistence mají odpovídající automatické testovací třídy.",
+              "ReservationCreationPersistenceTests; ReservationAuthorizationTests; ReservationApprovalPersistenceTests; ReservationCancellationPersistenceTests. Evidence-and-evolution.md zaznamenává historicky 31 testů dne 26. 10. 2026.",
+              "Před review spustit backend proti PostgreSQL a frontend lint/typecheck/build na 3c25e78; připojit logy vázané na commit."
+            ],
+            [
+              "5. C06 engineering decision",
+              "F1–F3 přijaty; implementační opravy zachovávají session identity a jeden owner lifecycle.",
+              "C06 Owner disposition + současný ReservationService + regresní testy.",
+              "Na prezentaci ukázat příslušný kód a výsledek opakovaného testu. Samotné ACCEPTED není důkaz aktuálního běhu."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Reference v tabulce určují, co otevřít při review. Aktuální testovací výsledek musí odpovídat uvedenému commitu; 31 backendových testů je doloženo historicky k 26. 10. 2026."
+        }
+      ]
+    },
+    {
+      "id": "risks",
+      "title": "B · Risk register",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "L a I mají rozsah 1–3; priorita je L×I. Actual residual níže vychází z kontroly kódu, testů, Docker Compose smoke testu a potvrzení týmu dne 2. 11. 2026."
+        },
+        {
+          "type": "paragraph",
+          "content": "**R-01 · Souběžné schválení**"
+        },
+        {
+          "type": "table",
+          "headers": ["Položka", "Projektové hodnocení"],
+          "rows": [
+            [
+              "Příčina → nejistá událost → dopad",
+              "Souběžné approve stejné PENDING rezervace může projít vícekrát → duplicitní historie/oznámení nebo nekonzistentní lifecycle."
+            ],
+            ["Kategorie", "Technical / quality"],
+            [
+              "Initial L/I / priorita a důvod",
+              "L=2, I=2, MEDIUM (4); C05 eviduje chybějící serializaci."
+            ],
+            ["Strategie a důvod", "MITIGATE — concurrency guard a DB test."],
+            [
+              "Opatření / vlastník / termín",
+              "Navržený owner: Kseniia Blokhina (backend guard a test); Fatima Tangatarova provede nezávislou kontrolu výsledku. Do dalšího checkpointu."
+            ],
+            [
+              "Důkaz účinnosti",
+              "Oprava: pessimistic write lock v ReservationRepository; souběžný PostgreSQL test prošel 2. 11. 2026 (jedno potvrzení, druhé 409, právě jedna nová historie a oznámení)."
+            ],
+            ["Expected residual", "L=1, I=2, LOW (2) po úspěšném testu."],
+            [
+              "Actual residual",
+              "L=1, I=2, LOW (2) — zámek a souběžný test ověřeny; zbývá běžné riziko databázového výpadku."
+            ],
+            [
+              "Přijetí / vlastník / důvod",
+              "Společně Kseniia Blokhina a Fatima Tangatarova po kontrole testu; pokud test neprojde, riziko se nepřijímá a stav zůstává OPEN."
+            ],
+            [
+              "Indikátor, trigger, contingency, kontrola",
+              "Trigger: více lifecycle přechodů/auditů. Contingency: negarantovat souběžné schválení a eskalovat. Review: další checkpoint."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "**R-02 · Aktuálnost testovací evidence**"
+        },
+        {
+          "type": "table",
+          "headers": ["Položka", "Projektové hodnocení"],
+          "rows": [
+            [
+              "Příčina → nejistá událost → dopad",
+              "Před C07 review byla poslední úplná sada z 26. 10. → změny po tomto datu nebyly znovu ověřeny → možná regrese a nepodložená obhajoba."
+            ],
+            ["Kategorie", "Schedule / quality"],
+            ["Initial L/I / priorita a důvod", "L=2, I=3, HIGH (6); baseline se změnila po běhu."],
+            ["Strategie a důvod", "MITIGATE — opakovat testy a svázat reporty se SHA."],
+            [
+              "Opatření / vlastník / termín",
+              "Kseniia Blokhina spustí backendovou sadu proti PostgreSQL; Fatima Tangatarova frontend lint/typecheck/build. Před review; připojit logy a SHA."
+            ],
+            [
+              "Důkaz účinnosti",
+              "2. 11. 2026: backend `mvnw.cmd test` 37/37 PASS proti PostgreSQL; frontend Vitest 10/10 PASS, lint 0 errors (1 warning), typecheck a build PASS. Docker image build a HTTP smoke PASS."
+            ],
+            ["Expected residual", "L=1, I=3, MEDIUM (3) po úspěšném běhu."],
+            [
+              "Actual residual",
+              "L=1, I=3, MEDIUM (3) — úplná lokální sada prošla; frontend lint má jedno varování Fast Refresh, bez chyby."
+            ],
+            [
+              "Přijetí / vlastník / důvod",
+              "Kseniia Blokhina a Fatima Tangatarova po kontrole logů a SHA; při chybě riziko nepřijímat a nastavit RED."
+            ],
+            [
+              "Indikátor, trigger, contingency, kontrola",
+              "Trigger: test selže či nejde zopakovat. Contingency: opravit regresi nebo změnit status na RED. Review: před prezentací."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "**R-03 · Vlastníci a kapacita**"
+        },
+        {
+          "type": "table",
+          "headers": ["Položka", "Projektové hodnocení"],
+          "rows": [
+            [
+              "Příčina → nejistá událost → dopad",
+              "Před potvrzením nebyla dostupnost a rozdělení práce zapsaná → hrozilo, že úkol zůstane bez vlastníka → zpoždění integrace/review. Tým 2. 11. 2026 potvrdil, že rozdělení i kapacita jsou v pořádku."
+            ],
+            ["Kategorie", "People / schedule"],
+            [
+              "Initial L/I / priorita a důvod",
+              "L=2, I=2, MEDIUM (4); plán a jména chybí v repozitáři."
+            ],
+            ["Strategie a důvod", "MITIGATE — určit ownera, zástupce a termín."],
+            [
+              "Opatření / vlastník / termín",
+              "Tým 2. 11. 2026 potvrdil rozdělení vlastníků a kapacitu Kseniia Blokhina + Fatima Tangatarova; přenést potvrzené termíny a zástupnost do týmového plánu."
+            ],
+            [
+              "Důkaz účinnosti",
+              "Tým 2. 11. 2026 potvrdil vlastníky a dostupnou kapacitu; konkrétní termíny a zástupnost zapsat do týmového plánu."
+            ],
+            ["Expected residual", "L=1, I=2, LOW (2) po potvrzení kapacity."],
+            [
+              "Actual residual",
+              "L=1, I=2, LOW (2) — tým potvrdil rozdělení práce a kapacitu; zbývá zapsat konkrétní termíny a zástupnost."
+            ],
+            [
+              "Přijetí / vlastník / důvod",
+              "Kseniia Blokhina a Fatima Tangatarova po zapsání termínů a zástupnosti; při změně dostupnosti riziko znovu otevřít."
+            ],
+            [
+              "Indikátor, trigger, contingency, kontrola",
+              "Trigger: akce bez ownera/termínu. Contingency: přerozdělit rozsah. Review: týdenní plánování."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "**R-04 · Čisté spuštění demonstrace**"
+        },
+        {
+          "type": "table",
+          "headers": ["Položka", "Projektové hodnocení"],
+          "rows": [
+            [
+              "Příčina → nejistá událost → dopad",
+              "Nezávislý clean checkout druhým členem není doložen; lokální kontejnerový smoke prošel → na druhém prostředí může build/config selhat → demo nebude dostupné."
+            ],
+            ["Kategorie", "Release / operation"],
+            [
+              "Initial L/I / priorita a důvod",
+              "L=2, I=3, HIGH (6); Docker je dokumentován, aktuální nezávislý smoke test chybí."
+            ],
+            ["Strategie a důvod", "MITIGATE — clean checkout a smoke test druhým členem."],
+            [
+              "Opatření / vlastník / termín",
+              "Izolovaný clean-source-copy běh a logy připravil C07 verification run; Fatima Tangatarova je owner/reviewer a zkontroluje přiložené důkazy. Pokud zadání vyžaduje osobní peer run, Kseniia Blokhina ho zopakuje na druhém zařízení."
+            ],
+            [
+              "Důkaz účinnosti",
+              "2. 11. 2026: izolovaný clean-source-copy Docker build; nová PostgreSQL volume, 14 migrací do v14, backend start, NOV0001 login, GET /api/slots vrátil 12 seedovaných slotů, frontend HTTP 200. Raw důkazy: docs/evidence/C07_clean_checkout_2026-11-02/."
+            ],
+            ["Expected residual", "L=1, I=3, MEDIUM (3) po úspěchu."],
+            [
+              "Actual residual",
+              "L=1, I=3, MEDIUM (3) — clean-source-copy smoke prošel; Fatima je owner/reviewer, její review a sign-off ještě čeká."
+            ],
+            [
+              "Přijetí / vlastník / důvod",
+              "Fatima Tangatarova zkontroluje přiložené logy a potvrdí přijetí; při selhání nepřijímat a eskalovat opravu."
+            ],
+            [
+              "Indikátor, trigger, contingency, kontrola",
+              "Trigger: migrace/backend/frontend nenaběhnou. Contingency: opravit konfiguraci a připravit záložní prostředí. Review: před demonstrací."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "status-report",
+      "title": "C · Project Status Report",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Stav reportu: **AMBER / AT RISK**. Aktuální kontroly i ochrana souběžného schválení prošly; tým potvrdil kapacitu. Čeká se na nezávislý peer checkout a zápis termínů."
+        },
+        {
+          "type": "table",
+          "headers": ["PPTX slide", "Vyplněný obsah pro aktuální projekt", "Důkaz / otevřená akce"],
+          "rows": [
+            [
+              "01 Executive Status",
+              "Consultation Reservation; výchozí commit 3c25e78, ověřený working tree; AMBER / AT RISK. Kseniia: C06 backend fixes/testy; Fatima: C05/C06 dokumentace a změny rušení/testů. Aktuální sada prošla; kapacita potvrzena, peer checkout ještě čeká.",
+              "37/37 backend, 10/10 frontend; izolovaný clean-source-copy smoke PASS; docs/evidence/C07_clean_checkout_2026-11-02/ čeká na Fatimina review."
+            ],
+            [
+              "02 Scope & Delivery",
+              "Create: SPECIFIED / DESIGNED / IMPLEMENTED; persistence a autorizace prošly v aktuálním working tree. Availability: SPECIFIED / IMPLEMENTED; authenticated smoke v existující DB vrátil 156 slotů a clean DB v izolované kopii 12; samostatná availability regression suite chybí. Confirm/Approval: SPECIFIED / DESIGNED / IMPLEMENTED; unit/API/DB i concurrency test prošly. Cancel: SPECIFIED / DESIGNED / IMPLEMENTED včetně zrušení slotu přes ReservationService; backend testy prošly. Souběžné schválení je serializované a ověřené.",
+              "C02, C05 a C07 Verification Evidence v evidence-and-evolution.md; běh working tree z 2. 11. 2026."
+            ],
+            [
+              "03 Schedule & Resources",
+              "Dokončeno: full backend/frontend checks, concurrency guard/test a kontejnerový smoke; tým potvrdil vlastníky a kapacitu. Otevřeno: zapsat termíny a nezávislé spuštění druhým členem.",
+              "Potvrzení vlastníků Kseniia Blokhina (backend) a Fatima Tangatarova (frontend/peer smoke); doplnit termíny do týmového plánu."
+            ],
+            [
+              "04 Top Risks & Issues",
+              "Aktualizované actual residual: R-01 1×2 LOW; R-02 1×3 MEDIUM; R-03 1×2 LOW; R-04 1×3 MEDIUM. Otevřené incidenty nejsou doloženy.",
+              "R-01/R-02 ověřeny testy; R-03 potvrzeno týmem; R-04 smoke z izolované kopie PASS, Fatimina kontrola logů/sign-off čeká."
+            ],
+            [
+              "05 Next Action Plan",
+              "Dokončeno 2. 11.: backend 37/37 testů na PostgreSQL, frontend 10/10 + lint/typecheck/build, souběžný approve test a clean-source-copy Docker build/start/login/API smoke; tým potvrdil vlastníky a kapacitu. Fatima má zkontrolovat výstup a tým má zapsat termíny.",
+              "Důkazy a omezení jsou zapsané v docs/evidence-and-evolution.md; rizikové actual residual skóre aktualizováno podle výsledků."
+            ],
+            [
+              "06 Decision & Outlook",
+              "Doloženo: opravy F1–F3, 37 backend testů, 10 frontend testů, souběžné schválení s jediným přechodem a clean-source-copy Docker smoke. Tým potvrdil vlastníky/kapacitu; čeká se na Fatimina review a zápis termínů.",
+              "RAG zůstává AMBER / AT RISK do Fatimina review/sign-off a zapsání termínů."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "actions",
+      "title": "C · 05 Next Action Plan",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": [
+            "Akce",
+            "Vlastník",
+            "Termín",
+            "Definition of Done (ověřitelný důkaz)",
+            "Finding / risk"
+          ],
+          "rows": [
+            [
+              "Dokončeno: spustit backendovou sadu proti PostgreSQL a frontendové kontroly",
+              "C07 verification run · 2. 11. 2026",
+              "Dokončeno",
+              "Backend 37/37; frontend 10/10, lint/typecheck/build PASS; logy v docs/evidence-and-evolution.md.",
+              "R-02"
+            ],
+            [
+              "Dokončeno: přidat a ověřit concurrency ochranu schválení",
+              "C07 implementation/review · 2. 11. 2026",
+              "Dokončeno",
+              "Pessimistic row lock; souběžný test ověřil jeden commit, druhý požadavek 409 a právě jednu historii/oznámení.",
+              "R-01"
+            ],
+            [
+              "Zapsat potvrzené jmenné vlastníky, zástupnost a termíny",
+              "Kseniia Blokhina + Fatima Tangatarova",
+              "Potvrzeno týmem 2. 11.; zapsat termíny",
+              "Tým potvrdil kapacitu; do evidence-and-evolution.md doplnit konkrétní datum a zástupce pro každou akci.",
+              "R-03"
+            ],
+            [
+              "Zkontrolovat clean-source-copy smoke a potvrdit peer evidence",
+              "Fatima Tangatarova (owner/reviewer)",
+              "Před demonstrací",
+              "Zkontrolovat docs/evidence/C07_clean_checkout_2026-11-02/; připojit komentář/sign-off. Pokud zadání vyžaduje osobní běh, zopakovat ho v jejím prostředí.",
+              "R-04"
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Fatima má zkontrolovat uložené výstupy a doplnit review komentář; tým má připsat konkrétní termíny. Pokud je vyžadováno osobní spuštění druhým členem, zopakovat ho a uložit nový log."
+        }
+      ]
+    }
+  ]
+}
