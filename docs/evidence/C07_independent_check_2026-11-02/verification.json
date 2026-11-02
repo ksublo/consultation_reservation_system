@@ -1,0 +1,16 @@
+{
+  "Date": "2026-11-02",
+  "VerifiedSourceRevision": "31a22ad on fix/docs-c07&corrections",
+  "EvidenceUpdateRevision": "50a2909",
+  "Verifier": "Fatima Tangatarova",
+  "IndependentRun": {
+    "ComposeBuild": "PASS",
+    "Database": "PostgreSQL 17.11 healthy on a fresh isolated volume",
+    "FlywayMigrations": "14 migrations applied; schema at v14",
+    "Backend": "Container started",
+    "Frontend": "Container started; HTTP request not recorded in this run",
+    "AuthenticatedLoginOrApiRequest": "Not repeated in this run; see ../C07_clean_checkout_2026-11-02/smoke-test.json"
+  },
+  "Review": "PASS; no startup or configuration defect found",
+  "Overall": "PASS for independent clean Compose build/start and evidence review; API smoke evidence remains in the original clean-start run"
+}

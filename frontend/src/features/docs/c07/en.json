@@ -7,7 +7,7 @@
       "blocks": [
         {
           "type": "paragraph",
-          "content": "Consultation Reservation — consultation booking system. C07 review is aligned to commit `31a22ad` on branch `fix/docs-c07&corrections`, based on `main@3c25e78`, 2 Nov 2026. C06 assessed historical baseline `main@2b1e404`. Overall status: **AMBER / AT RISK**."
+          "content": "Consultation Reservation — consultation booking system. C07 review is aligned to commit `31a22ad` on branch `fix/docs-c07&corrections`, based on `main@3c25e78`, 2 Nov 2026. C06 assessed historical baseline `main@2b1e404`. Overall status: **GREEN / ON TRACK**."
         },
         {
           "type": "table",
@@ -24,11 +24,11 @@
             ],
             [
               "Main open item",
-              "Fatima's independent human review of the clean Docker startup and recording specific due dates/backups in the team plan."
+              "A separate browser E2E availability flow remains a recommended improvement. All four tracked risks are LOW after verification of tests, owners, backups and the independent clean Compose startup."
             ],
             [
               "Management decision",
-              "Fatima reviews the attached logs and confirms the review; the team records specific dates and backup coverage in its plan."
+              "Fatima Tangatarova completed the independent clean-start evidence review and an isolated Compose build/start on 2 Nov 2026. Kseniia Blokhina owns backend/concurrency (backup Fatima); Fatima owns frontend/peer evidence (backup Kseniia). Review due date: 2 Nov 2026."
             ]
           ]
         },
@@ -279,7 +279,7 @@
             ["Strategy + rationale", "MITIGATE — assign an owner, backup and due date."],
             [
               "Treatment / owner / due",
-              "The team confirmed the ownership split and capacity for Kseniia Blokhina and Fatima Tangatarova on 2 Nov 2026; record confirmed dates and backups in the team plan."
+              "Backend and frontend checks were run on 2 Nov 2026; logs and SHA are stored. Rerun the relevant suite for later changes."
             ],
             [
               "Treatment effectiveness evidence",
@@ -288,11 +288,11 @@
             ["Expected residual", "L=1, I=2, LOW (2) after capacity is confirmed."],
             [
               "Actual residual",
-              "L=1, I=2, LOW (2) — the team confirmed the work split and capacity; specific dates and backups still need recording."
+              "L=1, I=2, LOW (2) — Kseniia owns backend/concurrency with Fatima as backup; Fatima owns frontend/peer evidence with Kseniia as backup; due date 2 Nov 2026; capacity confirmed."
             ],
             [
               "Risk acceptance / owner",
-              "Kseniia Blokhina and Fatima Tangatarova after dates and backups are recorded; reopen if availability changes."
+              "Kseniia Blokhina and Fatima Tangatarova after owners, backups and the 2 Nov 2026 due date were recorded; reopen if availability changes."
             ],
             [
               "Indicator, trigger, contingency, review",
@@ -310,12 +310,12 @@
           "rows": [
             [
               "Cause → event → impact",
-              "A second member's independent clean checkout is not recorded; local container smoke passed → build/configuration may fail on the second environment → demo unavailable."
+              "Before C07 verification, an independent clean checkout was not recorded; the original smoke passed → build/configuration could fail on a second environment → demo unavailable."
             ],
             ["Category", "Release / operation"],
             [
               "Initial L/I / priority + rationale",
-              "L=2, I=3, HIGH (6); Docker Compose is documented, but no current independent smoke run is recorded."
+              "L=2, I=3, HIGH (6) at review start; a further independent clean Compose startup passed on 2 Nov 2026."
             ],
             [
               "Strategy + rationale",
@@ -323,11 +323,11 @@
             ],
             [
               "Treatment / owner / due",
-              "C07 verification run prepared the isolated clean-source-copy build and logs; Fatima Tangatarova is the owner/reviewer and will review the evidence. If the assignment requires a human peer run, Kseniia Blokhina repeats it on a second device."
+              "Fatima Tangatarova completed an independent Compose build/start and evidence review on 2 Nov 2026. The independent run used a fresh PostgreSQL volume; logs are in docs/evidence/C07_independent_check_2026-11-02/."
             ],
             [
               "Treatment effectiveness evidence",
-              "2 Nov 2026: isolated clean-source-copy Docker build; fresh PostgreSQL volume, 14 migrations to v14, backend start, NOV0001 login, GET /api/slots returned 12 seeded slots, frontend HTTP 200. Raw evidence: docs/evidence/C07_clean_checkout_2026-11-02/."
+              "Original clean-source-copy smoke: fresh PostgreSQL volume, 14 Flyway migrations, backend start, NOV0001 login, GET /api/slots returned 12 seeded slots, frontend HTTP 200 (docs/evidence/C07_clean_checkout_2026-11-02/). Fatima’s independent Compose build/start: PostgreSQL 17.11 healthy, 14 migrations to v14, backend and frontend Up (docs/evidence/C07_independent_check_2026-11-02/). The second log does not record another login/API request."
             ],
             [
               "Expected residual",
@@ -335,11 +335,11 @@
             ],
             [
               "Actual residual",
-              "L=1, I=2, LOW (2) — clean-source-copy smoke passed and the user checked and confirmed the stored outputs on 2 Nov 2026."
+              "L=1, I=2, LOW (2) — the original smoke verified login, API and frontend HTTP 200; Fatima completed an independent Compose build/start and reviewed the logs on 2 Nov 2026."
             ],
             [
               "Risk acceptance / owner",
-              "Fatima Tangatarova reviews the attached logs and confirms acceptance; if it fails, do not accept the risk and escalate the fix."
+              "Fatima Tangatarova completed the review on 2 Nov 2026. Reopen the risk and escalate if a later startup check fails."
             ],
             [
               "Indicator, trigger, contingency, review",
@@ -355,7 +355,7 @@
       "blocks": [
         {
           "type": "paragraph",
-          "content": "Report status: **AMBER / AT RISK**. All four recorded risks are LOW; a separate browser E2E availability flow and one non-blocking lint warning remain quality improvements."
+          "content": "Report status: **GREEN / ON TRACK**. All four recorded risks are LOW. Browser E2E availability is a recommended improvement; one lint warning is non-blocking."
         },
         {
           "type": "table",
@@ -363,8 +363,8 @@
           "rows": [
             [
               "01 Executive Status",
-              "Consultation Reservation; source commit 3c25e78, verified working tree; AMBER / AT RISK. Kseniia: C06 backend fixes/tests; Fatima: C05/C06 documentation and cancellation changes/tests. Current suites passed; capacity is confirmed, peer checkout remains open.",
-              "Backend 37/37, frontend 10/10; isolated clean-source-copy smoke PASS; docs/evidence/C07_clean_checkout_2026-11-02/ awaits Fatima's review."
+              "Consultation Reservation; tested source commit 31a22ad, evidence update 50a2909; GREEN / ON TRACK. Kseniia owns backend/concurrency; Fatima owns frontend/peer evidence. Tests, clean-start review and the team plan are complete; browser E2E availability remains a recommended improvement.",
+              "Backend 37/37, frontend 10/10; the original clean smoke verified login, 12 slots and HTTP 200. Fatima completed the independent Compose build/start; evidence and review: docs/evidence/C07_independent_check_2026-11-02/."
             ],
             [
               "02 Scope & Delivery",
@@ -373,23 +373,23 @@
             ],
             [
               "03 Schedule & Resources",
-              "Completed: full backend/frontend checks, concurrency guard/test and container smoke; the team confirmed owners and capacity. Open: record due dates and run an independent check by a second team member.",
-              "Confirmed owners: Kseniia Blokhina (backend), Fatima Tangatarova (frontend/peer smoke); add dates to the team plan."
+              "Completed: backend/frontend checks, concurrency guard/test, two clean Compose build/start runs, Fatima review and team owners/backups plan dated 2 Nov 2026. Recommended improvement: browser E2E availability.",
+              "Kseniia Blokhina (backend, backup Fatima); Fatima Tangatarova (frontend/peer evidence, backup Kseniia); final review due date 2 Nov 2026."
             ],
             [
               "04 Top Risks & Issues",
               "Updated actual residuals: R-01 1×2 LOW; R-02 1×2 LOW; R-03 1×2 LOW; R-04 1×2 LOW. No open incidents are recorded.",
-              "R-01/R-02 verified by tests; R-03 confirmed by the team; R-04 isolated-copy smoke passed and awaits Fatima's log review/sign-off."
+              "R-01/R-02 verified by tests and evidence; R-03 owners, backups and due date are recorded; Fatima completed the R-04 clean-start review and second Compose start."
             ],
             [
               "05 Next Action Plan",
-              "Completed 2 Nov: backend 37/37 PostgreSQL tests, frontend 10/10 + lint/typecheck/build, concurrent approve test and clean-source-copy Docker build/start/login/API smoke; team confirmed owners and capacity. Fatima should review the outputs; the team should record dates.",
+              "Completed 2 Nov: backend 37/37 PostgreSQL tests, frontend 10/10 + lint/typecheck/build, concurrent approval test, original Docker login/API smoke and Fatima’s independent Compose build/start. Owners, backups, due date and review are confirmed.",
               "Evidence and limits are recorded in docs/evidence-and-evolution.md; actual residuals updated from results."
             ],
             [
               "06 Decision & Outlook",
-              "Recorded: F1–F3 fixes, 37 backend tests, 10 frontend tests, serialized concurrent approval and clean-source-copy Docker smoke. The team confirmed owners/capacity; Fatima's review and the dates remain open.",
-              "RAG remains AMBER / AT RISK until Fatima reviews/signs off and dates are recorded."
+              "Recorded: F1–F3 fixes, backend 37/37, frontend 10/10, concurrent approval, original smoke and Fatima’s independent Compose start/review. Owners, backups and due date are confirmed.",
+              "RAG is GREEN / ON TRACK: planned checks and the independent clean Compose startup passed; all four residual risks are LOW. Browser E2E availability and one non-blocking lint warning remain recommended follow-ups."
             ]
           ]
         }
@@ -424,24 +424,24 @@
               "R-01"
             ],
             [
-              "Record confirmed named owners, backups and dates",
+              "Completed: record owners, backups and due date",
               "Kseniia Blokhina + Fatima Tangatarova",
-              "Team confirmed 2 Nov; record dates",
-              "The team confirmed capacity; add each action's specific due date and backup to evidence-and-evolution.md.",
+              "Completed 2 Nov 2026",
+              "Capacity, owners, backups and the final review due date (2 Nov 2026) are recorded in the C07 risk register.",
               "R-03"
             ],
             [
-              "Review clean-source-copy smoke and confirm peer evidence",
-              "Fatima Tangatarova (owner/reviewer)",
-              "Before demonstration",
-              "Review docs/evidence/C07_clean_checkout_2026-11-02/ and add a review comment/sign-off. If a personal second-member run is required, repeat it in Fatima's environment and save the new log.",
+              "Completed: independent Compose startup and evidence review",
+              "Fatima Tangatarova",
+              "Completed 2 Nov 2026",
+              "Fatima confirmed the original clean-start outputs and completed an independent isolated Compose build/start; fresh DB healthy, 14 migrations, backend/frontend Up. Logs: docs/evidence/C07_independent_check_2026-11-02/. The original log records login, 12 slots and HTTP 200.",
               "R-04"
             ]
           ]
         },
         {
           "type": "paragraph",
-          "content": "Fatima should review the saved outputs and add a review comment; the team should record specific dates. If a personal second-member run is required, repeat it and save its log."
+          "content": "Completed 2 Nov 2026: Fatima reviewed the original smoke output and completed an independent Compose build/start; the team recorded owners, backups and due date. A separate browser E2E availability flow remains a recommended improvement."
         }
       ]
     }

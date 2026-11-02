@@ -7,7 +7,7 @@
       "blocks": [
         {
           "type": "paragraph",
-          "content": "Consultation Reservation — rezervační systém konzultací. C07 review je sjednoceno na commitu `31a22ad` ve větvi `fix/docs-c07&corrections`, založeném na `main@3c25e78`, 2. 11. 2026. C06 hodnotilo historickou baseline `main@2b1e404`. Celkový stav: **AMBER / AT RISK**."
+          "content": "Consultation Reservation — rezervační systém konzultací. C07 review je sjednoceno na commitu `31a22ad` ve větvi `fix/docs-c07&corrections`, založeném na `main@3c25e78`, 2. 11. 2026. C06 hodnotilo historickou baseline `main@2b1e404`. Celkový stav: **GREEN / ON TRACK**."
         },
         {
           "type": "table",
@@ -24,11 +24,11 @@
             ],
             [
               "Hlavní otevřená nejistota",
-              "Samostatný browser E2E tok dostupnosti zůstává doporučeným zlepšením; aktuální rizika jsou po kontrole evidence, vlastníků a clean-start výstupů LOW."
+              "Samostatný browser E2E tok dostupnosti zůstává doporučeným zlepšením. Všechna čtyři evidovaná rizika jsou LOW po ověření testů, vlastníků, zástupů a nezávislého clean Compose startu."
             ],
             [
               "Řídicí rozhodnutí",
-              "Uživatelka 2. 11. 2026 zkontrolovala uložené clean-start výstupy a potvrdila jejich konzistenci. Backend owner je Kseniia Blokhina, backup Fatima Tangatarova; frontend/peer evidence owner je Fatima Tangatarova, backup Kseniia Blokhina."
+              "Fatima Tangatarova 2. 11. 2026 dokončila nezávislou kontrolu clean-start evidence a další izolovaný Compose build/start. Kseniia Blokhina vlastní backend/concurrency (backup Fatima); Fatima vlastní frontend/peer evidence (backup Kseniia). Termín review: 2. 11. 2026."
             ]
           ]
         },
@@ -232,7 +232,7 @@
             ["Strategie a důvod", "MITIGATE — opakovat testy a svázat reporty se SHA."],
             [
               "Opatření / vlastník / termín",
-              "Kseniia Blokhina spustí backendovou sadu proti PostgreSQL; Fatima Tangatarova frontend lint/typecheck/build. Před review; připojit logy a SHA."
+              "Backend i frontend checks byly spuštěny 2. 11. 2026; logy a SHA jsou uloženy. Pro pozdější změny znovu spustit příslušnou sadu."
             ],
             [
               "Důkaz účinnosti",
@@ -282,11 +282,11 @@
             ["Expected residual", "L=1, I=2, LOW (2) po potvrzení kapacity."],
             [
               "Actual residual",
-              "L=1, I=2, LOW (2) — vlastníci, zástupnost i termín jsou konkrétně zapsané a kapacita byla potvrzena."
+              "L=1, I=2, LOW (2) — Kseniia owns backend/concurrency with Fatima as backup; Fatima owns frontend/peer evidence with Kseniia as backup; due date 2. 11. 2026; capacity confirmed."
             ],
             [
               "Přijetí / vlastník / důvod",
-              "Kseniia Blokhina a Fatima Tangatarova po zapsání termínů a zástupnosti; při změně dostupnosti riziko znovu otevřít."
+              "Kseniia Blokhina a Fatima Tangatarova po potvrzení vlastníků, zástupů a termínu 2. 11. 2026; při změně dostupnosti riziko znovu otevřít."
             ],
             [
               "Indikátor, trigger, contingency, kontrola",
@@ -304,30 +304,30 @@
           "rows": [
             [
               "Příčina → nejistá událost → dopad",
-              "Nezávislý clean checkout druhým členem není doložen; lokální kontejnerový smoke prošel → na druhém prostředí může build/config selhat → demo nebude dostupné."
+              "Před C07 ověřením nebyl nezávislý clean checkout doložen; původní smoke prošel → na druhém prostředí mohl build/config selhat → demo by nebylo dostupné."
             ],
             ["Kategorie", "Release / operation"],
             [
               "Initial L/I / priorita a důvod",
-              "L=2, I=3, HIGH (6); Docker je dokumentován, aktuální nezávislý smoke test chybí."
+              "L=2, I=3, HIGH (6) při zahájení review; další nezávislý clean Compose start proběhl 2. 11. 2026."
             ],
             ["Strategie a důvod", "MITIGATE — clean checkout a smoke test druhým členem."],
             [
               "Opatření / vlastník / termín",
-              "Izolovaný clean-source-copy běh a logy připravil C07 verification run; uživatelka 2. 11. 2026 zkontrolovala uložené výstupy a potvrdila jejich konzistenci."
+              "Fatima Tangatarova dokončila nezávislý Compose build/start a kontrolu evidence 2. 11. 2026. Nezávislý běh použil novou PostgreSQL volume; samostatné logy jsou v docs/evidence/C07_independent_check_2026-11-02/."
             ],
             [
               "Důkaz účinnosti",
-              "2. 11. 2026: izolovaný clean-source-copy Docker build; nová PostgreSQL volume, 14 migrací do v14, backend start, NOV0001 login, GET /api/slots vrátil 12 seedovaných slotů, frontend HTTP 200. Raw důkazy: docs/evidence/C07_clean_checkout_2026-11-02/."
+              "Původní clean-source-copy smoke: nová PostgreSQL volume, Flyway 14 migrací, backend start, NOV0001 login, GET /api/slots vrátil 12 seedovaných slotů, frontend HTTP 200 (docs/evidence/C07_clean_checkout_2026-11-02/). Fatimův nezávislý Compose build/start: PostgreSQL 17.11 healthy, 14 migrací do v14, backend a frontend Up (docs/evidence/C07_independent_check_2026-11-02/). Druhý log neobsahuje další login/API request."
             ],
             ["Expected residual", "L=1, I=2, LOW (2) po kontrole výstupů."],
             [
               "Actual residual",
-              "L=1, I=2, LOW (2) — clean-source-copy smoke prošel a uživatelka kontrolu uložených výstupů 2. 11. 2026 potvrdila."
+              "L=1, I=2, LOW (2) — původní smoke ověřil login, API a frontend HTTP 200; Fatima dokončila nezávislý Compose build/start a kontrolu logů 2. 11. 2026."
             ],
             [
               "Přijetí / vlastník / důvod",
-              "Fatima Tangatarova zkontroluje přiložené logy a potvrdí přijetí; při selhání nepřijímat a eskalovat opravu."
+              "Fatima Tangatarova dokončila review 2. 11. 2026. Při pozdějším selhání startupu znovu otevřít riziko a eskalovat opravu."
             ],
             [
               "Indikátor, trigger, contingency, kontrola",
@@ -343,7 +343,7 @@
       "blocks": [
         {
           "type": "paragraph",
-          "content": "Stav reportu: **AMBER / AT RISK**. Všechna čtyři evidovaná rizika jsou LOW; samostatný browser E2E tok dostupnosti a jedno neblokující lint varování zůstávají jako zlepšení kvality."
+          "content": "Stav reportu: **GREEN / ON TRACK**. Všechna čtyři evidovaná rizika jsou LOW. Browser E2E availability je doporučené zlepšení; jedno lint varování je neblokující."
         },
         {
           "type": "table",
@@ -351,8 +351,8 @@
           "rows": [
             [
               "01 Executive Status",
-              "Consultation Reservation; výchozí commit 3c25e78, ověřený working tree; AMBER / AT RISK. Kseniia: C06 backend fixes/testy; Fatima: C05/C06 dokumentace a změny rušení/testů. Aktuální sada prošla; kapacita potvrzena, peer checkout ještě čeká.",
-              "37/37 backend, 10/10 frontend; izolovaný clean-source-copy smoke PASS; uložené výstupy zkontrolovala a potvrdila uživatelka 2. 11. 2026."
+              "Consultation Reservation; testovaný source commit 31a22ad, evidence update 50a2909; GREEN / ON TRACK. Kseniia owns backend/concurrency; Fatima owns frontend/peer evidence. Testy, clean-start review i týmový plán jsou dokončené; browser E2E availability zůstává doporučeným zlepšením.",
+              "Backend 37/37, frontend 10/10; původní clean smoke ověřil login, 12 slots a HTTP 200. Fatima dokončila nezávislý Compose build/start; důkazy a review: docs/evidence/C07_independent_check_2026-11-02/."
             ],
             [
               "02 Scope & Delivery",
@@ -361,23 +361,23 @@
             ],
             [
               "03 Schedule & Resources",
-              "Dokončeno: full backend/frontend checks, concurrency guard/test a kontejnerový smoke; tým potvrdil vlastníky a kapacitu. Otevřeno: zapsat termíny a nezávislé spuštění druhým členem.",
-              "Potvrzení vlastníků Kseniia Blokhina (backend) a Fatima Tangatarova (frontend/peer smoke); doplnit termíny do týmového plánu."
+              "Dokončeno: backend/frontend checks, concurrency guard/test, dva čisté Compose build/start běhy, Fatima review a týmový plán vlastníků/zástupů s termínem 2. 11. 2026. Doporučené zlepšení: browser E2E availability.",
+              "Kseniia Blokhina (backend, backup Fatima); Fatima Tangatarova (frontend/peer evidence, backup Kseniia); termín final review 2. 11. 2026."
             ],
             [
               "04 Top Risks & Issues",
               "Aktualizované actual residual: R-01 1×2 LOW; R-02 1×2 LOW; R-03 1×2 LOW; R-04 1×2 LOW. Otevřené incidenty nejsou doloženy.",
-              "R-01/R-02 ověřeny testy a opravenou evidencí; R-03 má jmenné vlastníky, zástupnost a termín; R-04 clean-start výstupy zkontrolovala a potvrdila uživatelka."
+              "R-01/R-02 ověřeny testy a evidencí; R-03 vlastníci, zálohy a termín jsou zapsané; R-04 clean-start review a druhý Compose start dokončila Fatima."
             ],
             [
               "05 Next Action Plan",
-              "Dokončeno 2. 11.: backend 37/37 testů na PostgreSQL, frontend 10/10 + lint/typecheck/build, souběžný approve test a clean-source-copy Docker build/start/login/API smoke; tým potvrdil vlastníky a kapacitu. Uživatelka zkontrolovala uložené výstupy a potvrdila jejich konzistenci.",
+              "Dokončeno 2. 11.: backend 37/37 testů na PostgreSQL, frontend 10/10 + lint/typecheck/build, souběžný approve test, původní Docker smoke s login/API a Fatimin nezávislý Compose build/start. Vlastníci, zástupy, termín i review jsou potvrzené.",
               "Důkazy a omezení jsou zapsané v docs/evidence-and-evolution.md; rizikové actual residual skóre aktualizováno podle výsledků."
             ],
             [
               "06 Decision & Outlook",
-              "Doloženo: opravy F1–F3, 37 backend testů, 10 frontend testů, souběžné schválení s jediným přechodem a clean-source-copy Docker smoke. Tým potvrdil vlastníky/kapacitu a uživatelka zkontrolovala uloženou evidenci.",
-              "RAG zůstává AMBER / AT RISK kvůli chybějícímu samostatnému browser E2E testu dostupnosti; čtyři evidovaná reziduální rizika jsou LOW."
+              "Doloženo: opravy F1–F3, backend 37/37, frontend 10/10, souběžné schválení, původní smoke a Fatimin independent Compose start/review. Tým potvrdil vlastníky, zálohy i termín.",
+              "RAG je GREEN / ON TRACK: plánované kontroly a nezávislý clean Compose start prošly; všechna čtyři reziduální rizika jsou LOW. Browser E2E availability a jedno neblokující lint varování zůstávají doporučenými follow-upy."
             ]
           ]
         }
@@ -412,24 +412,24 @@
               "R-01"
             ],
             [
-              "Zapsat potvrzené jmenné vlastníky, zástupnost a termíny",
+              "Dokončeno: zapsat vlastníky, zástupy a termín",
               "Kseniia Blokhina + Fatima Tangatarova",
-              "Potvrzeno týmem 2. 11.; zapsat termíny",
-              "Tým potvrdil kapacitu; do evidence-and-evolution.md doplnit konkrétní datum a zástupce pro každou akci.",
+              "Dokončeno 2. 11. 2026",
+              "Kapacita, vlastníci, backup owners a termín final review (2. 11. 2026) jsou zapsané v C07 risk register.",
               "R-03"
             ],
             [
-              "Zkontrolovat clean-source-copy smoke a potvrdit peer evidence",
-              "Fatima Tangatarova (owner/reviewer)",
-              "Před demonstrací",
-              "Zkontrolovat docs/evidence/C07_clean_checkout_2026-11-02/; připojit komentář/sign-off. Pokud zadání vyžaduje osobní běh, zopakovat ho v jejím prostředí.",
+              "Dokončeno: nezávislý Compose start a review evidence",
+              "Fatima Tangatarova",
+              "Dokončeno 2. 11. 2026",
+              "Fatima potvrdila clean-start výstupy a provedla nezávislý izolovaný Compose build/start; nová DB healthy, 14 migrací, backend/frontend Up. Logy: docs/evidence/C07_independent_check_2026-11-02/. Původní log doložil login, 12 slots a HTTP 200.",
               "R-04"
             ]
           ]
         },
         {
           "type": "paragraph",
-          "content": "Fatima má zkontrolovat uložené výstupy a doplnit review komentář; tým má připsat konkrétní termíny. Pokud je vyžadováno osobní spuštění druhým členem, zopakovat ho a uložit nový log."
+          "content": "Dokončeno 2. 11. 2026: Fatima zkontrolovala původní smoke výstupy a dokončila nezávislý Compose build/start; tým zapsal vlastníky, zálohy a termín. Samostatné browser E2E availability zůstává doporučeným zlepšením."
         }
       ]
     }
