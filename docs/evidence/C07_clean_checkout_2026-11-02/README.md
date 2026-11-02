@@ -8,7 +8,7 @@
 
 ## Environment
 
-The source tree was copied to a new temporary directory without `.git`, `node_modules`, `target`, or `dist`. Docker Compose ran as project `c07-clean-smoke`, using a new isolated PostgreSQL volume and ports 55434 (database), 18083 (backend), and 15177 (frontend). The tested tree is based on `main@3c25e78` and includes the C07 concurrency-lock change.
+The source tree was copied to a new temporary directory without `.git`, `node_modules`, `target`, or `dist`. Docker Compose ran as project `c07-clean-smoke`, using a new isolated PostgreSQL volume and ports 55434 (database), 18083 (backend), and 15177 (frontend). The tested tree is commit `31a22ad` on `fix/docs-c07&corrections`, based on `main@3c25e78`, and includes the C07 concurrency-lock change.
 
 ## Result
 
@@ -19,7 +19,7 @@ The source tree was copied to a new temporary directory without `.git`, `node_mo
 - The frontend returned HTTP 200.
 - All three containers were reported `Up`; the database health check was `healthy`.
 
-This is an isolated clean-source-copy container run. Fatima's review/sign-off is still needed before describing it as a run personally performed by her or as a second-human peer check.
+Review record: the user checked the stored Compose, migration and smoke outputs on 2 Nov 2026 and confirmed that the clean-start result is acceptable. This confirmation is a review of the evidence, not a claim that the user personally executed the Docker commands.
 
 ## Attached machine-readable evidence
 

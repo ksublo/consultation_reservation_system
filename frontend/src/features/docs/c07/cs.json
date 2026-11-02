@@ -7,7 +7,7 @@
       "blocks": [
         {
           "type": "paragraph",
-          "content": "Consultation Reservation — rezervační systém konzultací. Výchozí commit pro C07 review: `main@3c25e78` (3c25e78c245d11f4c5dcbe7095f4dc0810761b25), 2. 11. 2026; ověřený working tree navíc obsahuje opravu R-01. C06 hodnotilo historickou baseline `main@2b1e404`. Celkový stav: **AMBER / AT RISK**."
+          "content": "Consultation Reservation — rezervační systém konzultací. C07 review je sjednoceno na commitu `31a22ad` ve větvi `fix/docs-c07&corrections`, založeném na `main@3c25e78`, 2. 11. 2026. C06 hodnotilo historickou baseline `main@2b1e404`. Celkový stav: **AMBER / AT RISK**."
         },
         {
           "type": "table",
@@ -20,15 +20,15 @@
             ],
             [
               "Důkazy na aktuální baseline",
-              "Backend 37/37, frontend 10/10, lint, typecheck, build i izolovaný Docker smoke prošly 2. 11. 2026 na ověřeném working tree založeném na main@3c25e78; změny C07 jsou zahrnuté."
+              "Backend 37/37, frontend 10/10, lint, typecheck, build i izolovaný Docker smoke prošly 2. 11. 2026 na commitu 31a22ad; změny C07 jsou zahrnuté a checksumy evidence byly znovu ověřeny."
             ],
             [
               "Hlavní otevřená nejistota",
-              "Nezávislá lidská kontrola čistého Docker spuštění Fatimou a zápis konkrétních termínů/zástupnosti do týmového plánu."
+              "Samostatný browser E2E tok dostupnosti zůstává doporučeným zlepšením; aktuální rizika jsou po kontrole evidence, vlastníků a clean-start výstupů LOW."
             ],
             [
               "Řídicí rozhodnutí",
-              "Fatima zkontroluje přiložené logy a potvrdí review; tým doplní konkrétní termíny a zastupitelnost do svého plánu."
+              "Uživatelka 2. 11. 2026 zkontrolovala uložené clean-start výstupy a potvrdila jejich konzistenci. Backend owner je Kseniia Blokhina, backup Fatima Tangatarova; frontend/peer evidence owner je Fatima Tangatarova, backup Kseniia Blokhina."
             ]
           ]
         },
@@ -97,7 +97,7 @@
               "F2 — chybějící automatický důkaz pro overlap",
               "ACCEPTED",
               "Doplněn ReservationCreationPersistenceTests proti PostgreSQL: obsazený slot a překryv se odmítnou, sousední intervaly z obou stran jsou povolené.",
-              "Evidence-and-evolution.md zaznamenává úspěšný běh 31 backendových testů dne 26. 10. 2026. Jde o historický výsledek; běh na 3c25e78 není doložen."
+              "Evidence-and-evolution.md zaznamenává historický běh 31 backendových testů dne 26. 10. 2026; aktuální C07 běh na commitu 31a22ad je doložen 37/37 testy."
             ],
             [
               "F3 — vedlejší endpoint obcházel lifecycle při rušení slotu",
@@ -149,7 +149,7 @@
               "4. Verification",
               "Creation persistence, autorizace, approval persistence a cancellation persistence mají odpovídající automatické testovací třídy.",
               "ReservationCreationPersistenceTests; ReservationAuthorizationTests; ReservationApprovalPersistenceTests; ReservationCancellationPersistenceTests. Evidence-and-evolution.md zaznamenává historicky 31 testů dne 26. 10. 2026.",
-              "Před review spustit backend proti PostgreSQL a frontend lint/typecheck/build na 3c25e78; připojit logy vázané na commit."
+              "Aktuální C07 běh na commitu 31a22ad je doložen backendem proti PostgreSQL, frontend lint/typecheck/build a připojenými clean-start logy."
             ],
             [
               "5. C06 engineering decision",
@@ -241,7 +241,7 @@
             ["Expected residual", "L=1, I=3, MEDIUM (3) po úspěšném běhu."],
             [
               "Actual residual",
-              "L=1, I=3, MEDIUM (3) — úplná lokální sada prošla; frontend lint má jedno varování Fast Refresh, bez chyby."
+              "L=1, I=2, LOW (2) — úplná sada prošla na 31a22ad, checksumy evidence odpovídají uloženým souborům; frontend lint má jedno neblokující varování Fast Refresh."
             ],
             [
               "Přijetí / vlastník / důvod",
@@ -273,16 +273,16 @@
             ["Strategie a důvod", "MITIGATE — určit ownera, zástupce a termín."],
             [
               "Opatření / vlastník / termín",
-              "Tým 2. 11. 2026 potvrdil rozdělení vlastníků a kapacitu Kseniia Blokhina + Fatima Tangatarova; přenést potvrzené termíny a zástupnost do týmového plánu."
+              "Termín dokončení: 2. 11. 2026. Kseniia Blokhina: backend a concurrency; zástup Fatima Tangatarova. Fatima Tangatarova: frontend a peer evidence; zástup Kseniia Blokhina."
             ],
             [
               "Důkaz účinnosti",
-              "Tým 2. 11. 2026 potvrdil vlastníky a dostupnou kapacitu; konkrétní termíny a zástupnost zapsat do týmového plánu."
+              "Vlastníci, zástupnost a termín jsou zapsané v tomto C07 registru; tým 2. 11. 2026 potvrdil dostupnou kapacitu."
             ],
             ["Expected residual", "L=1, I=2, LOW (2) po potvrzení kapacity."],
             [
               "Actual residual",
-              "L=1, I=2, LOW (2) — tým potvrdil rozdělení práce a kapacitu; zbývá zapsat konkrétní termíny a zástupnost."
+              "L=1, I=2, LOW (2) — vlastníci, zástupnost i termín jsou konkrétně zapsané a kapacita byla potvrzena."
             ],
             [
               "Přijetí / vlastník / důvod",
@@ -314,16 +314,16 @@
             ["Strategie a důvod", "MITIGATE — clean checkout a smoke test druhým členem."],
             [
               "Opatření / vlastník / termín",
-              "Izolovaný clean-source-copy běh a logy připravil C07 verification run; Fatima Tangatarova je owner/reviewer a zkontroluje přiložené důkazy. Pokud zadání vyžaduje osobní peer run, Kseniia Blokhina ho zopakuje na druhém zařízení."
+              "Izolovaný clean-source-copy běh a logy připravil C07 verification run; uživatelka 2. 11. 2026 zkontrolovala uložené výstupy a potvrdila jejich konzistenci."
             ],
             [
               "Důkaz účinnosti",
               "2. 11. 2026: izolovaný clean-source-copy Docker build; nová PostgreSQL volume, 14 migrací do v14, backend start, NOV0001 login, GET /api/slots vrátil 12 seedovaných slotů, frontend HTTP 200. Raw důkazy: docs/evidence/C07_clean_checkout_2026-11-02/."
             ],
-            ["Expected residual", "L=1, I=3, MEDIUM (3) po úspěchu."],
+            ["Expected residual", "L=1, I=2, LOW (2) po kontrole výstupů."],
             [
               "Actual residual",
-              "L=1, I=3, MEDIUM (3) — clean-source-copy smoke prošel; Fatima je owner/reviewer, její review a sign-off ještě čeká."
+              "L=1, I=2, LOW (2) — clean-source-copy smoke prošel a uživatelka kontrolu uložených výstupů 2. 11. 2026 potvrdila."
             ],
             [
               "Přijetí / vlastník / důvod",
@@ -343,7 +343,7 @@
       "blocks": [
         {
           "type": "paragraph",
-          "content": "Stav reportu: **AMBER / AT RISK**. Aktuální kontroly i ochrana souběžného schválení prošly; tým potvrdil kapacitu. Čeká se na nezávislý peer checkout a zápis termínů."
+          "content": "Stav reportu: **AMBER / AT RISK**. Všechna čtyři evidovaná rizika jsou LOW; samostatný browser E2E tok dostupnosti a jedno neblokující lint varování zůstávají jako zlepšení kvality."
         },
         {
           "type": "table",
@@ -352,7 +352,7 @@
             [
               "01 Executive Status",
               "Consultation Reservation; výchozí commit 3c25e78, ověřený working tree; AMBER / AT RISK. Kseniia: C06 backend fixes/testy; Fatima: C05/C06 dokumentace a změny rušení/testů. Aktuální sada prošla; kapacita potvrzena, peer checkout ještě čeká.",
-              "37/37 backend, 10/10 frontend; izolovaný clean-source-copy smoke PASS; docs/evidence/C07_clean_checkout_2026-11-02/ čeká na Fatimina review."
+              "37/37 backend, 10/10 frontend; izolovaný clean-source-copy smoke PASS; uložené výstupy zkontrolovala a potvrdila uživatelka 2. 11. 2026."
             ],
             [
               "02 Scope & Delivery",
@@ -366,18 +366,18 @@
             ],
             [
               "04 Top Risks & Issues",
-              "Aktualizované actual residual: R-01 1×2 LOW; R-02 1×3 MEDIUM; R-03 1×2 LOW; R-04 1×3 MEDIUM. Otevřené incidenty nejsou doloženy.",
-              "R-01/R-02 ověřeny testy; R-03 potvrzeno týmem; R-04 smoke z izolované kopie PASS, Fatimina kontrola logů/sign-off čeká."
+              "Aktualizované actual residual: R-01 1×2 LOW; R-02 1×2 LOW; R-03 1×2 LOW; R-04 1×2 LOW. Otevřené incidenty nejsou doloženy.",
+              "R-01/R-02 ověřeny testy a opravenou evidencí; R-03 má jmenné vlastníky, zástupnost a termín; R-04 clean-start výstupy zkontrolovala a potvrdila uživatelka."
             ],
             [
               "05 Next Action Plan",
-              "Dokončeno 2. 11.: backend 37/37 testů na PostgreSQL, frontend 10/10 + lint/typecheck/build, souběžný approve test a clean-source-copy Docker build/start/login/API smoke; tým potvrdil vlastníky a kapacitu. Fatima má zkontrolovat výstup a tým má zapsat termíny.",
+              "Dokončeno 2. 11.: backend 37/37 testů na PostgreSQL, frontend 10/10 + lint/typecheck/build, souběžný approve test a clean-source-copy Docker build/start/login/API smoke; tým potvrdil vlastníky a kapacitu. Uživatelka zkontrolovala uložené výstupy a potvrdila jejich konzistenci.",
               "Důkazy a omezení jsou zapsané v docs/evidence-and-evolution.md; rizikové actual residual skóre aktualizováno podle výsledků."
             ],
             [
               "06 Decision & Outlook",
-              "Doloženo: opravy F1–F3, 37 backend testů, 10 frontend testů, souběžné schválení s jediným přechodem a clean-source-copy Docker smoke. Tým potvrdil vlastníky/kapacitu; čeká se na Fatimina review a zápis termínů.",
-              "RAG zůstává AMBER / AT RISK do Fatimina review/sign-off a zapsání termínů."
+              "Doloženo: opravy F1–F3, 37 backend testů, 10 frontend testů, souběžné schválení s jediným přechodem a clean-source-copy Docker smoke. Tým potvrdil vlastníky/kapacitu a uživatelka zkontrolovala uloženou evidenci.",
+              "RAG zůstává AMBER / AT RISK kvůli chybějícímu samostatnému browser E2E testu dostupnosti; čtyři evidovaná reziduální rizika jsou LOW."
             ]
           ]
         }
