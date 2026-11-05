@@ -1134,6 +1134,87 @@ main.login-page {
 .docs-content {
   @apply min-w-0 w-full p-6 sm:p-8 lg:p-10;
 }
+.docs-layout {
+  @apply min-w-0;
+}
+.docs-toc {
+  @apply mb-8 rounded-2xl border border-slate-200 bg-slate-50/80;
+}
+.docs-toc summary {
+  @apply cursor-pointer list-none px-4 py-3 text-sm font-extrabold text-vsb transition hover:bg-white;
+}
+.docs-toc summary::-webkit-details-marker {
+  display: none;
+}
+.docs-toc summary::before {
+  content: '＋';
+  @apply mr-2 inline-block text-base font-bold;
+}
+.docs-toc[open] summary::before {
+  content: '−';
+}
+.docs-toc nav {
+  @apply border-t border-slate-200 px-4 pb-4 pt-3;
+}
+.docs-toc ol {
+  @apply m-0 grid max-h-[min(60dvh,34rem)] list-none gap-1 overflow-y-auto p-0;
+}
+.docs-toc li.nested {
+  @apply pl-3;
+}
+.docs-toc a {
+  @apply block rounded-lg px-2 py-1.5 text-sm leading-5 text-slate-600 transition hover:bg-white hover:text-vsb;
+}
+.docs-content h1,
+.docs-content h2,
+.docs-content h3 {
+  scroll-margin-top: 1.5rem;
+}
+.docs-c07-viewer {
+  @apply min-w-0;
+}
+.docs-c07-document {
+  @apply min-w-0;
+}
+.docs-c07-document > * + * {
+  @apply mt-12 border-t border-slate-200 pt-10;
+}
+.docs-c07-text {
+  @apply min-w-0;
+}
+.docs-c07-toolbar {
+  @apply mb-6 flex items-center justify-between gap-4 rounded-2xl border border-teal-100 bg-teal-50/60 p-4 sm:p-5;
+}
+.docs-c07-toolbar h1 {
+  @apply mt-1 text-2xl font-extrabold tracking-tight text-ink sm:text-3xl;
+}
+.docs-c07-heading {
+  @apply min-w-0 flex-1 text-left;
+}
+.docs-c07-toolbar .docs-eyebrow {
+  @apply m-0;
+}
+.docs-c07-meta {
+  @apply mt-1 text-sm text-slate-500;
+}
+.docs-c07-arrow {
+  @apply grid h-11 w-11 shrink-0 place-items-center rounded-full border border-teal-200 bg-white text-2xl font-semibold text-vsb shadow-sm transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-35;
+}
+.docs-c07-page-frame {
+  @apply flex min-h-[20rem] items-center justify-center rounded-2xl border border-teal-100 bg-teal-50/40 p-3 shadow-sm sm:p-5;
+}
+.docs-c07-page {
+  @apply block h-auto max-h-[70dvh] w-full object-contain;
+}
+.docs-c07-page-toolbar {
+  @apply mt-4 flex items-center justify-center gap-3 text-sm font-semibold text-slate-600;
+}
+.docs-c07-page-toolbar a {
+  @apply ml-3 rounded-full border border-teal-200 bg-white px-3 py-2 text-vsb transition hover:bg-teal-50;
+}
+.docs-c07-page-arrow {
+  @apply grid h-9 w-9 place-items-center rounded-full border border-teal-200 bg-white text-lg text-vsb transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-35;
+}
 .docs-eyebrow {
   @apply m-0 text-xs font-extrabold tracking-widest text-vsb;
 }

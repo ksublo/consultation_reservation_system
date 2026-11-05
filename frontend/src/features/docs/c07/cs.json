@@ -24,7 +24,7 @@
             ],
             [
               "Hlavní otevřená nejistota",
-              "Samostatný browser E2E tok dostupnosti zůstává doporučeným zlepšením. Všechna čtyři evidovaná rizika jsou LOW po ověření testů, vlastníků, zástupů a nezávislého clean Compose startu."
+              "Samostatný browser E2E tok dostupnosti zůstává doporučeným zlepšením; aktuální rizika jsou po kontrole evidence, vlastníků a clean-start výstupů LOW."
             ],
             [
               "Řídicí rozhodnutí",
@@ -304,7 +304,7 @@
           "rows": [
             [
               "Příčina → nejistá událost → dopad",
-              "Před C07 ověřením nebyl nezávislý clean checkout doložen; původní smoke prošel → na druhém prostředí mohl build/config selhat → demo by nebylo dostupné."
+              "Před C07 ověřením byl nezávislý clean checkout doložen; původní smoke prošel → na druhém prostředí mohl build/config selhat → demo by nebylo dostupné."
             ],
             ["Kategorie", "Release / operation"],
             [
