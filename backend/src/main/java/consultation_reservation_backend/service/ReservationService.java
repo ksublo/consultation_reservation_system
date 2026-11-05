@@ -264,7 +264,7 @@ public class ReservationService {
 
   private Reservation get(UUID id) {
     return reservations
-        .findById(id)
+        .findByIdForUpdate(id)
         .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Reservation not found."));
   }
 

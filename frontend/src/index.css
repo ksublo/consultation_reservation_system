@@ -1125,6 +1125,12 @@ main.login-page {
 .docs-tabs button.c6-tab.active {
   @apply text-red-600;
 }
+.docs-tabs button.c7-tab {
+  @apply text-teal-700;
+}
+.docs-tabs button.c7-tab.active {
+  @apply bg-teal-50 text-teal-900 shadow-sm ring-1 ring-teal-200;
+}
 .docs-content {
   @apply min-w-0 w-full p-6 sm:p-8 lg:p-10;
 }
@@ -1424,6 +1430,52 @@ main.login-page {
 }
 .docs-table td {
   background: #fff;
+}
+.docs-c07 .docs-table {
+  min-width: 0;
+  table-layout: fixed;
+}
+.docs-c07 .docs-table th,
+.docs-c07 .docs-table td {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+.docs-c07 .docs-table:has(th:nth-child(2):last-child) th:first-child,
+.docs-c07 .docs-table:has(th:nth-child(2):last-child) td:first-child {
+  width: 34%;
+}
+.docs-c07 .docs-table:has(th:nth-child(3):last-child) th:first-child,
+.docs-c07 .docs-table:has(th:nth-child(3):last-child) td:first-child {
+  width: 22%;
+}
+.docs-c07 .docs-table:has(th:nth-child(3):last-child) th:nth-child(2),
+.docs-c07 .docs-table:has(th:nth-child(3):last-child) td:nth-child(2) {
+  width: 40%;
+}
+.docs-c07 .docs-table:has(th:nth-child(4):last-child) th:first-child,
+.docs-c07 .docs-table:has(th:nth-child(4):last-child) td:first-child {
+  width: 22%;
+}
+.docs-c07 .docs-table:has(th:nth-child(4):last-child) th:nth-child(2),
+.docs-c07 .docs-table:has(th:nth-child(4):last-child) td:nth-child(2) {
+  width: 18%;
+}
+.docs-c07 .docs-table:has(th:nth-child(4):last-child) th:nth-child(3),
+.docs-c07 .docs-table:has(th:nth-child(4):last-child) td:nth-child(3) {
+  width: 32%;
+}
+.docs-c07 .docs-block-filled {
+  padding: 1.25rem;
+  border: 1px solid #b7e4dc;
+  border-left: 5px solid #0f766e;
+  border-radius: 1rem;
+  background: #f0fdfa;
+}
+.docs-c07 .docs-block-filled::after {
+  display: none;
+}
+.docs-c07 .docs-block-filled h2 {
+  color: #115e59;
 }
 .docs-c06-source .docs-table {
   width: 100%;

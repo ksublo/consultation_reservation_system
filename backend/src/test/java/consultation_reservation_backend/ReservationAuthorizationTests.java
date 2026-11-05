@@ -54,7 +54,7 @@ class ReservationAuthorizationTests {
             student,
             "Consultation",
             "Question");
-    when(reservations.findById(reservation.getId())).thenReturn(Optional.of(reservation));
+    when(reservations.findByIdForUpdate(reservation.getId())).thenReturn(Optional.of(reservation));
     token = UUID.randomUUID();
   }
 
