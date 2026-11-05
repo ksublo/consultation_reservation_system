@@ -1,0 +1,449 @@
+{
+  "title": "C07 · Project Documentation, Risks and Reviews",
+  "sections": [
+    {
+      "id": "status",
+      "title": "Project Status",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Consultation Reservation — consultation booking system. C07 review is aligned to commit `31a22ad` on branch `fix/docs-c07&corrections`, based on `main@3c25e78`, 2 Nov 2026. C06 assessed historical baseline `main@2b1e404`. Overall status: **AMBER / AT RISK**."
+        },
+        {
+          "type": "table",
+          "headers": ["Item", "Project status"],
+          "rows": [
+            ["C06 baseline", "main@2b1e404; assessment findings F1–F3"],
+            [
+              "Finding fixes",
+              "F1, F2 and F3 accepted; implementation changes are recorded in current code and project evidence"
+            ],
+            [
+              "Evidence on current baseline",
+              "Backend 37/37, frontend 10/10, lint, typecheck, build and isolated Docker smoke passed on commit 31a22ad on 2 Nov 2026; the C07 changes are included and the evidence checksums were reverified."
+            ],
+            [
+              "Main open item",
+              "A separate browser E2E availability flow remains a recommended quality improvement; the current risks are LOW after the evidence, ownership and clean-start checks."
+            ],
+            [
+              "Management decision",
+              "The user checked the stored clean-start outputs and confirmed their consistency on 2 Nov 2026. Kseniia Blokhina owns backend work with Fatima Tangatarova as backup; Fatima owns frontend/peer evidence with Kseniia as backup."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "warning",
+          "content": "Historical results retain their dates. A test or treatment is not marked verified on the current baseline without a matching run."
+        }
+      ]
+    },
+    {
+      "id": "team-contributions",
+      "title": "Team Members and Recorded Contributions",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Attribution below follows commit authorship in the repository. It records evidenced changes and does not claim that an author worked without collaboration."
+        },
+        {
+          "type": "table",
+          "headers": ["Team member", "Recorded project work", "Evidence"],
+          "rows": [
+            [
+              "Kseniia Blokhina",
+              "Post-C06 fixes: backend reservation authorization and lifecycle, persistence and regression tests; follow-up C06 documentation and frontend updates.",
+              "Commit 8ca6684 (26 Oct 2026): backend, tests, C06 assessment and project evidence. Commit cfc618e (27 Oct 2026): C06 frontend and documentation updates."
+            ],
+            [
+              "Fatima Tangatarova",
+              "C05 design and verification evidence; Czech and English C06 frontend documentation; later cancellation changes, UI and regression tests.",
+              "Commit 004bef1 (19 Oct 2026): C05 design, tests and documentation. Commit a938fd2 (26 Oct 2026): C06 frontend documentation. Commit 3c25e78 (2 Nov 2026): cancellation changes and related tests."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Names come from commit authorship. Proposed owners for future actions are recommendations for the team to confirm."
+        }
+      ]
+    },
+    {
+      "id": "c06",
+      "title": "C06 · Finding Disposition",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "C06 assessed baseline `main@2b1e404`. Three confirmed findings were accepted; their fixes are supported by implementation and project evidence."
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Finding",
+            "Disposition",
+            "Rationale / implemented change",
+            "Evidence and current status"
+          ],
+          "rows": [
+            [
+              "F1 — reservation created with a spoofed studentId",
+              "ACCEPTED",
+              "The controller passes the authenticated user. ReservationService requires the STUDENT role and derives ownership from the authenticated identity; studentId is no longer part of the request.",
+              "ReservationAuthorizationTests verifies that a spoofed ID cannot change the owner or audit actor. The test is included in the current C07 run."
+            ],
+            [
+              "F2 — missing automated evidence for overlapping reservations",
+              "ACCEPTED",
+              "ReservationCreationPersistenceTests against PostgreSQL rejects an occupied slot and overlapping interval while allowing adjacent intervals on both sides.",
+              "The 2 Nov 2026 C07 run passed all 37 backend tests against PostgreSQL; see C07 Verification Evidence."
+            ],
+            [
+              "F3 — secondary endpoint bypassed the reservation lifecycle when cancelling a slot",
+              "ACCEPTED",
+              "Both slot-cancellation endpoints use the authenticated actor and delegate the reservation transition to ReservationService, including authorization, cutoff, reason, history and notification.",
+              "ReservationAuthorizationTests covers spoofed-identity regressions and the owner's successful path; the complete suite passed in the current C07 run."
+            ],
+            [
+              "B1, R1, R4, R5, A2, A4, Q1, Q3",
+              "ACCEPTED; corrected in documentation/code",
+              "Baseline aligned; three-hour cutoff, create identity, test evidence, lifecycle ownership and quality-measurement scope clarified.",
+              "Details in frontend/src/features/docs/c06/C06_Assessment_consultation_reservation_system.md and docs/evidence-and-evolution.md."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "technical-review",
+      "title": "A · Technical Design Review",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Review argument: reservation and lifecycle requirements → verified identity and transition rules → `ReservationService` → persistence, history and notifications → test evidence and response to C06."
+        },
+        {
+          "type": "table",
+          "headers": ["Step", "Project claim", "Specific evidence", "Limit / what to demonstrate"],
+          "rows": [
+            [
+              "1. Scope and accepted behavior",
+              "REQ-01/BR-04: an authenticated student creates a reservation; PENDING and CONFIRMED block a slot; active student overlaps are rejected; intervals are [start,end). The slot must support the selected mode; creation has a 3-hour cutoff and a limit of 5 PENDING requests.",
+              "frontend/src/features/docs/c02/cs.json: OP-01, BR-01–04; ReservationService.create().",
+              "Demonstrate successful creation, an occupied slot, an overlap and an adjacent interval. Do not claim PENDING expiration is implemented."
+            ],
+            [
+              "2. Architecture",
+              "React → Spring Boot API → ReservationService → PostgreSQL. ReservationService owns the lifecycle, history and notifications; PostgreSQL protects active-slot exclusivity.",
+              "docs/architecture-and-decisions.md ADR-01; backend/src/main/java/consultation_reservation_backend/service/ReservationService.java; V1 migration.",
+              "Show the existing diagram against the source baseline and confirm the transaction boundary."
+            ],
+            [
+              "3. Detailed design",
+              "approve(): AuthenticatedUser + TEACHER role + ownership + PENDING → CONFIRMED, history and notification. cancel(): authorized student or slot owner, cutoff, reason, history and notification.",
+              "C05 DD; ReservationService.approve(), cancel(), cancelSlotWithReservation().",
+              "Demonstrate error paths 401/403/404/409 and a successful path; the concurrent approval regression now passes with row locking."
+            ],
+            [
+              "4. Verification",
+              "Creation persistence, authorization, approval persistence and cancellation persistence have corresponding automated test classes.",
+              "ReservationCreationPersistenceTests; ReservationAuthorizationTests; ReservationApprovalPersistenceTests; ReservationCancellationPersistenceTests. C07 Verification Evidence records 37 backend tests passed on 2 Nov 2026.",
+              "The full backend and frontend checks were rerun for the C07 working tree; see the evidence record and its commit limitation."
+            ],
+            [
+              "5. C06 engineering decision",
+              "F1–F3 accepted; implementation fixes preserve session identity and a single lifecycle owner.",
+              "C06 disposition, current ReservationService and regression tests.",
+              "Show the relevant code and rerun result. ACCEPTED alone is not evidence of a current run."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "The references identify what to open during review. The 2 Nov 2026 test results apply to C07 commit 31a22ad on fix/docs-c07&corrections, including the documented R-01 fix."
+        }
+      ]
+    },
+    {
+      "id": "risks",
+      "title": "B · Risk Register",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Likelihood (L) and impact (I) use a 1–3 scale; priority is L×I. Actual residuals below reflect code review, tests, Docker Compose smoke testing and team confirmation on 2 Nov 2026."
+        },
+        {
+          "type": "paragraph",
+          "content": "**R-01 · Concurrent approval**"
+        },
+        {
+          "type": "table",
+          "headers": ["Item", "Project assessment"],
+          "rows": [
+            [
+              "Cause → event → impact",
+              "Concurrent approval of the same PENDING reservation may pass more than once → duplicate history/notifications or inconsistent lifecycle."
+            ],
+            ["Category", "Technical / quality"],
+            [
+              "Initial L/I / priority + rationale",
+              "L=2, I=2, MEDIUM (4); C05 records missing serialization as an open risk."
+            ],
+            [
+              "Strategy + rationale",
+              "MITIGATE — add a concurrency guard and database integration test."
+            ],
+            [
+              "Treatment / owner / due",
+              "Implemented and verified in the C07 review on 2 Nov; proposed code owner for future changes: Kseniia Blokhina, with Fatima Tangatarova reviewing the result."
+            ],
+            [
+              "Treatment effectiveness evidence",
+              "Fix: pessimistic write lock in ReservationRepository; PostgreSQL concurrency test passed 2 Nov 2026 (one approval, second returns 409, exactly one new history row and notification)."
+            ],
+            ["Expected residual", "L=1, I=2, LOW (2) if the test passes."],
+            [
+              "Actual residual",
+              "L=1, I=2, LOW (2) — lock and concurrency test verified; ordinary database outage risk remains."
+            ],
+            [
+              "Risk acceptance / owner",
+              "Kseniia Blokhina and Fatima Tangatarova jointly after reviewing the test; if it fails, do not accept the risk and keep it OPEN."
+            ],
+            [
+              "Indicator, trigger, contingency, review",
+              "Trigger: multiple lifecycle transitions/audit records. Contingency: do not guarantee concurrent approval; escalate. Review: next checkpoint."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "**R-02 · Current test evidence**"
+        },
+        {
+          "type": "table",
+          "headers": ["Item", "Project assessment"],
+          "rows": [
+            [
+              "Cause → event → impact",
+              "Before C07 review the last complete test record was dated 26 Oct → later changes had not been rerun → a regression could go undetected and claims lack current evidence."
+            ],
+            ["Category", "Schedule / quality"],
+            [
+              "Initial L/I / priority + rationale",
+              "L=2, I=3, HIGH (6); baseline changed after the recorded run."
+            ],
+            ["Strategy + rationale", "MITIGATE — rerun checks and bind reports to SHA."],
+            [
+              "Treatment / owner / due",
+              "C07 review reran backend and frontend checks on 2 Nov on commit 31a22ad. For later changes, proposed owners are Kseniia Blokhina for backend and Fatima Tangatarova for frontend/peer evidence; attach logs and the tested revision."
+            ],
+            [
+              "Treatment effectiveness evidence",
+              "2 Nov 2026: backend `mvnw.cmd test` 37/37 PASS against PostgreSQL; frontend Vitest 10/10 PASS, lint 0 errors (1 warning), typecheck and build PASS. Docker image build and HTTP smoke PASS."
+            ],
+            ["Expected residual", "L=1, I=3, MEDIUM (3) after successful backend run."],
+            [
+              "Actual residual",
+              "L=1, I=2, LOW (2) — the full suite passed on 31a22ad and the evidence checksums match the stored files; frontend lint has one non-blocking Fast Refresh warning."
+            ],
+            [
+              "Risk acceptance / owner",
+              "Kseniia Blokhina and Fatima Tangatarova after checking logs and SHA; if checks fail, do not accept the risk and set status RED."
+            ],
+            [
+              "Indicator, trigger, contingency, review",
+              "Trigger: any failure or a non-repeatable run. Contingency: fix regression or set status RED. Review: before presentation."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "**R-03 · Owners and capacity**"
+        },
+        {
+          "type": "table",
+          "headers": ["Item", "Project assessment"],
+          "rows": [
+            [
+              "Cause → event → impact",
+              "Before confirmation, ownership and availability were not recorded → a task could lack an available owner → integration/review delay. The team confirmed on 2 Nov 2026 that the split and capacity are acceptable."
+            ],
+            ["Category", "People / schedule"],
+            [
+              "Initial L/I / priority + rationale",
+              "L=2, I=2, MEDIUM (4); named owners and schedule are absent from repository records."
+            ],
+            ["Strategy + rationale", "MITIGATE — assign an owner, backup and due date."],
+            [
+              "Treatment / owner / due",
+              "The team confirmed the ownership split, backups and capacity for Kseniia Blokhina and Fatima Tangatarova on 2 Nov 2026."
+            ],
+            [
+              "Treatment effectiveness evidence",
+              "The team confirmed ownership, backups and capacity on 2 Nov 2026; the remaining improvement is to add specific due dates to the team plan."
+            ],
+            ["Expected residual", "L=1, I=2, LOW (2) after capacity is confirmed."],
+            [
+              "Actual residual",
+              "L=1, I=2, LOW (2) — the team confirmed the work split, backups and capacity; specific dates remain a planning improvement."
+            ],
+            [
+              "Risk acceptance / owner",
+              "Kseniia Blokhina and Fatima Tangatarova after dates and backups are recorded; reopen if availability changes."
+            ],
+            [
+              "Indicator, trigger, contingency, review",
+              "Trigger: action lacks owner/date. Contingency: reassign scope. Review: weekly planning."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "**R-04 · Clean demo startup**"
+        },
+        {
+          "type": "table",
+          "headers": ["Item", "Project assessment"],
+          "rows": [
+            [
+              "Cause → event → impact",
+              "An independent second-member clean checkout is not recorded; the isolated container smoke passed and the stored outputs were checked → a separate peer run could still reveal an environment-specific build/configuration issue."
+            ],
+            ["Category", "Release / operation"],
+            [
+              "Initial L/I / priority + rationale",
+              "L=2, I=3, HIGH (6); Docker Compose is documented, but no current independent smoke run is recorded."
+            ],
+            [
+              "Strategy + rationale",
+              "MITIGATE — a second team member performs clean checkout and smoke test."
+            ],
+            [
+              "Treatment / owner / due",
+              "C07 verification run prepared the isolated clean-source-copy build and logs; the user checked the stored outputs on 2 Nov 2026. Fatima Tangatarova owns the peer-evidence follow-up, with Kseniia Blokhina as backup if a personal second-member run is required."
+            ],
+            [
+              "Treatment effectiveness evidence",
+              "2 Nov 2026: isolated clean-source-copy Docker build; fresh PostgreSQL volume, 14 migrations to v14, backend start, NOV0001 login, GET /api/slots returned 12 seeded slots, frontend HTTP 200. Raw evidence: docs/evidence/C07_clean_checkout_2026-11-02/."
+            ],
+            [
+              "Expected residual",
+              "L=1, I=3, MEDIUM (3) after successful second-environment check."
+            ],
+            [
+              "Actual residual",
+              "L=1, I=2, LOW (2) — clean-source-copy smoke passed and the user checked and confirmed the stored outputs on 2 Nov 2026."
+            ],
+            [
+              "Risk acceptance / owner",
+              "The stored outputs were checked for consistency; if an independent peer run fails, do not accept the risk and escalate the fix."
+            ],
+            [
+              "Indicator, trigger, contingency, review",
+              "Trigger: migration/backend/frontend fails to start. Contingency: fix config and prepare backup demo environment. Review: before demo."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "status-report",
+      "title": "C · Project Status Report",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Report status: **AMBER / AT RISK**. All four recorded risks are LOW; a separate browser E2E availability flow and one non-blocking lint warning remain quality improvements."
+        },
+        {
+          "type": "table",
+          "headers": ["PPTX slide", "Filled content for this project", "Evidence / open action"],
+          "rows": [
+            [
+              "01 Executive Status",
+              "Consultation Reservation; source commit 31a22ad on fix/docs-c07&corrections; AMBER / AT RISK. Kseniia: C06 backend fixes/tests; Fatima: C05/C06 documentation and cancellation changes/tests. Current suites passed; capacity and stored clean-start outputs were confirmed.",
+              "Backend 37/37, frontend 10/10; isolated clean-source-copy smoke PASS; the user checked and confirmed the stored clean-start outputs on 2 Nov 2026."
+            ],
+            [
+              "02 Scope & Delivery",
+              "Create: SPECIFIED / DESIGNED / IMPLEMENTED; persistence and authorization tests passed in the current working tree. Availability: SPECIFIED / IMPLEMENTED; authenticated smoke returned 156 slots in the existing DB and 12 in the isolated fresh DB; no dedicated availability regression suite was found. Confirm/Approval: SPECIFIED / DESIGNED / IMPLEMENTED; unit/API/DB and concurrent tests passed. Cancel: SPECIFIED / DESIGNED / IMPLEMENTED, including slot cancellation through ReservationService; covered by backend tests. Concurrent approval: serialized and verified.",
+              "C02, C05 and C07 Verification Evidence in evidence-and-evolution.md; current working-tree run dated 2 Nov 2026."
+            ],
+            [
+              "03 Schedule & Resources",
+              "Completed: full backend/frontend checks, concurrency guard/test and container smoke; the team confirmed owners, backups and capacity. Remaining improvement: record due dates and, if required, run an independent check by a second team member.",
+              "Confirmed owners and backups: Kseniia Blokhina (backend; Fatima backup) and Fatima Tangatarova (frontend/peer evidence; Kseniia backup); add dates to the team plan."
+            ],
+            [
+              "04 Top Risks & Issues",
+              "Updated actual residuals: R-01 1×2 LOW; R-02 1×2 LOW; R-03 1×2 LOW; R-04 1×2 LOW. No open incidents are recorded.",
+              "R-01/R-02 verified by tests; R-03 confirmed by the team; R-04 isolated-copy smoke passed and the stored outputs were checked by the user."
+            ],
+            [
+              "05 Next Action Plan",
+              "Completed 2 Nov: backend 37/37 PostgreSQL tests, frontend 10/10 + lint/typecheck/build, concurrent approve test and clean-source-copy Docker build/start/login/API smoke; the team confirmed owners, backups and capacity. Recording specific dates remains a planning improvement.",
+              "Evidence and limits are recorded in docs/evidence-and-evolution.md; actual residuals updated from results."
+            ],
+            [
+              "06 Decision & Outlook",
+              "Recorded: F1–F3 fixes, 37 backend tests, 10 frontend tests, serialized concurrent approval and clean-source-copy Docker smoke. The team confirmed owners, backups and capacity; the separate browser E2E availability flow remains a quality improvement.",
+              "RAG remains AMBER / AT RISK because the separate browser E2E availability flow is not yet covered; the four recorded residual risks are LOW."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "actions",
+      "title": "C · 05 Next Action Plan",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": [
+            "Action",
+            "Owner",
+            "Due",
+            "Evidence-checkable Definition of Done",
+            "Finding / risk"
+          ],
+          "rows": [
+            [
+              "Completed: run backend suite against PostgreSQL and frontend checks",
+              "C07 verification run · 2 Nov 2026",
+              "Complete",
+              "Backend 37/37; frontend 10/10, lint/typecheck/build PASS; logs in docs/evidence-and-evolution.md.",
+              "R-02"
+            ],
+            [
+              "Completed: add and verify concurrent approval protection",
+              "C07 implementation/review · 2 Nov 2026",
+              "Complete",
+              "Pessimistic row lock; concurrent test verified one commit, second request 409 and exactly one history row/notification.",
+              "R-01"
+            ],
+            [
+              "Record confirmed named owners, backups and dates",
+              "Kseniia Blokhina + Fatima Tangatarova",
+              "Team confirmed 2 Nov; record dates",
+              "The team confirmed capacity; add each action's specific due date and backup to evidence-and-evolution.md.",
+              "R-03"
+            ],
+            [
+              "Optional: repeat clean-source-copy smoke as an independent peer check",
+              "Fatima Tangatarova (owner/reviewer)",
+              "Before demonstration, if required",
+              "The stored outputs were checked by the user. If the assignment requires a personal second-member run, repeat the smoke test in Fatima's environment and save the new log.",
+              "R-04"
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "The stored outputs were checked for consistency. If the assignment requires a personal second-member run, repeat the smoke test and save its log; add specific dates to the team plan."
+        }
+      ]
+    }
+  ]
+}

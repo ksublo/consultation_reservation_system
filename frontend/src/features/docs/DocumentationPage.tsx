@@ -6,11 +6,13 @@ import csC02 from './c02/cs.json'
 import csC03A from './c03a/cs.json'
 import csC03B from './c03b/cs.json'
 import csC05 from './c05/cs.json'
+import csC07 from './c07/cs.json'
 import enC01 from './c01/en.json'
 import enC02 from './c02/en.json'
 import enC03A from './c03a/en.json'
 import enC03B from './c03b/en.json'
 import enC05 from './c05/en.json'
+import enC07 from './c07/en.json'
 import c06Source from './c06/C06_Assessment_consultation_reservation_system.md?raw'
 import {
   parseDocumentation,
@@ -19,7 +21,7 @@ import {
 } from './documentation-model'
 
 type DocsSection = 'c01' | 'c02' | 'c03a' | 'c03b' | 'c05' | 'c06' | 'c07'
-type StructuredDocsSection = Exclude<DocsSection, 'c06' | 'c07'>
+type StructuredDocsSection = Exclude<DocsSection, 'c06'>
 
 interface DocumentationPageProps {
   language: Language
@@ -377,23 +379,25 @@ function DocumentationToc({ items, label }: { items: DocumentationTocItem[]; lab
   )
 }
 
-function C07Document({ language }: { language: Language }) {
-  const [documentIndex, setDocumentIndex] = useState(0)
+function C07Presentation({
+  document,
+  language,
+  documentIndex,
+  onChangeDocument,
+}: {
+  document: (typeof c07Documents)[number]
+  language: Language
+  documentIndex: number
+  onChangeDocument: (index: number) => void
+}) {
   const [pageIndex, setPageIndex] = useState(0)
-  const document = c07Documents[documentIndex]
   const title = language === 'cs' ? document.titleCs : document.titleEn
-  const previousLabel = language === 'cs' ? 'Předchozí dokument' : 'Previous document'
-  const nextLabel = language === 'cs' ? 'Další dokument' : 'Next document'
+  const previousDocumentLabel = language === 'cs' ? 'Předchozí prezentace' : 'Previous presentation'
+  const nextDocumentLabel = language === 'cs' ? 'Další prezentace' : 'Next presentation'
   const previousPageLabel = language === 'cs' ? 'Předchozí strana' : 'Previous page'
   const nextPageLabel = language === 'cs' ? 'Další strana' : 'Next page'
-  const documentLabel = language === 'cs' ? 'Dokument' : 'Document'
   const pageLabel = language === 'cs' ? 'Strana' : 'Page'
   const openPdfLabel = language === 'cs' ? 'Otevřít PDF' : 'Open PDF'
-
-  const changeDocument = (index: number) => {
-    setDocumentIndex(index)
-    setPageIndex(0)
-  }
 
   const pageNumber =
     document.pagePrefix === 'ac07' ? String(pageIndex + 1).padStart(2, '0') : pageIndex + 1
@@ -404,9 +408,12 @@ function C07Document({ language }: { language: Language }) {
         <button
           type="button"
           className="docs-c07-arrow"
-          aria-label={previousLabel}
+          aria-label={previousDocumentLabel}
           disabled={documentIndex === 0}
-          onClick={() => changeDocument(Math.max(0, documentIndex - 1))}
+          onClick={() => {
+            onChangeDocument(Math.max(0, documentIndex - 1))
+            setPageIndex(0)
+          }}
         >
           ←
         </button>
@@ -414,16 +421,18 @@ function C07Document({ language }: { language: Language }) {
           <p className="docs-eyebrow">C07</p>
           <h1>{title}</h1>
           <p className="docs-c07-meta">
-            {documentLabel} {documentIndex + 1} / {c07Documents.length} · {document.pages}{' '}
-            {language === 'cs' ? 'stran' : 'pages'}
+            {document.pages} {language === 'cs' ? 'stran' : 'pages'}
           </p>
         </div>
         <button
           type="button"
           className="docs-c07-arrow"
-          aria-label={nextLabel}
+          aria-label={nextDocumentLabel}
           disabled={documentIndex === c07Documents.length - 1}
-          onClick={() => changeDocument(Math.min(c07Documents.length - 1, documentIndex + 1))}
+          onClick={() => {
+            onChangeDocument(Math.min(c07Documents.length - 1, documentIndex + 1))
+            setPageIndex(0)
+          }}
         >
           →
         </button>
@@ -465,6 +474,41 @@ function C07Document({ language }: { language: Language }) {
   )
 }
 
+function C07Document({
+  language,
+  documentation,
+}: {
+  language: Language
+  documentation: Documentation
+}) {
+  const [documentIndex, setDocumentIndex] = useState(0)
+
+  return (
+    <div className="docs-c07-document">
+      <C07Presentation
+        document={c07Documents[documentIndex]}
+        language={language}
+        documentIndex={documentIndex}
+        onChangeDocument={setDocumentIndex}
+      />
+      <div className="docs-c07-text">
+        <p className="docs-eyebrow">C07</p>
+        <h1>{documentation.title}</h1>
+        <div className="docs-blocks">
+          {documentation.sections.map((section) => (
+            <section id={section.id} key={section.id} className="docs-block">
+              <h2>{section.title}</h2>
+              {section.blocks.map((block, index) => (
+                <ContentBlock key={`${section.id}-${index}`} block={block} language={language} />
+              ))}
+            </section>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function DocumentationPage({ language, t }: DocumentationPageProps) {
   const [tab, setTab] = useState<DocsSection>('c01')
   const documents = useMemo<Record<Language, Record<StructuredDocsSection, Documentation>>>(
@@ -475,6 +519,7 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
         c03a: parseDocumentation(csC03A, 'C03A / cs'),
         c03b: parseDocumentation(csC03B, 'C03B / cs'),
         c05: parseDocumentation(csC05, 'C05 / cs'),
+        c07: parseDocumentation(csC07, 'C07 / cs'),
       },
       en: {
         c01: parseDocumentation(enC01, 'C01 / en'),
@@ -482,11 +527,12 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
         c03a: parseDocumentation(enC03A, 'C03A / en'),
         c03b: parseDocumentation(enC03B, 'C03B / en'),
         c05: parseDocumentation(enC05, 'C05 / en'),
+        c07: parseDocumentation(enC07, 'C07 / en'),
       },
     }),
     [],
   )
-  const current = tab === 'c06' || tab === 'c07' ? null : documents[language][tab]
+  const current = tab === 'c06' ? null : documents[language][tab]
   const c06Lines = c06Source.replace(/\r\n/g, '\n').split('\n')
   const tocItems = current
     ? current.sections.map((section) => ({ id: section.id, title: section.title }))
@@ -513,12 +559,12 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
         </div>
         <article className="docs-content">
           <div className="docs-layout">
-            {tab !== 'c07' && <DocumentationToc items={tocItems} label={tocLabel} />}
+            {tab !== 'c06' && <DocumentationToc items={tocItems} label={tocLabel} />}
             <div className="docs-document">
               {tab !== 'c06' && tab !== 'c07' && (
                 <p className="docs-eyebrow">{t('documentation')}</p>
               )}
-              {current ? (
+              {current && tab !== 'c07' ? (
                 <>
                   <h1>{current.title}</h1>
                   <div className="docs-blocks">
@@ -539,7 +585,7 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
               ) : tab === 'c06' ? (
                 <C06Document />
               ) : (
-                <C07Document language={language} />
+                <C07Document language={language} documentation={documents[language].c07} />
               )}
             </div>
           </div>
