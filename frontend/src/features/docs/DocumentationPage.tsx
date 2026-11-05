@@ -124,7 +124,7 @@ function ContentBlock({ block, language }: { block: DocumentationBlock; language
         </div>
       )
     case 'paragraph':
-      return <p>{block.content}</p>
+      return <p>{renderInlineMarkdown(block.content)}</p>
     case 'list':
       return (
         <ul>
@@ -510,7 +510,7 @@ function C07Document({
 }
 
 export default function DocumentationPage({ language, t }: DocumentationPageProps) {
-  const [tab, setTab] = useState<DocsSection>('c01')
+  const [tab, setTab] = useState<DocsSection>('c07')
   const documents = useMemo<Record<Language, Record<StructuredDocsSection, Documentation>>>(
     () => ({
       cs: {
@@ -547,7 +547,7 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
           {tabs.map((item) => (
             <button
               key={item}
-              className={`${tab === item ? 'active' : ''} ${item === 'c06' ? 'c6-tab' : ''}`.trim()}
+              className={`${tab === item ? 'active' : ''} ${item === 'c06' ? 'c6-tab' : ''} ${item === 'c07' ? 'c7-tab' : ''}`.trim()}
               type="button"
               role="tab"
               aria-selected={tab === item}
