@@ -2,16 +2,23 @@ package consultation_reservation_backend.repository;
 
 import consultation_reservation_backend.domain.Reservation;
 import consultation_reservation_backend.domain.ReservationStatus;
+import jakarta.persistence.LockModeType;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ReservationRepository extends JpaRepository<Reservation, UUID> {
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
   Optional<Reservation> findBySlotIdAndStatusIn(UUID slotId, List<ReservationStatus> statuses);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select reservation from Reservation reservation where reservation.id = :id")
+  Optional<Reservation> findByIdForUpdate(@Param("id") UUID id);
 
   @Query(
       """

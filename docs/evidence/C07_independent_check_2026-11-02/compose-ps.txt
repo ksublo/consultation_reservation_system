@@ -1,0 +1,4 @@
+NAME                                  IMAGE                               COMMAND                  SERVICE    CREATED         STATUS                   PORTS
+c07-independent-20261102-backend-1    c07-independent-20261102-backend    "java -jar /app/app.…"   backend    6 seconds ago   Up Less than a second    0.0.0.0:18084->8080/tcp, [::]:18084->8080/tcp
+c07-independent-20261102-database-1   postgres:17-alpine                  "docker-entrypoint.s…"   database   6 seconds ago   Up 5 seconds (healthy)   0.0.0.0:55435->5432/tcp, [::]:55435->5432/tcp
+c07-independent-20261102-frontend-1   c07-independent-20261102-frontend   "/docker-entrypoint.…"   frontend   6 seconds ago   Up Less than a second    0.0.0.0:15178->80/tcp, [::]:15178->80/tcp

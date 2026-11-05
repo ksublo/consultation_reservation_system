@@ -49,7 +49,7 @@ class ReservationApprovalDesignTests {
             "Consultation",
             "Question");
     actor = new AuthenticatedUser(teacher.getId(), UserRole.TEACHER);
-    when(reservations.findById(reservation.getId())).thenReturn(Optional.of(reservation));
+    when(reservations.findByIdForUpdate(reservation.getId())).thenReturn(Optional.of(reservation));
     when(users.get(teacher.getId())).thenReturn(teacher);
   }
 

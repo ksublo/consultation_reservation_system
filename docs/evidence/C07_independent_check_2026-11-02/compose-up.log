@@ -1,0 +1,192 @@
+ Image c07-independent-20261102-frontend Building 
+ Image c07-independent-20261102-backend Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.04kB done
+#1 DONE 0.0s
+
+#2 [frontend internal] load build definition from Dockerfile
+#2 transferring dockerfile: 282B done
+#2 DONE 0.0s
+
+#3 [backend internal] load build definition from Dockerfile
+#3 transferring dockerfile: 345B done
+#3 DONE 0.0s
+
+#4 [backend internal] load metadata for docker.io/library/eclipse-temurin:21-jre-alpine
+#4 ...
+
+#5 [frontend internal] load metadata for docker.io/library/nginx:1.27-alpine
+#5 DONE 0.7s
+
+#4 [backend internal] load metadata for docker.io/library/eclipse-temurin:21-jre-alpine
+#4 DONE 0.7s
+
+#6 [backend internal] load metadata for docker.io/library/maven:3.9-eclipse-temurin-21
+#6 DONE 0.9s
+
+#7 [frontend internal] load metadata for docker.io/library/node:22-alpine
+#7 DONE 0.9s
+
+#8 [backend internal] load .dockerignore
+#8 transferring context: 59B done
+#8 DONE 0.0s
+
+#9 [frontend internal] load .dockerignore
+#9 transferring context: 65B done
+#9 DONE 0.0s
+
+#10 [frontend build 1/6] FROM docker.io/library/node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914
+#10 resolve docker.io/library/node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 0.0s done
+#10 DONE 0.0s
+
+#11 [backend build 1/6] FROM docker.io/library/maven:3.9-eclipse-temurin-21@sha256:99e61abcff91a9b1333463bd8451fb18495d6eba9250ac66a338b518f8278320
+#11 resolve docker.io/library/maven:3.9-eclipse-temurin-21@sha256:99e61abcff91a9b1333463bd8451fb18495d6eba9250ac66a338b518f8278320 0.0s done
+#11 DONE 0.0s
+
+#12 [backend stage-1 1/3] FROM docker.io/library/eclipse-temurin:21-jre-alpine@sha256:82cf3d9ccbe1ed46252008d51b2f2329e6b9e8a2f4394c4bebefc3ea7f4b1372
+#12 resolve docker.io/library/eclipse-temurin:21-jre-alpine@sha256:82cf3d9ccbe1ed46252008d51b2f2329e6b9e8a2f4394c4bebefc3ea7f4b1372 0.0s done
+#12 DONE 0.0s
+
+#13 [frontend stage-1 1/3] FROM docker.io/library/nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
+#13 resolve docker.io/library/nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10 0.0s done
+#13 DONE 0.0s
+
+#14 [backend internal] load build context
+#14 transferring context: 146.75kB done
+#14 DONE 0.0s
+
+#15 [backend build 2/6] WORKDIR /app
+#15 CACHED
+
+#16 [backend build 3/6] COPY pom.xml .
+#16 CACHED
+
+#17 [backend build 4/6] RUN mvn -B -q dependency:go-offline
+#17 CACHED
+
+#18 [backend build 5/6] COPY src src
+#18 DONE 0.1s
+
+#19 [frontend internal] load build context
+#19 transferring context: 10.47MB 0.1s done
+#19 DONE 0.1s
+
+#20 [frontend build 3/6] COPY package*.json .npmrc ./
+#20 CACHED
+
+#21 [frontend build 2/6] WORKDIR /app
+#21 CACHED
+
+#22 [frontend build 4/6] RUN npm ci
+#22 CACHED
+
+#23 [frontend build 5/6] COPY . .
+#23 DONE 0.1s
+
+#24 [frontend build 6/6] RUN npm run build
+#24 0.760 
+#24 0.760 > consultation-reservation-frontend@0.0.1 build
+#24 0.760 > vite build
+#24 0.760 
+#24 1.268 vite v8.3.0 building client environment for production...
+#24 1.282 transforming...
+#24 1.580 ✓ 62 modules transformed.
+#24 1.666 rendering chunks...
+#24 1.761 computing gzip size...
+#24 1.767 dist/index.html                                                   0.49 kB │ gzip:  0.30 kB
+#24 1.767 dist/assets/c05-approval-sequence-BbA41fWT.svg                    6.23 kB │ gzip:  1.56 kB
+#24 1.767 dist/assets/c03b-create-reservation-sequence-en-DiqF1d-a.svg      7.34 kB │ gzip:  1.98 kB
+#24 1.767 dist/assets/c03b-create-reservation-sequence-CwUtztk_.svg         7.38 kB │ gzip:  2.14 kB
+#24 1.767 dist/assets/c05-reservation-lifecycle-FiiT9ODu.svg               11.40 kB │ gzip:  2.84 kB
+#24 1.767 dist/assets/c03b-context-use-cases-Cx3la_Pe.png                 102.27 kB
+#24 1.767 dist/assets/c02-reservation-state-DAEgmiWu.png                  155.48 kB
+#24 1.767 dist/assets/c02-use-cases-BdKGueuc.png                          230.10 kB
+#24 1.767 dist/assets/c03b-create-reservation-class-Dov4iYeH.png          333.50 kB
+#24 1.767 dist/assets/c03b-domain-model-BC3FchUw.png                      493.96 kB
+#24 1.767 dist/assets/c03b-create-reservation-sequence-Djy6_C9e.png       515.20 kB
+#24 1.767 dist/assets/consultation-reservations-wordmark-ClCCqVbU.png     604.15 kB
+#24 1.767 dist/assets/c03b-runtime-deployment-ecIBIoWg.png                779.76 kB
+#24 1.767 dist/assets/c02-activity-diagram-WcYtbQlg.png                   960.26 kB
+#24 1.767 dist/assets/c03b-static-architecture-DfS8cjXg.png             1,283.67 kB
+#24 1.767 dist/assets/c03b-approval-sequence-De5JpYG1.png               2,066.20 kB
+#24 1.767 dist/assets/index-BAlSpcDg.css                                  119.02 kB │ gzip: 15.02 kB
+#24 1.767 dist/assets/DocumentationPage-DWlyrtIx.js                       280.54 kB │ gzip: 84.18 kB
+#24 1.767 dist/assets/index-BQ7kSau-.js                                   301.36 kB │ gzip: 89.36 kB
+#24 1.767 
+#24 1.768 ✓ built in 498ms
+#24 1.812 npm notice
+#24 1.812 npm notice New major version of npm available! 10.9.9 -> 12.2.1
+#24 1.812 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+#24 1.812 npm notice To update run: npm install -g npm@12.2.1
+#24 1.812 npm notice
+#24 DONE 1.8s
+
+#25 [backend build 6/6] RUN mvn -B -q package -DskipTests
+#25 ...
+
+#26 [frontend stage-1 2/3] COPY nginx.conf /etc/nginx/conf.d/default.conf
+#26 CACHED
+
+#27 [frontend stage-1 3/3] COPY --from=build /app/dist /usr/share/nginx/html
+#27 DONE 0.0s
+
+#28 [frontend] exporting to image
+#28 exporting layers
+#28 exporting layers 0.4s done
+#28 exporting manifest sha256:37f2491f4a86bb566e30156142e950d468efdaee59dbbc5686cbc7d96438f868 done
+#28 exporting config sha256:2b673bf446032fdc585385ee263a21a470d8c24079b38f90eb9df0a3dd8b6255 done
+#28 exporting attestation manifest sha256:0f10084c0cae3b2da2cd21243839659193c4562711a39cc800625de29eaa2648 done
+#28 exporting manifest list sha256:6cbf1795aef37e591cd30826fdb2d1b670376ad44962bbb8de59649e5f706587 done
+#28 naming to docker.io/library/c07-independent-20261102-frontend:latest done
+#28 unpacking to docker.io/library/c07-independent-20261102-frontend:latest 0.0s done
+#28 DONE 0.5s
+
+#29 [frontend] resolving provenance for metadata file
+#29 DONE 0.0s
+
+#25 [backend build 6/6] RUN mvn -B -q package -DskipTests
+#25 DONE 6.7s
+
+#30 [backend stage-1 2/3] WORKDIR /app
+#30 CACHED
+
+#31 [backend stage-1 3/3] COPY --from=build /app/target/*.jar app.jar
+#31 DONE 0.1s
+
+#32 [backend] exporting to image
+#32 exporting layers 1.5s done
+#32 exporting manifest sha256:12ab928e8dce63e215dd86f284c4040f63b220f6335a879eeb2d81d1cac3ae74 done
+#32 exporting config sha256:cc7efae7e15b1b73aaa2317377aae64822057d41645796e1867b5a3f48df9934 done
+#32 exporting attestation manifest sha256:1a6cc0c24a27655dab8ab0ec058e767e460a709d79d0aa72eb2e88d40ca6e740 done
+#32 exporting manifest list sha256:135e5755a1d03e31f67712d2e5d92644ecbc8e5d408fa0bbb64ec02982081695 done
+#32 naming to docker.io/library/c07-independent-20261102-backend:latest done
+#32 unpacking to docker.io/library/c07-independent-20261102-backend:latest
+#32 unpacking to docker.io/library/c07-independent-20261102-backend:latest 0.2s done
+#32 DONE 1.7s
+
+#33 [backend] resolving provenance for metadata file
+#33 DONE 0.0s
+ Image c07-independent-20261102-backend Built 
+ Image c07-independent-20261102-frontend Built 
+ Network c07-independent-20261102_default Creating 
+ Network c07-independent-20261102_default Creating 
+ Volume c07-independent-20261102_postgres-data Creating 
+ Volume c07-independent-20261102_postgres-data Creating 
+ Volume c07-independent-20261102_postgres-data Created 
+ Volume c07-independent-20261102_postgres-data Created 
+ Network c07-independent-20261102_default Created 
+ Network c07-independent-20261102_default Created 
+ Container c07-independent-20261102-database-1 Creating 
+ Container c07-independent-20261102-database-1 Created 
+ Container c07-independent-20261102-backend-1 Creating 
+ Container c07-independent-20261102-backend-1 Created 
+ Container c07-independent-20261102-frontend-1 Creating 
+ Container c07-independent-20261102-frontend-1 Created 
+ Container c07-independent-20261102-database-1 Starting 
+ Container c07-independent-20261102-database-1 Started 
+ Container c07-independent-20261102-database-1 Waiting 
+ Container c07-independent-20261102-database-1 Healthy 
+ Container c07-independent-20261102-backend-1 Starting 
+ Container c07-independent-20261102-backend-1 Started 
+ Container c07-independent-20261102-frontend-1 Starting 
+ Container c07-independent-20261102-frontend-1 Started 

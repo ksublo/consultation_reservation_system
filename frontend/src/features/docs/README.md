@@ -15,6 +15,8 @@ docs/
   c03b/en.json
   c05/cs.json
   c05/en.json
+  c07/cs.json
+  c07/en.json
 ```
 
 Every file contains one document with `title` and `sections`. Each section has
@@ -36,3 +38,8 @@ and `docs/evidence-and-evolution.md`. Keep the Czech copy and English translatio
 in sync when those source sections change. Sequence diagram source is in
 `docs/diagrams/c05-approval-sequence.svg`; its bundled copy is in
 `frontend/src/assets/docs/`.
+
+C07's complete assignment and filled project tables are in
+`frontend/src/features/docs/c07/`. Regenerate the responsive standalone page
+with `node docs/generate-c07-html.mjs`; its output is
+`docs/C07_Complete_Assignment.html`.
