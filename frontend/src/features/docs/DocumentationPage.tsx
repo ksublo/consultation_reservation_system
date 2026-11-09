@@ -29,6 +29,22 @@ interface DocumentationPageProps {
 }
 
 const tabs: DocsSection[] = ['c01', 'c02', 'c03a', 'c03b', 'c05', 'c06', 'c07']
+const c07Documents = [
+  {
+    titleCs: 'A · Technická obhajoba',
+    titleEn: 'A · Technical defence',
+    fileName: 'AC07_Technicka_obhajoba.pdf',
+    pagePrefix: 'ac07',
+    pages: 11,
+  },
+  {
+    titleCs: 'C · Stav projektu pro vedení',
+    titleEn: 'C · Executive project status',
+    fileName: 'CC07_Executive_project_status.pdf',
+    pagePrefix: 'cc07',
+    pages: 6,
+  },
+] as const
 const bundledImages = import.meta.glob('../../assets/docs/*', {
   eager: true,
   query: '?url',
@@ -158,8 +174,41 @@ function renderInlineMarkdown(text: string) {
     })
 }
 
+type DocumentationTocItem = {
+  id: string
+  title: string
+  level?: number
+}
+
+function slugifyHeading(text: string) {
+  return text
+    .toLocaleLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+function getC06Headings(lines: string[]): DocumentationTocItem[] {
+  return lines.flatMap((line, index) => {
+    const heading = line.match(/^(#{1,6})\s+(.*)$/)
+    if (!heading) return []
+    return [
+      {
+        id: `c06-${slugifyHeading(heading[2])}-${index}`,
+        title: heading[2],
+        level: Math.min(heading[1].length, 3),
+      },
+    ]
+  })
+}
+
 function C06Document() {
   const lines = c06Source.replace(/\r\n/g, '\n').split('\n')
+  const headings = getC06Headings(lines)
+  const headingByLine = new Map(
+    headings.map((heading) => [Number(heading.id.split('-').pop()), heading.id]),
+  )
   const blocks: ReactNode[] = []
   let index = 0
 
@@ -189,13 +238,20 @@ function C06Document() {
     if (heading) {
       const level = Math.min(heading[1].length, 3)
       const content = renderInlineMarkdown(heading[2])
+      const id = headingByLine.get(index)
       blocks.push(
         level === 1 ? (
-          <h1 key={`heading-${index}`}>{content}</h1>
+          <h1 id={id} key={`heading-${index}`}>
+            {content}
+          </h1>
         ) : level === 2 ? (
-          <h2 key={`heading-${index}`}>{content}</h2>
+          <h2 id={id} key={`heading-${index}`}>
+            {content}
+          </h2>
         ) : (
-          <h3 key={`heading-${index}`}>{content}</h3>
+          <h3 id={id} key={`heading-${index}`}>
+            {content}
+          </h3>
         ),
       )
       index += 1
@@ -306,6 +362,153 @@ function C06Document() {
   return <div className="docs-blocks docs-c06-source">{blocks}</div>
 }
 
+function DocumentationToc({ items, label }: { items: DocumentationTocItem[]; label: string }) {
+  return (
+    <details className="docs-toc">
+      <summary>{label}</summary>
+      <nav aria-label={label}>
+        <ol>
+          {items.map((item) => (
+            <li key={item.id} className={item.level && item.level > 1 ? 'nested' : undefined}>
+              <a href={`#${item.id}`}>{item.title}</a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+    </details>
+  )
+}
+
+function C07Presentation({
+  document,
+  language,
+  documentIndex,
+  onChangeDocument,
+}: {
+  document: (typeof c07Documents)[number]
+  language: Language
+  documentIndex: number
+  onChangeDocument: (index: number) => void
+}) {
+  const [pageIndex, setPageIndex] = useState(0)
+  const title = language === 'cs' ? document.titleCs : document.titleEn
+  const previousDocumentLabel = language === 'cs' ? 'Předchozí prezentace' : 'Previous presentation'
+  const nextDocumentLabel = language === 'cs' ? 'Další prezentace' : 'Next presentation'
+  const previousPageLabel = language === 'cs' ? 'Předchozí strana' : 'Previous page'
+  const nextPageLabel = language === 'cs' ? 'Další strana' : 'Next page'
+  const pageLabel = language === 'cs' ? 'Strana' : 'Page'
+  const openPdfLabel = language === 'cs' ? 'Otevřít PDF' : 'Open PDF'
+
+  const pageNumber =
+    document.pagePrefix === 'ac07' ? String(pageIndex + 1).padStart(2, '0') : pageIndex + 1
+
+  return (
+    <div className="docs-c07-viewer">
+      <div className="docs-c07-toolbar">
+        <button
+          type="button"
+          className="docs-c07-arrow"
+          aria-label={previousDocumentLabel}
+          disabled={documentIndex === 0}
+          onClick={() => {
+            onChangeDocument(Math.max(0, documentIndex - 1))
+            setPageIndex(0)
+          }}
+        >
+          ←
+        </button>
+        <div className="docs-c07-heading">
+          <p className="docs-eyebrow">C07</p>
+          <h1>{title}</h1>
+          <p className="docs-c07-meta">
+            {document.pages} {language === 'cs' ? 'stran' : 'pages'}
+          </p>
+        </div>
+        <button
+          type="button"
+          className="docs-c07-arrow"
+          aria-label={nextDocumentLabel}
+          disabled={documentIndex === c07Documents.length - 1}
+          onClick={() => {
+            onChangeDocument(Math.min(c07Documents.length - 1, documentIndex + 1))
+            setPageIndex(0)
+          }}
+        >
+          →
+        </button>
+      </div>
+      <div className="docs-c07-page-frame">
+        <img
+          className="docs-c07-page"
+          src={`/docs/c07/pages/${document.pagePrefix}-${pageNumber}.png`}
+          alt={`${title}, ${pageLabel.toLocaleLowerCase()} ${pageIndex + 1}`}
+        />
+      </div>
+      <div className="docs-c07-page-toolbar">
+        <button
+          type="button"
+          className="docs-c07-page-arrow"
+          aria-label={previousPageLabel}
+          disabled={pageIndex === 0}
+          onClick={() => setPageIndex((index) => Math.max(0, index - 1))}
+        >
+          ←
+        </button>
+        <span>
+          {pageLabel} {pageIndex + 1} / {document.pages}
+        </span>
+        <button
+          type="button"
+          className="docs-c07-page-arrow"
+          aria-label={nextPageLabel}
+          disabled={pageIndex === document.pages - 1}
+          onClick={() => setPageIndex((index) => Math.min(document.pages - 1, index + 1))}
+        >
+          →
+        </button>
+        <a href={`/docs/c07/${document.fileName}`} target="_blank" rel="noreferrer">
+          {openPdfLabel}
+        </a>
+      </div>
+    </div>
+  )
+}
+
+function C07Document({
+  language,
+  documentation,
+}: {
+  language: Language
+  documentation: Documentation
+}) {
+  const [documentIndex, setDocumentIndex] = useState(0)
+
+  return (
+    <div className="docs-c07-document">
+      <C07Presentation
+        document={c07Documents[documentIndex]}
+        language={language}
+        documentIndex={documentIndex}
+        onChangeDocument={setDocumentIndex}
+      />
+      <div className="docs-c07-text">
+        <p className="docs-eyebrow">C07</p>
+        <h1>{documentation.title}</h1>
+        <div className="docs-blocks">
+          {documentation.sections.map((section) => (
+            <section id={section.id} key={section.id} className="docs-block">
+              <h2>{section.title}</h2>
+              {section.blocks.map((block, index) => (
+                <ContentBlock key={`${section.id}-${index}`} block={block} language={language} />
+              ))}
+            </section>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function DocumentationPage({ language, t }: DocumentationPageProps) {
   const [tab, setTab] = useState<DocsSection>('c07')
   const documents = useMemo<Record<Language, Record<StructuredDocsSection, Documentation>>>(
@@ -330,6 +533,13 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
     [],
   )
   const current = tab === 'c06' ? null : documents[language][tab]
+  const c06Lines = c06Source.replace(/\r\n/g, '\n').split('\n')
+  const tocItems = current
+    ? current.sections.map((section) => ({ id: section.id, title: section.title }))
+    : tab === 'c06'
+      ? getC06Headings(c06Lines)
+      : []
+  const tocLabel = language === 'cs' ? 'Obsah dokumentu' : 'Table of contents'
   return (
     <main className="docs-page">
       <section className="docs-card">
@@ -347,30 +557,37 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
             </button>
           ))}
         </div>
-        <article className={`docs-content ${tab === 'c07' ? 'docs-c07' : ''}`}>
-          <div className="docs-document">
-            {tab !== 'c06' && <p className="docs-eyebrow">{t('documentation')}</p>}
-            {current ? (
-              <>
-                <h1>{current.title}</h1>
-                <div className="docs-blocks">
-                  {current.sections.map((section) => (
-                    <section key={section.id} className={`docs-block docs-block-${section.id}`}>
-                      <h2>{section.title}</h2>
-                      {section.blocks.map((block, index) => (
-                        <ContentBlock
-                          key={`${section.id}-${index}`}
-                          block={block}
-                          language={language}
-                        />
-                      ))}
-                    </section>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <C06Document />
-            )}
+        <article className="docs-content">
+          <div className="docs-layout">
+            {tab !== 'c06' && <DocumentationToc items={tocItems} label={tocLabel} />}
+            <div className="docs-document">
+              {tab !== 'c06' && tab !== 'c07' && (
+                <p className="docs-eyebrow">{t('documentation')}</p>
+              )}
+              {current && tab !== 'c07' ? (
+                <>
+                  <h1>{current.title}</h1>
+                  <div className="docs-blocks">
+                    {current.sections.map((section) => (
+                      <section id={section.id} key={section.id} className="docs-block">
+                        <h2>{section.title}</h2>
+                        {section.blocks.map((block, index) => (
+                          <ContentBlock
+                            key={`${section.id}-${index}`}
+                            block={block}
+                            language={language}
+                          />
+                        ))}
+                      </section>
+                    ))}
+                  </div>
+                </>
+              ) : tab === 'c06' ? (
+                <C06Document />
+              ) : (
+                <C07Document language={language} documentation={documents[language].c07} />
+              )}
+            </div>
           </div>
         </article>
       </section>
