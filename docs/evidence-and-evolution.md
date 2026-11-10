@@ -223,3 +223,134 @@ Návrh, implementace vybraného scénáře i její ověření jsou pro uvedený 
 R-02–R-04 are LOW after the evidence refresh, explicit ownership plan, and Fatima's completed review. The separate browser E2E availability flow remains a quality improvement, not a release-blocking incident; a later code change requires rerunning the suite and refreshing the manifest.
 
 **Overall C07 project RAG: GREEN / ON TRACK.** The recorded backend/frontend checks, clean startup evidence, ownership plan and independent review are complete; all four residual risks are LOW. The browser E2E availability flow and one non-blocking lint warning remain follow-ups, with no documented release blocker.
+
+## C08 Verification Evidence — automatické storno neschválených rezervací
+
+### 1. Identifikace výchozího stavu
+
+| Položka         | Hodnota                                                                                                                                                                                             |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Before baseline | `main@99210f0158993b2b8a81f9b327f63e5736556c62` (`Docs/docs7 (#63)`), přímý rodič implementačního commitu `a5cf9d9`                                                                                 |
+| Stav schématu   | Flyway V14; po změně přibyla V15, která povoluje null `actor_user_id` pro systémový auditní záznam                                                                                                  |
+| Runtime         | Java 21 / Spring Boot 4.1.1 / Maven wrapper; frontend React + TypeScript + Vite; PostgreSQL 17 přes Docker Compose                                                                                  |
+| Test setup      | Persistence testy vytváří izolované náhodné PostgreSQL schéma, použijí Flyway a SQL čtení committed stavu; frontend Vitest + Testing Library. Přihlašovací údaje se do tohoto dokumentu nekopírují. |
+| After reference | `feat/auto-cancel-unapproved-reservations@a5cf9d99bfa860a31a6cccfc870edc8e4bc6d4c4`, PR #67                                                                                                         |
+
+Kontrola historie potvrdila, že backendový strom `31a22ad` je shodný s backendem `main@99210f0`. C07 evidence proto dokládá běh backendové baseline: 37/37 testů 2. 11. 2026. Toto ověření pokrývá existující lifecycle, nikoli nový C08 cutoff scénář. Frontendový strom se mezi těmito commity liší; C07 frontend výsledky se nepřenášejí jako důkaz stejného souborového stavu.
+
+### 2. Test cases dosavadního chování
+
+Očekávání v této části vycházejí z pravidel a kódu `main@99210f0`, nikoli z nového chování po C08.
+
+#### TC-C08-01 — vlastník schválí platnou čekající žádost
+
+**Basis:** schválení vlastníkem slotu mění `PENDING` na `CONFIRMED`; úspěšná změna zapisuje historii a oznámení studentovi. **Data:** izolované schéma; přihlášený vlastník termínu, student, budoucí slot a rezervace `PENDING`. Existující persistence test používá slot `2030-01-07T10:00+01:00`.
+
+| #   | Akce                                                                            | Expected před během                                                                      | Actual / evidence po běhu                                                                               |
+| --- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| 1   | Připravit a commitnout uživatele, slot, PENDING rezervaci a počáteční historii. | Jeden řádek rezervace ve stavu `PENDING`; počáteční historie existuje.                   | PASS v `ReservationApprovalPersistenceTests`; baseline testovaný na backendově shodné revizi `31a22ad`. |
+| 2   | Zavolat approve jako pedagoga, který vlastní slot.                              | Úspěšný response; vlastník a stav jsou platné.                                           | PASS; `successfulApprovalCommitsStateHistoryAndNotification`.                                           |
+| 3   | Znovu načíst committed řádek a počty historie/oznámení.                         | `CONFIRMED`, `confirmedAt` nastaveno, právě jeden záznam historie a oznámení studentovi. | PASS; C05 persistence evidence v této dokumentaci a C07 backend run 37/37.                              |
+| 4   | Resetovat schéma pro opakování.                                                 | Testovací příprava je izolovaná a opakovatelná.                                          | PASS; persistence testy vytvářejí vlastní schéma a po běhu jej odstraňují.                              |
+
+**Verdikt:** PASS pro běžnou schvalovací cestu na původním backendu. Test není důkazem chování těsně u tříhodinové hranice.
+
+#### TC-C08-02 — pozdní schválení čekající žádosti na původní baseline
+
+**Basis:** původní `ReservationService.approve()` ověřuje vlastníka a `PENDING`, ale nemá časovou kontrolu. **Data:** izolovaná `PENDING` rezervace s `startsAt = now + 2 h 59 min`, vlastník přihlášen jako pedagog.
+
+| #   | Akce                                                                | Expected před během podle původní implementace                                             | Actual / evidence po běhu                                                          |
+| --- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| 1   | Připravit a commitnout PENDING rezervaci se začátkem za 2 h 59 min. | PENDING blokuje slot; stav je nezávisle ověřen v DB.                                       | NOT RUN proti `main@99210f0`.                                                      |
+| 2   | Zavolat approve jako vlastník.                                      | Původní kód nemá časový guard; podle skutečně vykonané cesty by schválení mělo pokračovat. | NOT RUN; zdrojový kód potvrzuje absenci guardu, ale to není náhrada za actual běh. |
+| 3   | Znovu načíst stav a změny historie/oznámení.                        | Očekávaný výsledek baseline je `CONFIRMED`, jedna nová historie a oznámení.                | NOT RUN; neoznačovat jako PASS.                                                    |
+| 4   | Resetovat izolovaná data a opakovat.                                | Stejný reprodukovatelný výsledek.                                                          | NOT RUN.                                                                           |
+
+**Stav:** BLOCKED / NOT RUN pro samostatný C08 boundary test na before baseline. Při této dokumentační práci se neprováděl nový běh nad databází; lokální Compose služby byly na výslovnou žádost ponechány zastavené. Opakovatelný další krok: připravit izolovanou DB, checkout `99210f0`, spustit test nad předzměnovým `ReservationService` a uložit SQL/API výstup. Kódová inspekce není vykazována jako vykonání testu.
+
+### 3. Ověření implementace `a5cf9d9`
+
+| Ověření                               | Rozsah                                                                                                                                                          | Actual / omezení                                                                                                                                                                                                                                       |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ReservationExpiryPersistenceTests`   | 6 PostgreSQL/Spring testů: přesná hranice a idempotence, okamžik před hranicí, approve na hranici, ruční storno na hranici, selhání historie, selhání oznámení. | PASS všech 6 v plném běhu implementační pracovní kopie 10. 11. 2026. Čte se committed SQL stav; testovací hodiny jsou fixní.                                                                                                                           |
+| `ReservationApprovalPersistenceTests` | Úspěšný commit a rollback při chybě historie/oznámení.                                                                                                          | PASS 4 testů v plném backendovém běhu.                                                                                                                                                                                                                 |
+| `ReservationAuthorizationTests`       | MockMvc API, autorizace, pozdní ruční storno a přímý pokus o vytvoření rezervace méně než 3 h před slotem.                                                      | PASS 17/17 v cíleném běhu 10. 11. 2026; repository a uživatelé jsou v této sadě mockované, nejde o persistence důkaz.                                                                                                                                  |
+| Kompletní backend                     | Sady aplikačního kontextu, approval design/persistence, autorizace, cancellation persistence, creation persistence a expiry persistence.                        | PASS 44/44 před přidáním posledního přímého API testu vytvoření pod 3 h. Poté cílená autorizace 17/17 prošla. **Netvrdíme, že kompletní sada 45/45 byla znovu spuštěna na finálním commitu.**                                                          |
+| Frontend                              | Vitest / Testing Library, včetně studentské a pedagogické přesné UI hranice.                                                                                    | PASS 12/12 ve 4 souborech.                                                                                                                                                                                                                             |
+| Frontend typecheck                    | `npm run typecheck`                                                                                                                                             | PASS.                                                                                                                                                                                                                                                  |
+| Frontend lint                         | `npm run lint`                                                                                                                                                  | Exit 0; jedno existující Fast Refresh upozornění v `src/components/HistoryPeriodFilter.tsx:34`, mimo změněné soubory.                                                                                                                                  |
+| Java format check                     | `mvnw.cmd fmt:check`                                                                                                                                            | FAIL kvůli čtyřem nesouvisejícím, před změnou nevyhovujícím souborům: `AuthController.java`, `ReservationResponse.java`, `ReservationCancellationPersistenceTests.java`, `ReservationApprovalPersistenceTests.java`. Dokumentační větev je neupravuje. |
+
+Plný backendový běh skončil úspěšně po opravě očekávaného času v oznámení. Tato evidence nesmí být sloučena s předzměnovým TC-C08-02: post-change PASS neprokazuje chování staré baseline.
+
+### 4. Pokryté acceptance oracles
+
+| Oracle                 | Výsledek po změně                                                                                      | Konkrétní důkaz                                                                                                                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `startsAt > now + 3 h` | Rezervace zůstane PENDING a před hranicí ji vlastník může schválit.                                    | `doesNotExpireOrBlockApprovalBeforeTheThreeHourBoundary`.                                                                                                                                   |
+| `startsAt = now + 3 h` | Scheduler ji stornuje; approve ji stornuje a vrátí 409; ruční cancel vrátí 409.                        | `expiresAtExactThreeHourBoundaryAndDoesNotDuplicateAuditOrNotification`, `approvalAtExactBoundaryIsRejectedAndCommitsAutomaticCancellation`, `manualCancellationAtExactBoundaryIsRejected`. |
+| Automatický audit      | `CANCELLED`, důvod ve zrušení i historii, `actor_user_id = NULL`, původní `CREATED` zachován.          | SQL assertions v `ReservationExpiryPersistenceTests`; Flyway V15.                                                                                                                           |
+| Oznámení               | Student dostane jedno uložené `RESERVATION_CANCELLED` s termínem, pedagogem a důvodem.                 | Ověření počtu a zprávy; opakovaný scheduler call nevytvoří duplicitu.                                                                                                                       |
+| Atomická chyba         | Selhání historie nebo oznámení vrátí DB zpět na PENDING a nevytvoří částečný audit/notification.       | Dva rollback testy nad skutečnou PostgreSQL.                                                                                                                                                |
+| UI a API               | V UI jsou approve/cancel disabled přesně na hranici; API ruční storno a create pod 3 h vrací konflikt. | Frontendové testy přesného cutoffu; `ReservationAuthorizationTests`.                                                                                                                        |
+
+### 5. Známé limity / residual exposure
+
+1. Scheduler má fixed delay default 1000 ms. Při běžícím backendu je tedy plánovaný přechod zpožděn nejvýše přibližně o interval plus dobu DB operace; přesný commit v konkrétní nanosekundě není garantován. Listing rezervací i approve provádí dodatečnou synchronní kontrolu.
+2. Backendový výpadek přeruší scheduler; po restartu proběhne sweep, ale změna a oznámení budou opožděné. Není zaveden samostatný queue/monitoring lag.
+3. Create cutoff přijímá přesnou hranici `now + 3 h`, ale expiry a approve považují hranici za uzavřenou. Rezervace vytvořená přesně na hranici proto může být ihned zrušena. Přesné rozhodnutí pro další změnu: sjednotit hranici vytvoření, dostupnosti a expirace, nebo formálně přijmout toto chování.
+4. Integrační testy ověřují idempotentní opakované zpracování, nikoli souběh více scheduler instancí. Query používá pessimistic write lock; dedikovaný distribuovaný lock/race test není doložen.
+5. Peer approval z PR #67 není z git historie ověřitelný. Záznam review doplnit z PR události; jméno recenzenta se nevymýšlí.
+
+**C08 stav:** projektový CR, dopady, alternativy, decision a implementační evidence jsou zapsané. Dva test cases baseline jsou definované; TC-C08-01 má navázaný skutečný integrační důkaz na shodném backendovém stromu, TC-C08-02 zůstává NOT RUN/BLOCKED. Před formálním označením všech DoD bodů jako hotových doplnit tento boundary běh a peer-review záznam PR.
+
+### 3. Porovnání návrhu s implementací a řešení rozdílů
+
+| Rozhodnutí z DD                                                 | Implementováno?           | Doklad                                                                                     | Rozhodnutí / další akce                                               |
+| --------------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| Identita a role se kontrolují před načtením rezervace           | YES                       | ReservationService.approve; missingActor…, student…                                        | Ponechat existující úpravu; aktuální testy prošly.                    |
+| Chybějící ID nebo request znamená 400                           | YES                       | approve; missingId…, missingRequest…                                                       | Ponechat explicitní kontrolu vstupu.                                  |
+| Schválit smí vlastník a pouze PENDING                           | YES                       | approve; foreignTeacher…, ownerCannotApprove…                                              | Ponechat; odmítnutí nemění stav a nevytváří historii ani oznámení.    |
+| Reservation vlastní status a confirmedAt                        | YES                       | Reservation.confirm; ownerApproves…                                                        | Ponechat; služba kontroluje podmínky před voláním confirm.            |
+| Služba koordinuje historii a oznámení a předává technické chyby | YES                       | ownerApproves…; historyFailure…; notificationFailure…                                      | Ponechat; testy ověřují obsah a volání spolupracujících prvků.        |
+| Všechny změny se uloží společně, nebo žádná                     | YES — pro ověřené scénáře | ReservationApprovalPersistenceTests: úspěšný commit a rollback při chybě historie/oznámení | Ponechat produkční transakci; doplněné tři integrační testy prošly.   |
+| O schválení rozhoduje služba rezervací                          | YES                       | approve provádí kontroly; UserService.get načítá aktéra                                    | Zpřesněn text DD, který dříve uváděl společného vlastníka rozhodnutí. |
+
+Návrh zachovává pravidla v jedné službě, protože nyní existuje jeden způsob schvalování. Samostatná policy třída není pro tento rozsah potřebná. Diagram proto ukazuje existující rozhraní repository a závislosti služby.
+
+### 4. Integrační ověření a zbývající rizika
+
+- Souběžná schválení nejsou serializována zámkem ani verzí entity; mohou vytvořit duplicitní historii/oznámení. Sekvenční 409 test není testem souběhu.
+- Rollback je nyní ověřen proti PostgreSQL pro řízené RuntimeException po zápisech. Výpadek databázového spojení ani jiné druhy selhání tento test nepokrývá.
+- `Reservation.confirm()` se spoléhá na kontrolu služby. Nový volající musí respektovat stejný kontrakt.
+
+Následující případy v ReservationApprovalPersistenceTests **prošly**:
+
+| DD element / decision                     | What must hold?                                                                            | Test level                             | Test case (PASS)                                     |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------- | ---------------------------------------------------- |
+| D4–D6: úspěšné společné uložení           | CONFIRMED, čas a právě jeden nový záznam historie i oznámení se správným aktérem/příjemcem | Integration: Spring proxy + PostgreSQL | successfulApprovalCommitsStateHistoryAndNotification |
+| D6: atomická transakce při chybě oznámení | Po selhání zůstane v DB PENDING, confirmedAt=null a původní počty historie/oznámení        | Integration: Spring proxy + PostgreSQL | notificationFailureRollsBackApprovalAndHistory       |
+| D6: atomická transakce při chybě historie | Po selhání se potvrzení neuloží a nevznikne oznámení                                       | Integration: Spring proxy + PostgreSQL | historyFailureRollsBackApproval                      |
+
+**Proč integrační úroveň:** rozhodnutí o společné transakci realizuje Spring a databáze. Mocky neumějí prokázat commit ani rollback. Kontrola proto proběhne novým načtením z databáze po skončení volané transakce; podrobný postup je v C05 DD. Tyto případy doplňují existující unit testy propagace výjimek.
+
+### 5. Kontrola úplnosti podle zadání
+
+| Požadovaný výstup                                          | Stav                                                                              |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Jedna jednotka, vazba na požadavky a scénář                | Hotovo v C05 DD, část 1                                                           |
+| 3–7 odpovědností a jejich vlastníci                        | Hotovo, části 2–3                                                                 |
+| Rozhraní a kontrakty                                       | Hotovo, části 4 a 6–7                                                             |
+| Strukturální UML a detailní sekvence                       | Zahrnuty, části 5 a 8                                                             |
+| Významné operace, algoritmus a stavy                       | Hotovo, části 6–7                                                                 |
+| Nejméně 5 odvozených testů, zdůvodnění alespoň dvou úrovní | Hotovo, 12 případů v části 1 této evidence                                        |
+| Spuštění unit/component testů                              | Hotovo, 26 testů prošlo v aktuální revizi                                         |
+| Porovnání návrhu a implementace                            | Hotovo; zahrnuje databázový commit a rollback                                     |
+| Doklad atomického uložení při chybě                        | Hotovo; oba rollback testy proti PostgreSQL prošly                                |
+| C05 snapshot tag                                           | `v0.3-c05` (`87a4c5a`, historický snapshot); integrovaná baseline: `main@2b1e404` |
+
+### 6. Commit/tag a další postup
+
+**Commit / tag:** `v0.3-c05` (`87a4c5a`) identifies the historical C05 design/evidence snapshot. The integrated baseline shared by C05 documentation, code and tests at assessment time is `main@2b1e404` (`Update readme`).
+
+Návrh, implementace vybraného scénáře i její ověření jsou pro uvedený rozsah hotové. Souběžné schvalování zůstává přiznaným návrhovým rizikem a vyžaduje samostatné rozhodnutí.

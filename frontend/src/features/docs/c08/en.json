@@ -1,0 +1,289 @@
+{
+  "title": "C08 · Automatic cancellation of unapproved reservations",
+  "sections": [
+    {
+      "id": "change-request",
+      "title": "Change intent and scope",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "CR-08 comes from GitHub issue #64. If a teacher has not approved a student's request three hours before the consultation, the system automatically cancels it, releases the slot, and tells the student that the request was not approved in time. This document describes implementation commit a5cf9d99bfa860a31a6cccfc870edc8e4bc6d4c4 on feat/auto-cancel-unapproved-reservations, PR #67; this documentation change is on main."
+        },
+        {
+          "type": "table",
+          "headers": ["ID", "Acceptance condition", "Observable behavior"],
+          "rows": [
+            [
+              "AC-01",
+              "Approval before deadline",
+              "When startsAt > now + 3 h, the request stays PENDING and its owner can approve it; CONFIRMED, history, and a notification are stored."
+            ],
+            [
+              "AC-02",
+              "Automatic cancellation",
+              "When startsAt <= now + 3 h, a pending request becomes CANCELLED; a late approval returns 409 and still commits the cancellation."
+            ],
+            [
+              "AC-03",
+              "Student message",
+              "One internal RESERVATION_CANCELLED notification includes the slot, teacher, and reason that the request was not approved in time."
+            ],
+            [
+              "AC-04",
+              "Audit and slot release",
+              "The original CREATED event remains, a CANCELLED audit event is added with a NULL system actor, and the reservation stops blocking the slot."
+            ],
+            [
+              "AC-05",
+              "Consistency",
+              "State, audit, and notification are stored atomically; repeated sweeps do not create duplicates."
+            ],
+            [
+              "AC-06",
+              "No late manual action",
+              "The UI disables approve/cancel at <= 3 h and the backend rejects manual cancellation with HTTP 409."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "warning",
+          "content": "Known boundary mismatch: create rejects only starts earlier than now + 3 h, so it accepts exactly three hours. Expiry and approval treat that same boundary as closed; a request created there can be cancelled shortly afterwards. C08 does not change this rule."
+        }
+      ]
+    },
+    {
+      "id": "baseline",
+      "title": "Baseline before the change",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Item", "Before the change"],
+          "rows": [
+            [
+              "Revision",
+              "main@99210f0158993b2b8a81f9b327f63e5736556c62; direct parent of a5cf9d9."
+            ],
+            ["Database", "Flyway V14."],
+            ["Runtime", "Java 21, Spring Boot 4.1.1, PostgreSQL 17, React, TypeScript, and Vite."],
+            [
+              "Previous behavior",
+              "PENDING blocked the slot; its owner could approve during the final three hours; automatic cancellation did not exist."
+            ],
+            [
+              "Earlier evidence",
+              "C07 records 37/37 backend tests on 31a22ad (2 Nov 2026); its backend tree matches baseline main@99210f0. That run does not verify the new cutoff scenario."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Persistence tests use isolated PostgreSQL schemas, Flyway, and reads of committed state. Frontend tests use Vitest and Testing Library. Database services were not started during this documentation task; Compose was kept stopped as requested."
+        }
+      ]
+    },
+    {
+      "id": "baseline-tests",
+      "title": "Baseline test cases and actual results",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Test", "Baseline procedure and expectation", "Actual result"],
+          "rows": [
+            [
+              "TC-C08-01 — ordinary approval",
+              "Prepare a PENDING reservation and initial history; call approve as the owner; read the committed row, history, and notification. Expect CONFIRMED, confirmedAt, a new history event, and a student notification.",
+              "PASS evidenced by existing ReservationApprovalPersistenceTests.successfulApprovalCommitsStateHistoryAndNotification and C07's 37/37 run on matching backend revision 31a22ad. This is not a cutoff test."
+            ],
+            [
+              "TC-C08-02 — late approval on baseline",
+              "On main@99210f0 prepare PENDING with startsAt = now + 2 h 59 min; approve as the owner; independently read the DB. Expect CONFIRMED because the original approve had no time guard.",
+              "NOT RUN / BLOCKED. Source inspection confirms the missing guard, but no actual baseline run was performed. Compose database services remained stopped at the user's request."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "warning",
+          "content": "Code inspection is not presented as an executed test. TC-C08-02 remains open; completion requires an isolated DB, checkout 99210f0, an API/service call, and SQL output confirming the post-approval state."
+        }
+      ]
+    },
+    {
+      "id": "impact-options",
+      "title": "Impact and alternatives",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Area", "Classification", "Reason and evidence"],
+          "rows": [
+            [
+              "Lifecycle and rules",
+              "CHANGE",
+              "ReservationService transitions PENDING → CANCELLED; no EXPIRED state is added."
+            ],
+            [
+              "Identity and roles",
+              "NO IMPACT",
+              "Existing checks for actor, teacher role, and slot ownership remain in place."
+            ],
+            [
+              "Persistence and audit",
+              "CHANGE",
+              "V15 permits NULL actor_user_id for system audit; a write failure rolls back the change."
+            ],
+            [
+              "API and authorization",
+              "CHANGE",
+              "Late approval automatically cancels and returns 409; manual cancellation is rejected at the boundary."
+            ],
+            [
+              "Frontend",
+              "CHANGE",
+              "TeacherPage and MyReservationsPage disable late actions; reservation lists refresh periodically."
+            ],
+            [
+              "Notifications",
+              "CHANGE",
+              "The student receives a stored in-app message; email and an external service are outside this implementation."
+            ],
+            [
+              "Slot creation",
+              "NO IMPACT",
+              "Consultation slot creation operations and rules are unchanged; C08 applies to an existing reservation."
+            ],
+            [
+              "Configuration/operations",
+              "CHECK",
+              "The scheduler runs inside the backend with a configurable interval, default 1000 ms; backend downtime delays the sweep."
+            ],
+            [
+              "Multiple instances",
+              "CHECK",
+              "The repository uses PESSIMISTIC_WRITE; no dedicated multi-scheduler concurrency test is evidenced."
+            ]
+          ]
+        },
+        {
+          "type": "table",
+          "headers": ["Option", "Outcome", "Decision"],
+          "rows": [
+            [
+              "A — lazy check only on approve/list",
+              "Does not guarantee slot release without another interaction.",
+              "Rejected; does not meet autonomous cancellation requirement."
+            ],
+            [
+              "B — scheduler + approval guard + synchronous sweep on read",
+              "Proactive cancellation and notification, plus protection against stale lists.",
+              "Accepted and implemented in a5cf9d9."
+            ],
+            [
+              "C — no change; teacher handles requests manually",
+              "PENDING can block the slot indefinitely.",
+              "Rejected; does not meet the requirement."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "ReservationService remains the lifecycle authority; the scheduler only triggers its operation. The in-app notification, history, and state change form one transaction. PR #67 review approval cannot be verified from local commit history and must be added from the PR record."
+        }
+      ]
+    },
+    {
+      "id": "implementation-verification",
+      "title": "Post-change implementation and verification",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Check", "Result", "Scope and limitation"],
+          "rows": [
+            [
+              "ReservationExpiryPersistenceTests",
+              "PASS 6/6",
+              "PostgreSQL: exact boundary, idempotence, approval/cancellation at cutoff, and audit/notification rollback."
+            ],
+            [
+              "ReservationApprovalPersistenceTests",
+              "PASS 4 in full run",
+              "Ordinary approval and rollback on failure."
+            ],
+            [
+              "ReservationAuthorizationTests",
+              "Targeted PASS 17/17",
+              "API authorization, late cancellation, and create less than 3 h before slot; persistence is mocked."
+            ],
+            [
+              "Full backend",
+              "PASS 44/44",
+              "Full run preceded the final added API test; then the targeted authorization suite passed 17/17. We do not claim a final 45/45 full run."
+            ],
+            [
+              "Frontend",
+              "PASS 12/12",
+              "Four Vitest files, including exact UI cutoff for students and teachers."
+            ],
+            [
+              "Typecheck / lint",
+              "PASS",
+              "Typecheck passed. Lint exited 0 with one existing Fast Refresh warning in HistoryPeriodFilter.tsx:34."
+            ],
+            [
+              "Java fmt:check",
+              "FAIL — unrelated",
+              "Four earlier formatting deviations in AuthController, ReservationResponse, and two persistence test files; this documentation task does not edit source."
+            ]
+          ]
+        },
+        {
+          "type": "list",
+          "items": [
+            "startsAt > now + 3 h: the request remains PENDING and approval is allowed.",
+            "startsAt = now + 3 h: the scheduler cancels; late approval commits cancellation and returns 409; manual cancellation returns 409.",
+            "Audit: CANCELLED, actor_user_id NULL, original CREATED retained; the student receives one message with the reason.",
+            "A failure while writing history or notification restores the database to the original PENDING state."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "handoff-dod",
+      "title": "Handoff, residual risks, and DoD",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "While the backend is running, polling can add the interval (default 1 s) plus DB operation time; downtime delays cancellation and notification until restart.",
+            "Decide whether creation exactly three hours ahead should be rejected or whether the current cutoff mismatch is formally accepted.",
+            "Add a dedicated multi-scheduler concurrency test and job-lag monitoring if required by the deployment model.",
+            "Add the actual TC-C08-02 baseline run and PR #67 peer-review record; do not mark either complete without evidence."
+          ]
+        },
+        {
+          "type": "checklist",
+          "items": [
+            { "label": "CR and observable acceptance conditions documented", "done": true },
+            {
+              "label": "Baseline and two test cases documented; TC-C08-01 has actual evidence",
+              "done": true
+            },
+            { "label": "TC-C08-02 baseline boundary run actually executed", "done": false },
+            { "label": "Impact matrix and at least two alternatives recorded", "done": true },
+            {
+              "label": "Implementation tests and limitations distinguished by actual runs",
+              "done": true
+            },
+            { "label": "Peer review evidenced from PR #67", "done": false },
+            { "label": "C09 handoff includes the open boundary decision", "done": true }
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "The detailed project record is in docs/intent-and-change.md, implementation and test evidence in docs/evidence-and-evolution.md, and the architecture description in docs/architecture-and-decisions.md."
+        }
+      ]
+    }
+  ]
+}

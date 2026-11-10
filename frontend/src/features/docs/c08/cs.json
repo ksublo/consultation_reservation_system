@@ -1,0 +1,289 @@
+{
+  "title": "C08 · Automatické storno neschválených rezervací",
+  "sections": [
+    {
+      "id": "change-request",
+      "title": "Záměr změny a rozsah",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "CR-08 vychází z GitHub issue #64. Pokud pedagog žádost studenta do tří hodin před konzultací neschválí, systém ji automaticky stornuje, uvolní termín a informuje studenta, že žádost nebyla včas schválena. Dokumentace popisuje implementační commit a5cf9d99bfa860a31a6cccfc870edc8e4bc6d4c4 na větvi feat/auto-cancel-unapproved-reservations, PR #67; tato dokumentační změna je na main."
+        },
+        {
+          "type": "table",
+          "headers": ["ID", "Akceptační podmínka", "Ověřitelné chování"],
+          "rows": [
+            [
+              "AC-01",
+              "Včasné schválení",
+              "Při startsAt > now + 3 h zůstane žádost PENDING a vlastník ji může schválit; uloží se CONFIRMED, historie a oznámení."
+            ],
+            [
+              "AC-02",
+              "Automatické storno",
+              "Při startsAt <= now + 3 h přejde čekající žádost do CANCELLED; pozdní approve vrací 409 a přesto commitne storno."
+            ],
+            [
+              "AC-03",
+              "Zpráva studentovi",
+              "Vznikne interní oznámení RESERVATION_CANCELLED s termínem, pedagogem a důvodem, že žádost nebyla včas schválena."
+            ],
+            [
+              "AC-04",
+              "Audit a uvolnění",
+              "Původní CREATED zůstává, přibude CANCELLED audit se systémovým aktérem NULL a rezervace přestane blokovat termín."
+            ],
+            [
+              "AC-05",
+              "Konzistence",
+              "Stav, audit a oznámení se uloží atomicky; opakovaný sweep nevytváří duplikáty."
+            ],
+            [
+              "AC-06",
+              "Zákaz pozdní ruční akce",
+              "UI zakáže approve/cancel při <= 3 h a backend zamítne ruční storno HTTP 409."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "warning",
+          "content": "Známá hraniční nejednotnost: create odmítá jen začátek dřívější než now + 3 h, takže přesně tři hodiny přijme. Expirace a schválení považují stejnou hranici za uzavřenou; takto vytvořená žádost může být vzápětí stornována. C08 tuto podmínku nemění."
+        }
+      ]
+    },
+    {
+      "id": "baseline",
+      "title": "Baseline před změnou",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Položka", "Před změnou"],
+          "rows": [
+            ["Revize", "main@99210f0158993b2b8a81f9b327f63e5736556c62; přímý rodič a5cf9d9."],
+            ["Databáze", "Flyway V14."],
+            ["Runtime", "Java 21, Spring Boot 4.1.1, PostgreSQL 17, React, TypeScript a Vite."],
+            [
+              "Původní chování",
+              "PENDING blokovalo termín; vlastník mohl schválit i v posledních třech hodinách; automatické storno neexistovalo."
+            ],
+            [
+              "Dřívější důkaz",
+              "C07 uvádí 37/37 backendových testů na 31a22ad (2. 11. 2026); backendový strom je shodný s baseline main@99210f0. Tento běh neověřuje nový cutoff scénář."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Persistence testy používají izolovaná PostgreSQL schémata, Flyway a čtení committed stavu. Frontendové testy používají Vitest a Testing Library. Při této dokumentační práci nebyly databázové služby spuštěny; respektovali jsme požadavek ponechat Compose zastavený."
+        }
+      ]
+    },
+    {
+      "id": "baseline-tests",
+      "title": "Baseline test cases a skutečný výsledek",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Test", "Postup a očekávání baseline", "Skutečný výsledek"],
+          "rows": [
+            [
+              "TC-C08-01 — běžné schválení",
+              "Připravit PENDING rezervaci a počáteční historii; jako vlastník zavolat approve; načíst committed řádek, historii a oznámení. Očekává se CONFIRMED, confirmedAt, nová historie a oznámení studentovi.",
+              "PASS doložen existujícím ReservationApprovalPersistenceTests.successfulApprovalCommitsStateHistoryAndNotification a C07 během 37/37 na backendově shodné revizi 31a22ad. Není to test cutoff hranice."
+            ],
+            [
+              "TC-C08-02 — pozdní approve baseline",
+              "Na main@99210f0 připravit PENDING se startsAt = now + 2 h 59 min; approve jako vlastník; nezávisle načíst DB. Očekává se CONFIRMED, protože původní approve neměl časový guard.",
+              "NOT RUN / BLOCKED. Zdrojový kód potvrzuje absenci guardu, ale actual baseline běh nebyl proveden. Compose databáze byly ponechány zastavené na žádost uživatele."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "warning",
+          "content": "Kódová inspekce není vydávána za vykonání testu. TC-C08-02 zůstává otevřený; pro uzavření je potřeba izolovaná DB, checkout 99210f0, API/service volání a SQL výstup potvrzující stav po approve."
+        }
+      ]
+    },
+    {
+      "id": "impact-options",
+      "title": "Dopady a alternativy",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Oblast", "Klasifikace", "Důvod a důkaz"],
+          "rows": [
+            [
+              "Lifecycle a pravidla",
+              "CHANGE",
+              "ReservationService přechází PENDING → CANCELLED; nový stav EXPIRED nevzniká."
+            ],
+            [
+              "Identita a role",
+              "NO IMPACT",
+              "Existující ověření aktéra, role pedagoga a vlastnictví termínu zůstává."
+            ],
+            [
+              "Persistence a audit",
+              "CHANGE",
+              "V15 dovoluje NULL actor_user_id pro systémový audit; selhání zápisu rollbackne změnu."
+            ],
+            [
+              "API a oprávnění",
+              "CHANGE",
+              "Pozdní approve automaticky stornuje a vrací 409; ruční cancel je na hranici odmítnut."
+            ],
+            [
+              "Frontend",
+              "CHANGE",
+              "TeacherPage a MyReservationsPage deaktivují pozdní ovládání; seznamy se periodicky obnovují."
+            ],
+            [
+              "Oznámení",
+              "CHANGE",
+              "Student dostává uloženou in-app zprávu; e-mail ani externí služba nejsou součástí implementace."
+            ],
+            [
+              "Tvorba termínů",
+              "NO IMPACT",
+              "Pravidla a operace vytváření konzultačních slotů se nemění; C08 se týká až existující rezervace."
+            ],
+            [
+              "Konfigurace/provoz",
+              "CHECK",
+              "Scheduler uvnitř backendu má interval nastavitelný vlastností, default 1000 ms; výpadek backendu odloží sweep."
+            ],
+            [
+              "Souběh instancí",
+              "CHECK",
+              "Repository používá PESSIMISTIC_WRITE; zvláštní test souběhu více schedulerů doložen není."
+            ]
+          ]
+        },
+        {
+          "type": "table",
+          "headers": ["Varianta", "Výsledek", "Rozhodnutí"],
+          "rows": [
+            [
+              "A — lazy kontrola jen při approve/list",
+              "Nezaručuje uvolnění termínu bez další interakce.",
+              "Odmítnuta; nesplňuje autonomní storno."
+            ],
+            [
+              "B — scheduler + approve guard + synchronní sweep při načtení",
+              "Proaktivní storno, oznámení a ochrana zastaralého seznamu.",
+              "Přijata a implementována v a5cf9d9."
+            ],
+            [
+              "C — beze změny, ruční práce pedagoga",
+              "PENDING může termín blokovat neomezeně.",
+              "Odmítnuta; nesplňuje požadavek."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "ReservationService zůstává autoritou pro lifecycle; scheduler pouze spouští jeho operaci. In-app notification, historie a změna stavu jsou jedna transakce. Review schválení PR #67 není ověřitelné z lokální commit historie a musí být doplněno z PR záznamu."
+        }
+      ]
+    },
+    {
+      "id": "implementation-verification",
+      "title": "Implementace a verifikace po změně",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Kontrola", "Výsledek", "Rozsah a omezení"],
+          "rows": [
+            [
+              "ReservationExpiryPersistenceTests",
+              "PASS 6/6",
+              "PostgreSQL: přesná hranice, idempotence, approve/cancel na hranici a rollback auditu/oznámení."
+            ],
+            [
+              "ReservationApprovalPersistenceTests",
+              "PASS 4 v plném běhu",
+              "Běžné schválení a rollback při selhání."
+            ],
+            [
+              "ReservationAuthorizationTests",
+              "PASS 17/17 cíleně",
+              "API autorizace, pozdní cancel a create méně než 3 h před termínem; mock persistence."
+            ],
+            [
+              "Celý backend",
+              "PASS 44/44",
+              "Plný běh proběhl před přidáním posledního API testu; následně cílená autorizační sada 17/17. Netvrdíme finální full run 45/45."
+            ],
+            [
+              "Frontend",
+              "PASS 12/12",
+              "4 Vitest soubory včetně přesného UI cutoffu pro studenta i pedagoga."
+            ],
+            [
+              "Typecheck / lint",
+              "PASS",
+              "Typecheck prošel. Lint exit 0 s jedním stávajícím Fast Refresh upozorněním v HistoryPeriodFilter.tsx:34."
+            ],
+            [
+              "Java fmt:check",
+              "FAIL — nesouvisející",
+              "Čtyři starší formátovací odchylky v AuthController, ReservationResponse a dvou persistence testech; dokumentační práce zdroj neupravuje."
+            ]
+          ]
+        },
+        {
+          "type": "list",
+          "items": [
+            "startsAt > now + 3 h: žádost zůstává PENDING a schválení je možné.",
+            "startsAt = now + 3 h: scheduler stornuje; pozdní approve commitne storno a vrátí 409; ruční cancel vrátí 409.",
+            "Audit: CANCELLED, actor_user_id NULL, původní CREATED zachován; student dostane jednu zprávu s důvodem.",
+            "Chyba při zápisu historie nebo oznámení vrací databázi do původního PENDING stavu."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "handoff-dod",
+      "title": "Předání, zbytková rizika a DoD",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "Při běžícím backendu polling může přidat prodlevu intervalu (default 1 s) plus dobu DB operace; výpadek backendu odloží storno i oznámení do restartu.",
+            "Rozhodnout, zda create přesně na hranici tří hodin odmítat, nebo formálně přijmout dnešní nesoulad cutoffů.",
+            "Doplnit samostatný test souběhu více scheduler instancí a monitoring zpoždění jobu, pokud to provozní nasazení vyžaduje.",
+            "Doplnit skutečný baseline běh TC-C08-02 a peer-review záznam PR #67; tyto body se nesmějí označit jako splněné bez evidence."
+          ]
+        },
+        {
+          "type": "checklist",
+          "items": [
+            { "label": "CR a ověřitelné akceptační podmínky zapsány", "done": true },
+            {
+              "label": "Baseline a dva test cases popsány; TC-C08-01 má skutečný důkaz",
+              "done": true
+            },
+            { "label": "TC-C08-02 baseline boundary běh skutečně proveden", "done": false },
+            {
+              "label": "Impact matrix a alespoň dvě varianty rozhodnutí zaznamenány",
+              "done": true
+            },
+            {
+              "label": "Implementační testy a omezení rozlišeny podle skutečných běhů",
+              "done": true
+            },
+            { "label": "Peer review doloženo z PR #67", "done": false },
+            { "label": "C09 předání obsahuje otevřené hraniční rozhodnutí", "done": true }
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Podrobný projektový záznam je v docs/intent-and-change.md, implementační a testovací evidence v docs/evidence-and-evolution.md a architektonický popis v docs/architecture-and-decisions.md."
+        }
+      ]
+    }
+  ]
+}
