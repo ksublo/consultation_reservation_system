@@ -174,6 +174,11 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
 
   useEffect(() => {
     void load()
+    const interval = window.setInterval(() => {
+      setNow(Date.now())
+      void load()
+    }, 10000)
+    return () => window.clearInterval(interval)
   }, [])
 
   const daySlots = useMemo(
@@ -430,9 +435,11 @@ export default function TeacherPage({ session, onToast, view, language, t }: Pro
         {items.map((request) => {
           const canCancel =
             request.status !== 'CANCELLED' &&
-            new Date(request.startsAt).getTime() - now >= cancellationCutoffMs
+            new Date(request.startsAt).getTime() - now > cancellationCutoffMs
           const canApprove =
-            request.status === 'PENDING' && new Date(request.endsAt).getTime() >= now
+            request.status === 'PENDING' &&
+            new Date(request.startsAt).getTime() - now > cancellationCutoffMs &&
+            new Date(request.endsAt).getTime() >= now
           return (
             <div className="request-row" key={request.id}>
               <div className="request-cell request-student" data-label={t('studentColumn')}>
