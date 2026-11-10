@@ -9,6 +9,7 @@ import consultation_reservation_backend.domain.*;
 import consultation_reservation_backend.repository.*;
 import consultation_reservation_backend.security.AuthenticatedUser;
 import consultation_reservation_backend.service.*;
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,7 +39,9 @@ class ReservationApprovalDesignTests {
     history = mock(ReservationHistoryRepository.class);
     users = mock(UserService.class);
     notifications = mock(NotificationService.class);
-    service = new ReservationService(reservations, slots, history, users, notifications);
+    service =
+        new ReservationService(
+            reservations, slots, history, users, notifications, Clock.systemUTC());
     teacher = user(UserRole.TEACHER, "owner");
     student = user(UserRole.STUDENT, "student");
     var start = OffsetDateTime.now().plusDays(2);

@@ -4,9 +4,10 @@ import consultation_reservation_backend.api.*;
 import consultation_reservation_backend.domain.*;
 import consultation_reservation_backend.repository.*;
 import consultation_reservation_backend.security.AuthenticatedUser;
+import java.time.Clock;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -28,18 +29,21 @@ public class ReservationService {
   private final ReservationHistoryRepository history;
   private final NotificationService notifications;
   private final UserService users;
+  private final Clock clock;
 
   public ReservationService(
       ReservationRepository reservations,
       ConsultationSlotRepository slots,
       ReservationHistoryRepository history,
       UserService users,
-      NotificationService notifications) {
+      NotificationService notifications,
+      Clock clock) {
     this.reservations = reservations;
     this.slots = slots;
     this.history = history;
     this.users = users;
     this.notifications = notifications;
+    this.clock = clock;
   }
 
   public ReservationResponse create(
@@ -57,7 +61,7 @@ public class ReservationService {
         slots
             .findById(request.slotId())
             .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Slot not found."));
-    OffsetDateTime now = OffsetDateTime.now();
+    OffsetDateTime now = OffsetDateTime.now(clock);
     if (slot.getStatus() != SlotStatus.ACTIVE || !slot.getStartsAt().isAfter(now))
       throw new ApiException(HttpStatus.CONFLICT, "This slot is not available.");
     if ((request.consultationMode() == ConsultationMode.ONLINE && !slot.isOnlineAvailable())
@@ -113,6 +117,7 @@ public class ReservationService {
     }
   }
 
+  @Transactional(noRollbackFor = ApiException.class)
   public ReservationResponse approve(
       UUID reservationId,
       AuthenticatedUser authenticatedActor,
@@ -129,6 +134,12 @@ public class ReservationService {
       throw new ApiException(HttpStatus.FORBIDDEN, "Only the slot's teacher can approve it.");
     if (reservation.getStatus() != ReservationStatus.PENDING)
       throw new ApiException(HttpStatus.CONFLICT, "Only a pending reservation can be approved.");
+    if (!reservation.getSlot().getStartsAt().isAfter(OffsetDateTime.now(clock).plusHours(3))) {
+      cancelAutomatically(reservation);
+      throw new ApiException(
+          HttpStatus.CONFLICT,
+          "The reservation was automatically cancelled because it was not approved in time.");
+    }
     reservation.confirm();
     history.save(
         new ReservationHistory(
@@ -203,10 +214,9 @@ public class ReservationService {
           HttpStatus.FORBIDDEN, "Only the student or the slot's teacher can cancel it.");
     if (reservation.getStatus() == ReservationStatus.CANCELLED)
       throw new ApiException(HttpStatus.CONFLICT, "Reservation is already cancelled.");
-    if (reservation
-        .getSlot()
-        .getStartsAt()
-        .isBefore(OffsetDateTime.now().plusHours(RESERVATION_CUTOFF_HOURS)))
+    OffsetDateTime cancellationCutoff =
+        OffsetDateTime.now(clock).plusHours(RESERVATION_CUTOFF_HOURS);
+    if (!reservation.getSlot().getStartsAt().isAfter(cancellationCutoff))
       throw new ApiException(
           HttpStatus.CONFLICT,
           "Reservations cannot be cancelled less than 3 hours before the consultation starts.");
@@ -233,11 +243,7 @@ public class ReservationService {
                 ? ""
                 : " Důvod: " + request.note().trim() + ".");
     notifications.create(
-        recipient,
-        reservation,
-        "RESERVATION_CANCELLED",
-        "Rezervace byla zrušena",
-        message);
+        recipient, reservation, "RESERVATION_CANCELLED", "Rezervace byla zrušena", message);
     return ReservationResponse.from(reservation);
   }
 
@@ -257,9 +263,46 @@ public class ReservationService {
       throw new ApiException(HttpStatus.FORBIDDEN, "Only the slot's teacher can cancel it.");
   }
 
-  @Transactional(readOnly = true)
+  @Transactional
   public List<ReservationResponse> forUser(UUID userId) {
+    cancelExpiredPendingReservations();
     return reservations.findAllForUser(userId).stream().map(ReservationResponse::from).toList();
+  }
+
+  @Transactional
+  public void cancelExpiredPendingReservations() {
+    OffsetDateTime latestStart = OffsetDateTime.now(clock).plusHours(RESERVATION_CUTOFF_HOURS);
+    reservations
+        .findPendingForAutomaticCancellation(ReservationStatus.PENDING, latestStart)
+        .forEach(this::cancelAutomatically);
+  }
+
+  private void cancelAutomatically(Reservation reservation) {
+    if (reservation.getStatus() != ReservationStatus.PENDING) return;
+    var slot = reservation.getSlot();
+    var teacher = slot.getTeacher();
+    String reason = "Pedagog žádost včas neschválil.";
+    reservation.cancel(null, reason);
+    history.save(
+        new ReservationHistory(
+            reservation,
+            ReservationAction.CANCELLED,
+            ReservationStatus.PENDING,
+            ReservationStatus.CANCELLED,
+            null,
+            reason));
+    notifications.create(
+        reservation.getStudent(),
+        reservation,
+        "RESERVATION_CANCELLED",
+        "Žádost automaticky stornována",
+        "Konzultace dne "
+            + APPOINTMENT_TIME.format(slot.getStartsAt())
+            + " u pedagoga "
+            + teacher.getFirstName()
+            + " "
+            + teacher.getLastName()
+            + " byla automaticky stornována. Pedagog žádost včas neschválil.");
   }
 
   private Reservation get(UUID id) {

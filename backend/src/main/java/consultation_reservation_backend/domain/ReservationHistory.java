@@ -25,7 +25,7 @@ public class ReservationHistory {
   private ReservationStatus newStatus;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "actor_user_id", nullable = false)
+  @JoinColumn(name = "actor_user_id")
   private AppUser actor;
 
   private String note;

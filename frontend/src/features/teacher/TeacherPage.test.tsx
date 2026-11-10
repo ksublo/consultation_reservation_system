@@ -28,8 +28,11 @@ const session: Session = {
 
 const translate = ((key: string) => key) as TFunction
 
-function makeReservation(status: Reservation['status'] = 'PENDING'): Reservation {
-  const startsAt = new Date(Date.now() + (status === 'CANCELLED' ? -48 : 48) * 60 * 60 * 1000)
+function makeReservation(
+  status: Reservation['status'] = 'PENDING',
+  hoursFromNow = status === 'CANCELLED' ? -48 : 48,
+): Reservation {
+  const startsAt = new Date(Date.now() + hoursFromNow * 60 * 60 * 1000)
   return {
     id: 'reservation-1',
     slotId: 'slot-1',
@@ -71,6 +74,7 @@ describe('TeacherPage cancellation flow', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+    vi.restoreAllMocks()
   })
 
   it('opens confirmation before cancelling a student request and sends the reason', async () => {
@@ -101,5 +105,18 @@ describe('TeacherPage cancellation flow', () => {
 
     expect(screen.getByText('Změna plánů')).toBeTruthy()
     expect(screen.getByText('Ada Nováková')).toBeTruthy()
+  })
+
+  it('disables approval and manual cancellation exactly three hours before the slot', async () => {
+    const now = 1_900_000_000_000
+    vi.spyOn(Date, 'now').mockReturnValue(now)
+    vi.mocked(api.getReservations).mockResolvedValue([makeReservation('PENDING', 3)])
+    renderPage()
+
+    await screen.findByText('Jan Novák')
+    expect((screen.getByTitle('approve') as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByTitle('cancelTooLate') as HTMLButtonElement).disabled).toBe(true)
+    expect(api.approveReservation).not.toHaveBeenCalled()
+    expect(api.cancelReservation).not.toHaveBeenCalled()
   })
 })

@@ -4,12 +4,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import consultation_reservation_backend.api.ConsultationSlotController;
 import consultation_reservation_backend.api.ReservationController;
 import consultation_reservation_backend.config.SecurityConfig;
+import consultation_reservation_backend.config.TimeConfiguration;
 import consultation_reservation_backend.domain.*;
 import consultation_reservation_backend.repository.*;
 import consultation_reservation_backend.security.AuthenticatedUser;
@@ -28,7 +29,12 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest({ReservationController.class, ConsultationSlotController.class})
-@Import({SecurityConfig.class, BearerTokenFilter.class, ReservationService.class})
+@Import({
+  SecurityConfig.class,
+  TimeConfiguration.class,
+  BearerTokenFilter.class,
+  ReservationService.class
+})
 class ReservationAuthorizationTests {
   @Autowired MockMvc mvc;
   @MockitoBean AuthService auth;
@@ -165,6 +171,29 @@ class ReservationAuthorizationTests {
   }
 
   @Test
+  void reservationCreationThroughApiIsRejectedLessThanThreeHoursBeforeTheSlot()
+      throws Exception {
+    login(student, UserRole.STUDENT);
+    var start = OffsetDateTime.now().plusHours(2);
+    var slot = new ConsultationSlot(teacher, start, start.plusHours(1));
+    when(slots.findById(slot.getId())).thenReturn(Optional.of(slot));
+
+    mvc.perform(
+            post("/api/reservations")
+                .header("Authorization", "Bearer " + token)
+                .contentType("application/json")
+                .content(
+                    "{\"slotId\":\""
+                        + slot.getId()
+                        + "\",\"reasonTitle\":\"Question\",\"reasonDescription\":\"Details\",\"consultationMode\":\"OFFLINE\"}"))
+        .andExpect(status().isConflict());
+
+    verify(reservations, never()).saveAndFlush(any(Reservation.class));
+    verify(history, never()).save(any(ReservationHistory.class));
+    verifyNoInteractions(notifications);
+  }
+
+  @Test
   void studentCannotSpoofSlotOwnerWhenCancellingSlotWithReservation() throws Exception {
     login(student, UserRole.STUDENT);
     var slot = reservation.getSlot();
@@ -268,6 +297,17 @@ class ReservationAuthorizationTests {
   }
 
   @Test
+  void reservationCannotBeCancelledThroughApiWithinThreeHours() throws Exception {
+    login(student, UserRole.STUDENT);
+    ReflectionTestUtils.setField(
+        reservation.getSlot(), "startsAt", OffsetDateTime.now().plusHours(2));
+
+    request("cancel", "{\"note\":\"Too late\"}").andExpect(status().isConflict());
+
+    unchanged();
+  }
+
+  @Test
   void confirmedReservationCanBeCancelledWithoutReason() throws Exception {
     login(teacher, UserRole.TEACHER);
     reservation.confirm();
@@ -281,7 +321,8 @@ class ReservationAuthorizationTests {
     assertEquals(ReservationStatus.CANCELLED, reservation.getStatus());
     verify(history).save(any(ReservationHistory.class));
     verify(notifications)
-        .create(eq(student), eq(reservation), eq("RESERVATION_CANCELLED"), anyString(), anyString());
+        .create(
+            eq(student), eq(reservation), eq("RESERVATION_CANCELLED"), anyString(), anyString());
   }
 
   @Test
