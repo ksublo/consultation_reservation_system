@@ -7,12 +7,14 @@ import csC03A from './c03a/cs.json'
 import csC03B from './c03b/cs.json'
 import csC05 from './c05/cs.json'
 import csC07 from './c07/cs.json'
+import csC08 from './c08/cs.json'
 import enC01 from './c01/en.json'
 import enC02 from './c02/en.json'
 import enC03A from './c03a/en.json'
 import enC03B from './c03b/en.json'
 import enC05 from './c05/en.json'
 import enC07 from './c07/en.json'
+import enC08 from './c08/en.json'
 import c06Source from './c06/C06_Assessment_consultation_reservation_system.md?raw'
 import {
   parseDocumentation,
@@ -20,7 +22,7 @@ import {
   type DocumentationBlock,
 } from './documentation-model'
 
-type DocsSection = 'c01' | 'c02' | 'c03a' | 'c03b' | 'c05' | 'c06' | 'c07'
+type DocsSection = 'c01' | 'c02' | 'c03a' | 'c03b' | 'c05' | 'c06' | 'c07' | 'c08'
 type StructuredDocsSection = Exclude<DocsSection, 'c06'>
 
 interface DocumentationPageProps {
@@ -28,7 +30,7 @@ interface DocumentationPageProps {
   t: TFunction
 }
 
-const tabs: DocsSection[] = ['c01', 'c02', 'c03a', 'c03b', 'c05', 'c06', 'c07']
+const tabs: DocsSection[] = ['c01', 'c02', 'c03a', 'c03b', 'c05', 'c06', 'c07', 'c08']
 const c07Documents = [
   {
     titleCs: 'A · Technická obhajoba',
@@ -520,6 +522,7 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
         c03b: parseDocumentation(csC03B, 'C03B / cs'),
         c05: parseDocumentation(csC05, 'C05 / cs'),
         c07: parseDocumentation(csC07, 'C07 / cs'),
+        c08: parseDocumentation(csC08, 'C08 / cs'),
       },
       en: {
         c01: parseDocumentation(enC01, 'C01 / en'),
@@ -528,6 +531,7 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
         c03b: parseDocumentation(enC03B, 'C03B / en'),
         c05: parseDocumentation(enC05, 'C05 / en'),
         c07: parseDocumentation(enC07, 'C07 / en'),
+        c08: parseDocumentation(enC08, 'C08 / en'),
       },
     }),
     [],

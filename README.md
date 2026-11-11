@@ -2,43 +2,33 @@
 
 Webová aplikace pro rezervaci konzultačních termínů na univerzitě. Studenti si vybírají dostupné termíny a žádají o konzultaci; pedagogové termíny vytvářejí a žádosti schvalují.
 
-## Obsah
+## Technologie
 
-- [Technologie a části aplikace](#technologie-a-části-aplikace)
-- [Rychlé spuštění](#rychlé-spuštění)
-- [Vývoj](#vývoj)
-- [Dokumentace](#dokumentace)
-
-## Technologie a části aplikace
-
-| Část | Technologie | Umístění | Účel |
-| --- | --- | --- | --- |
-| Uživatelské rozhraní | React, Vite a TypeScript | `frontend/` | Přihlášení, nabídka termínů a správa rezervací |
-| Serverové rozhraní | Java 21, Spring Boot a Maven | `backend/` | REST API, ověřování uživatelů a pravidla rezervací |
-| Databáze | PostgreSQL a Flyway | `backend/src/main/resources/db/migration/` | Ukládání dat a správa databázového schématu |
-| Dokumentace | Markdown a JSON | `docs/`, `frontend/src/features/docs/` | Projektové podklady a dokumentace zobrazovaná v aplikaci |
+| Část                 | Technologie                 | Umístění                                   |
+| -------------------- | --------------------------- | ------------------------------------------ |
+| Uživatelské rozhraní | React, Vite, TypeScript     | `frontend/`                                |
+| Serverové rozhraní   | Java 21, Spring Boot, Maven | `backend/`                                 |
+| Databáze             | PostgreSQL, Flyway          | `backend/src/main/resources/db/migration/` |
 
 ## Rychlé spuštění
 
-Nejjednodušší je spustit všechny služby pomocí Docker Compose. Je potřeba mít nainstalovaný a spuštěný Docker Desktop.
+Vyžaduje Docker Desktop:
 
 ```sh
 docker compose up --build
 ```
 
-Po spuštění jsou dostupné:
-
-| Služba | Adresa |
-| --- | --- |
-| Aplikace | <http://localhost:5173> |
+| Služba      | Adresa                  |
+| ----------- | ----------------------- |
+| Aplikace    | <http://localhost:5173> |
 | Backend API | <http://localhost:8080> |
-| PostgreSQL | `localhost:5432` |
+| PostgreSQL  | `localhost:5432`        |
 
-Služby zastavíte příkazem `docker compose down`. Podrobnosti ke konfiguraci a práci s databázovým svazkem jsou v [návodu k Dockeru](DOCKER.md).
+Služby zastavíte příkazem `docker compose down`. Podrobnosti jsou v [návodu k Dockeru](DOCKER.md).
 
 ## Vývoj
 
-### Frontend
+Frontend:
 
 ```sh
 cd frontend
@@ -46,87 +36,28 @@ npm install
 npm run dev
 ```
 
-Další dostupné příkazy:
+Další frontendové příkazy: `npm run build`, `npm test`, `npm run lint`, `npm run typecheck`, `npm run format` a `npm run format:check`.
 
-```sh
-npm run build
-npm test
-npm run lint
-npm run typecheck
-npm run format
-npm run format:check
-```
-
-### Backend
-
-Nastavte připojení k PostgreSQL podle `backend/.env.example` a z adresáře `backend/` spusťte:
+Backend spusťte s nakonfigurovaným PostgreSQL připojením z `backend/`:
 
 ```sh
 ./mvnw spring-boot:run --spring.profiles.active=local
 ```
 
-Ve Windows použijte `mvnw.cmd` místo `./mvnw`. Formátování a kontrolu formátování zajišťuje Google Java Format:
-
-```sh
-mvn fmt:format
-mvn fmt:check
-```
+Ve Windows použijte `mvnw.cmd`. Formátování zajišťuje Google Java Format (`mvn fmt:format`, `mvn fmt:check`).
 
 ## Dokumentace
 
-Dokumentace je rozdělená podle účelu. Projektové podklady a záznamy jsou v kořenové složce `docs/`; texty jednotlivých částí, které se zobrazují přímo ve webové aplikaci, jsou samostatně ve `frontend/src/features/docs/`.
+Projektové podklady a rozhodnutí jsou v `docs/`; aplikační dokumentace je zobrazena v obou jazycích v `frontend/src/features/docs/`.
 
-### Projektové podklady (`docs/`)
+| Dokument                                                                   | Obsah                                                        |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| [`docs/intent-and-change.md`](docs/intent-and-change.md)                   | Záměr projektu, uživatelé, pravidla a C08 change request     |
+| [`docs/architecture-and-decisions.md`](docs/architecture-and-decisions.md) | Architektura, datový model a technická rozhodnutí včetně C08 |
+| [`docs/evidence-and-evolution.md`](docs/evidence-and-evolution.md)         | Testovací evidence, výsledky etap a omezení                  |
+| [`docs/deployment-development.md`](docs/deployment-development.md)         | Vývojové a nasazovací podklady                               |
+| [`docs/diagrams/`](docs/diagrams/)                                         | Zdrojové a vykreslené diagramy                               |
 
-| Soubor nebo složka | Obsah |
-| --- | --- |
-| [`docs/intent-and-change.md`](docs/intent-and-change.md) | Záměr projektu, jeho uživatelé, hlavní pojmy a operace |
-| [`docs/architecture-and-decisions.md`](docs/architecture-and-decisions.md) | Architektura, datový model a technická rozhodnutí včetně ADR |
-| [`docs/evidence-and-evolution.md`](docs/evidence-and-evolution.md) | Ověřovací důkazy, výsledky etap a vývoj projektu |
-| [`docs/deployment-development.md`](docs/deployment-development.md) | Postup nasazení větve `development` |
-| [`docs/diagrams/`](docs/diagrams/) | Zdrojové a vykreslené diagramy, například životní cyklus rezervace |
-| [`DOCKER.md`](DOCKER.md) | Lokální spuštění služeb a nastavení Docker Compose |
+Aplikační dokumentace používá české a anglické JSON soubory. Jednotlivé části jsou `c01`, `c02`, `c03a`, `c03b`, `c05`, `c07` a `c08`; C06 se načítá z Markdownu. Renderer a obsahový model jsou v `frontend/src/features/docs/DocumentationPage.tsx` a `documentation-model.ts`. Struktura a postup rozšíření jsou popsány v [`frontend/src/features/docs/README.md`](frontend/src/features/docs/README.md).
 
-### Dokumentace v aplikaci (`frontend/src/features/docs/`)
-
-Obsah je uložen jako JSON soubory s českou a anglickou verzí pro každou část. V aplikaci se zobrazuje pomocí společného modelu a vykreslovače.
-
-```text
-frontend/src/features/docs/
-├── README.md              # Struktura obsahu a pravidla pro jeho rozšíření
-├── documentation-model.ts # Typy a validace dokumentů
-├── DocumentationPage.tsx  # Sp
-+            + actor.getFirstName()
-+            + " "
-+            + actor.getLastName()
-+            + " zrušil konzultaci dne "
-+            + APPOINTMENT_TIME.format(reservation.getSlot().getStartsAt())
-+            + "."
-+            + (request.note() == null || request.note().isBlank()
-+                ? ""
-+                : " Důvod: " + request.note().trim() + ".");
-     notifications.create(
-         recipient,
-         reservation,
-         "RESERVATION_CANCELLED",
--        previous == ReservationStatus.PENDING && !isStudent
--            ? "Žádost byla zamítnuta"
--            : "Rezervace byla zrušena",
-+        "Rezervace byla zrušena",
-         message);
-     return ReservationResponse.from(reservation);
-netopus@netopus-ROG-Strix-G713QM:~/consultation_reservation_system$ 
-netopus@netopus-ROG-Strix-G713QM:~/consultation_reservation_system$ git status
-On branch feat/explain_cancel
-Your branch is up to date with 'origin/feat/explain_cancel'.
-
-nothing to commit, working tree clean
-netopus@netopus-ROG-Strix-G713QM:~/consultation_reservation_system$ olečné zobrazení a navigace
-├── c01/                   # C01
-├── c02/                   # C02
-├── c03a/                  # C03, část A
-├── c03b/                  # C03, část B
-└── c05/                   # C05
-```
-
-V každé složce části jsou soubory `cs.json` a `en.json`. Podrobný popis datového formátu a přidání nové části je v [`frontend/src/features/docs/README.md`](frontend/src/features/docs/README.md). Dokumentace C05 přebírá vybrané informace z projektových podkladů v `docs/`; při jejich změně je potřeba upravit také českou a anglickou kopii.
+C08 dokumentuje automatické storno neschválených rezervací podle implementačního commitu `a5cf9d9` a [PR #67](https://github.com/ksublo/consultation_reservation_system/pull/67). Projektové dokumenty i česká a anglická aplikační verze zachovávají rozdíl mezi skutečně spuštěnými testy, neprovedeným baseline testem a neověřeným PR review.
