@@ -257,18 +257,22 @@ Očekávání v této části vycházejí z pravidel a kódu `main@99210f0`, nik
 
 #### TC-C08-02 — pozdní schválení čekající žádosti na původní baseline
 
-**Basis:** původní `ReservationService.approve()` ověřuje vlastníka a `PENDING`, ale nemá časovou kontrolu. **Data:** izolovaná `PENDING` rezervace s `startsAt = now + 2 h 59 min`, vlastník přihlášen jako pedagog.
+**Basis:** původní `ReservationService.approve()` ověřuje vlastníka a `PENDING`, ale nemá časovou kontrolu. **Data:** zamýšlená izolovaná `PENDING` rezervace s `startsAt = now + 2 h 59 min`, vlastník přihlášen jako pedagog. Baseline `create()` však takovou rezervaci přes podporovanou cestu odmítá ještě před uložením.
 
 | #   | Akce                                                                | Expected před během podle původní implementace                                             | Actual / evidence po běhu                                                          |
 | --- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| 1   | Připravit a commitnout PENDING rezervaci se začátkem za 2 h 59 min. | PENDING blokuje slot; stav je nezávisle ověřen v DB.                                       | NOT RUN proti `main@99210f0`.                                                      |
-| 2   | Zavolat approve jako vlastník.                                      | Původní kód nemá časový guard; podle skutečně vykonané cesty by schválení mělo pokračovat. | NOT RUN; zdrojový kód potvrzuje absenci guardu, ale to není náhrada za actual běh. |
-| 3   | Znovu načíst stav a změny historie/oznámení.                        | Očekávaný výsledek baseline je `CONFIRMED`, jedna nová historie a oznámení.                | NOT RUN; neoznačovat jako PASS.                                                    |
-| 4   | Resetovat izolovaná data a opakovat.                                | Stejný reprodukovatelný výsledek.                                                          | NOT RUN.                                                                           |
+| 1   | Připravit PENDING rezervaci se začátkem za 2 h 59 min přes podporovanou create cestu. | PENDING blokuje slot; stav je nezávisle ověřen v DB. | **BLOCKED:** baseline `ReservationService.create()` na `main@99210f0` při `startsAt < now + 3 h` vrací `409 CONFLICT` s textem `Reservations must be created at least 3 hours before the consultation starts.`; k `saveAndFlush()` se nedostane. |
+| 2   | Zavolat approve jako vlastník.                                      | Původní kód nemá časový guard; u již existující PENDING by schválení mělo pokračovat. | **N/A:** rezervaci nebylo možné vytvořit podporovanou cestou, proto nebyl proveden approve. |
+| 3   | Znovu načíst stav a změny historie/oznámení.                        | Očekávaný výsledek při existující PENDING je `CONFIRMED`, jedna nová historie a oznámení. | **N/A:** nevznikl řádek rezervace, historie ani oznámení, které by šlo kontrolovat v DB. |
+| 4   | Resetovat izolovaná data a opakovat.                                | Stejný reprodukovatelný výsledek.                                                          | **NOT RUN:** další běh by vyžadoval předem vloženou PENDING rezervaci mimo podporovanou create cestu; tento workaround nebyl vydáván za požadovaný test. |
 
-**Stav:** BLOCKED / NOT RUN pro samostatný C08 boundary test na before baseline. Při této dokumentační práci se neprováděl nový běh nad databází; lokální Compose služby byly na výslovnou žádost ponechány zastavené. Opakovatelný další krok: připravit izolovanou DB, checkout `99210f0`, spustit test nad předzměnovým `ReservationService` a uložit SQL/API výstup. Kódová inspekce není vykazována jako vykonání testu.
+**Stav:** **BLOCKED / nedokončeno.** Konkrétní překážkou je tříhodinový cutoff v baseline create cestě, takže požadovanou PENDING rezervaci za 2 h 59 min nelze vytvořit přes aplikaci a není možné poctivě doložit DB stav po approve. Doplňkově proběhl cílený baseline běh `ReservationAuthorizationTests` z čisté kopie `99210f0`: příkaz `-Dtest=ReservationAuthorizationTests -DargLine=-javaagent:/home/netopus/.m2/repository/net/bytebuddy/byte-buddy-agent/1.18.11/byte-buddy-agent-1.18.11.jar test`, výsledek **15 testů, 0 chyb, BUILD SUCCESS**; tento běh však neobsahuje TC-C08-02 a není vydáván za jeho provedení. Opakovatelný další krok pro uzavření: připravit izolovanou DB a explicitně vložit testovací PENDING pouze tehdy, pokud vlastník zadání schválí takovou přípravu mimo create API; následně uložit API a SQL výstup.
 
-### 3. Ověření implementace `a5cf9d9`
+### 3. Peer review PR #67
+
+Peer review je doloženo přímo v [PR #67](https://github.com/ksublo/consultation_reservation_system/pull/67). GitHub uvádí review od `Falplp` se stavem **Approved**, provedené 11. 11. 2026; review nemá inline komentáře ani požadované změny. Reviewovaný commit je `a5cf9d9`, jeho rodič je baseline `99210f0`, a PR má při kontrole 6/6 úspěšných checks. Významné připomínky recenzenta nebyly zaznamenány; proto nejsou žádné připomínky domýšleny. Samotný diff se týká scheduleru, cutoff kontroly při approve, zámku při výběru expirovaných rezervací, systémového auditního aktéra a příslušných testů.
+
+### 4. Ověření implementace `a5cf9d9`
 
 | Ověření                               | Rozsah                                                                                                                                                          | Actual / omezení                                                                                                                                                                                                                                       |
 | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -283,7 +287,7 @@ Očekávání v této části vycházejí z pravidel a kódu `main@99210f0`, nik
 
 Plný backendový běh skončil úspěšně po opravě očekávaného času v oznámení. Tato evidence nesmí být sloučena s předzměnovým TC-C08-02: post-change PASS neprokazuje chování staré baseline.
 
-### 4. Pokryté acceptance oracles
+### 5. Pokryté acceptance oracles
 
 | Oracle                 | Výsledek po změně                                                                                      | Konkrétní důkaz                                                                                                                                                                             |
 | ---------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -294,17 +298,17 @@ Plný backendový běh skončil úspěšně po opravě očekávaného času v oz
 | Atomická chyba         | Selhání historie nebo oznámení vrátí DB zpět na PENDING a nevytvoří částečný audit/notification.       | Dva rollback testy nad skutečnou PostgreSQL.                                                                                                                                                |
 | UI a API               | V UI jsou approve/cancel disabled přesně na hranici; API ruční storno a create pod 3 h vrací konflikt. | Frontendové testy přesného cutoffu; `ReservationAuthorizationTests`.                                                                                                                        |
 
-### 5. Známé limity / residual exposure
+### 6. Známé limity / residual exposure
 
 1. Scheduler má fixed delay default 1000 ms. Při běžícím backendu je tedy plánovaný přechod zpožděn nejvýše přibližně o interval plus dobu DB operace; přesný commit v konkrétní nanosekundě není garantován. Listing rezervací i approve provádí dodatečnou synchronní kontrolu.
 2. Backendový výpadek přeruší scheduler; po restartu proběhne sweep, ale změna a oznámení budou opožděné. Není zaveden samostatný queue/monitoring lag.
 3. Create cutoff přijímá přesnou hranici `now + 3 h`, ale expiry a approve považují hranici za uzavřenou. Rezervace vytvořená přesně na hranici proto může být ihned zrušena. Přesné rozhodnutí pro další změnu: sjednotit hranici vytvoření, dostupnosti a expirace, nebo formálně přijmout toto chování.
 4. Integrační testy ověřují idempotentní opakované zpracování, nikoli souběh více scheduler instancí. Query používá pessimistic write lock; dedikovaný distribuovaný lock/race test není doložen.
-5. Peer approval z PR #67 není z git historie ověřitelný. Záznam review doplnit z PR události; jméno recenzenta se nevymýšlí.
+5. Peer approval z PR #67 není součástí git historie, ale je doložené přímo PR událostí: `Falplp` schválil review 11. 11. 2026 bez inline připomínek.
 
-**C08 stav:** projektový CR, dopady, alternativy, decision a implementační evidence jsou zapsané. Dva test cases baseline jsou definované; TC-C08-01 má navázaný skutečný integrační důkaz na shodném backendovém stromu, TC-C08-02 zůstává NOT RUN/BLOCKED. Před formálním označením všech DoD bodů jako hotových doplnit tento boundary běh a peer-review záznam PR.
+**C08 stav:** projektový CR, dopady, alternativy, decision, baseline evidence a peer-review záznam PR #67 jsou zapsané. TC-C08-01 má navázaný skutečný integrační důkaz na shodném backendovém stromu; TC-C08-02 zůstává oprávněně **BLOCKED / nedokončený** kvůli nemožnosti vytvořit požadovanou rezervaci přes baseline create cestu.
 
-### 3. Porovnání návrhu s implementací a řešení rozdílů
+### 7. Porovnání návrhu s implementací a řešení rozdílů
 
 | Rozhodnutí z DD                                                 | Implementováno?           | Doklad                                                                                     | Rozhodnutí / další akce                                               |
 | --------------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |

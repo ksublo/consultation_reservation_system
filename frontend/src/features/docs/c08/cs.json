@@ -95,14 +95,14 @@
             [
               "TC-C08-02 — pozdní approve baseline",
               "Na main@99210f0 připravit PENDING se startsAt = now + 2 h 59 min; approve jako vlastník; nezávisle načíst DB. Očekává se CONFIRMED, protože původní approve neměl časový guard.",
-              "NOT RUN / BLOCKED. Zdrojový kód potvrzuje absenci guardu, ale actual baseline běh nebyl proveden. Compose databáze byly ponechány zastavené na žádost uživatele."
+              "BLOCKED / nedokončeno. Baseline create na main@99210f0 odmítá startsAt = now + 2 h 59 min HTTP 409 před saveAndFlush() kvůli pravidlu minimálně 3 hodiny před konzultací; proto nebylo možné vytvořit požadovanou PENDING a provést approve. Cílený běh ReservationAuthorizationTests z čisté kopie 99210f0 prošel 15/15, ale TC-C08-02 neobsahuje."
             ]
           ]
         },
         {
           "type": "note",
           "variant": "warning",
-          "content": "Kódová inspekce není vydávána za vykonání testu. TC-C08-02 zůstává otevřený; pro uzavření je potřeba izolovaná DB, checkout 99210f0, API/service volání a SQL výstup potvrzující stav po approve."
+          "content": "TC-C08-02 zůstává oprávněně nedokončený. Kódová inspekce a 15/15 cílených baseline testů nejsou vydávány za provedení tohoto případu; uzavření vyžaduje schválený způsob přípravy PENDING mimo create API, izolovanou DB a SQL/API výstup po approve."
         }
       ]
     },
@@ -254,7 +254,7 @@
             "Při běžícím backendu polling může přidat prodlevu intervalu (default 1 s) plus dobu DB operace; výpadek backendu odloží storno i oznámení do restartu.",
             "Rozhodnout, zda create přesně na hranici tří hodin odmítat, nebo formálně přijmout dnešní nesoulad cutoffů.",
             "Doplnit samostatný test souběhu více scheduler instancí a monitoring zpoždění jobu, pokud to provozní nasazení vyžaduje.",
-            "Doplnit skutečný baseline běh TC-C08-02 a peer-review záznam PR #67; tyto body se nesmějí označit jako splněné bez evidence."
+            "TC-C08-02 zůstává BLOCKED kvůli baseline create cutoff; peer review PR #67 je doloženo v projektu a v docs/evidence-and-evolution.md."
           ]
         },
         {
@@ -274,7 +274,7 @@
               "label": "Implementační testy a omezení rozlišeny podle skutečných běhů",
               "done": true
             },
-            { "label": "Peer review doloženo z PR #67", "done": false },
+            { "label": "Peer review doloženo z PR #67", "done": true },
             { "label": "C09 předání obsahuje otevřené hraniční rozhodnutí", "done": true }
           ]
         },

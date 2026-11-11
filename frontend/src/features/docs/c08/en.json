@@ -98,14 +98,14 @@
             [
               "TC-C08-02 — late approval on baseline",
               "On main@99210f0 prepare PENDING with startsAt = now + 2 h 59 min; approve as the owner; independently read the DB. Expect CONFIRMED because the original approve had no time guard.",
-              "NOT RUN / BLOCKED. Source inspection confirms the missing guard, but no actual baseline run was performed. Compose database services remained stopped at the user's request."
+              "BLOCKED / incomplete. Baseline create on main@99210f0 rejects startsAt = now + 2 h 59 min with HTTP 409 before saveAndFlush() because of the three-hour minimum; the required PENDING could therefore not be created and approved. A targeted ReservationAuthorizationTests run from a clean 99210f0 copy passed 15/15, but it does not contain TC-C08-02."
             ]
           ]
         },
         {
           "type": "note",
           "variant": "warning",
-          "content": "Code inspection is not presented as an executed test. TC-C08-02 remains open; completion requires an isolated DB, checkout 99210f0, an API/service call, and SQL output confirming the post-approval state."
+          "content": "TC-C08-02 remains correctly incomplete. Code inspection and the 15/15 targeted baseline tests are not presented as execution of this case; completion requires an approved way to prepare PENDING outside the create API, an isolated DB, and SQL/API output after approve."
         }
       ]
     },
@@ -257,7 +257,7 @@
             "While the backend is running, polling can add the interval (default 1 s) plus DB operation time; downtime delays cancellation and notification until restart.",
             "Decide whether creation exactly three hours ahead should be rejected or whether the current cutoff mismatch is formally accepted.",
             "Add a dedicated multi-scheduler concurrency test and job-lag monitoring if required by the deployment model.",
-            "Add the actual TC-C08-02 baseline run and PR #67 peer-review record; do not mark either complete without evidence."
+            "TC-C08-02 remains BLOCKED because of the baseline create cutoff; the PR #67 peer review is evidenced in the project and in docs/evidence-and-evolution.md."
           ]
         },
         {
@@ -274,7 +274,7 @@
               "label": "Implementation tests and limitations distinguished by actual runs",
               "done": true
             },
-            { "label": "Peer review evidenced from PR #67", "done": false },
+            { "label": "Peer review evidenced from PR #67", "done": true },
             { "label": "C09 handoff includes the open boundary decision", "done": true }
           ]
         },
