@@ -20,6 +20,16 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
   @Query("select reservation from Reservation reservation where reservation.id = :id")
   Optional<Reservation> findByIdForUpdate(@Param("id") UUID id);
 
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query(
+      """
+      select reservation from Reservation reservation
+      where reservation.status = :status and reservation.slot.startsAt <= :latestStart
+      order by reservation.slot.startsAt, reservation.id
+      """)
+  List<Reservation> findPendingForAutomaticCancellation(
+      @Param("status") ReservationStatus status, @Param("latestStart") OffsetDateTime latestStart);
+
   @Query(
       """
             select reservation from Reservation reservation

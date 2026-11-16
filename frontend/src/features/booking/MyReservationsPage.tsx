@@ -70,7 +70,7 @@ function ReservationList({
           startsAt - now <= cancellationCutoffMs
         const showCancel =
           Boolean(onCancel) && reservation.status !== 'CANCELLED' && startsAt >= now
-        const canCancel = startsAt - now >= cancellationCutoffMs
+        const canCancel = startsAt - now > cancellationCutoffMs
         return (
           <article className="student-reservation" key={reservation.id}>
             <div>
@@ -141,9 +141,9 @@ export default function MyReservationsPage({
   const [cancellationDetails, setCancellationDetails] = useState<Reservation | null>(null)
   const [cancelling, setCancelling] = useState(false)
 
-  async function load() {
+  async function load(showLoading = true) {
     try {
-      setLoading(true)
+      if (showLoading) setLoading(true)
       const data = await api.getReservations(session.token, session.userId)
       setReservations(data.filter((item) => item.studentId === session.userId))
       setNow(Date.now())
@@ -153,12 +153,17 @@ export default function MyReservationsPage({
         message: error instanceof Error ? error.message : t('loadMyReservationsFailed'),
       })
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
     }
   }
 
   useEffect(() => {
     void load()
+    const interval = window.setInterval(() => {
+      setNow(Date.now())
+      void load(false)
+    }, 10000)
+    return () => window.clearInterval(interval)
   }, [refreshSignal])
 
   async function cancelReservation(note: string) {

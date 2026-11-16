@@ -23,8 +23,11 @@ const session: Session = {
 
 const translate = ((key: string) => key) as TFunction
 
-function makeReservation(status: Reservation['status'] = 'CONFIRMED'): Reservation {
-  const startsAt = new Date(Date.now() + (status === 'CANCELLED' ? -48 : 48) * 60 * 60 * 1000)
+function makeReservation(
+  status: Reservation['status'] = 'CONFIRMED',
+  hoursFromNow = status === 'CANCELLED' ? -48 : 48,
+): Reservation {
+  const startsAt = new Date(Date.now() + hoursFromNow * 60 * 60 * 1000)
   return {
     id: 'reservation-1',
     slotId: 'slot-1',
@@ -71,6 +74,7 @@ describe('MyReservationsPage cancellation flow', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+    vi.restoreAllMocks()
   })
 
   it('requires confirmation and sends the entered optional reason', async () => {
@@ -100,5 +104,16 @@ describe('MyReservationsPage cancellation flow', () => {
     expect(within(dialog).getByText('Ada Nováková')).toBeTruthy()
     expect(within(dialog).getByText('Nemoc')).toBeTruthy()
     expect(within(dialog).getByText('cancelledBy')).toBeTruthy()
+  })
+
+  it('disables cancellation exactly three hours before the consultation', async () => {
+    const now = 1_900_000_000_000
+    vi.spyOn(Date, 'now').mockReturnValue(now)
+    vi.mocked(api.getReservations).mockResolvedValue([makeReservation('PENDING', 3)])
+    renderPage()
+
+    const cancelButton = await screen.findByRole('button', { name: 'cancelTooLate' })
+    expect((cancelButton as HTMLButtonElement).disabled).toBe(true)
+    expect(api.cancelReservation).not.toHaveBeenCalled()
   })
 })
