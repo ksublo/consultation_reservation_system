@@ -14,7 +14,7 @@ Aplikace je rozdělena na frontend, backend a relační databázi.
 - **Frontend** – uživatelské rozhraní pro přihlášení, zobrazení termínů a práci s rezervacemi.
 - **Backend API** – REST API, validace požadavků, autorizace uživatelů a business pravidla.
 - **PostgreSQL** – ukládá uživatele, konzultační termíny, rezervace, relace přihlášení a historii rezervací.
-- **Notification Service** – oznámení po vytvoření, schválení nebo zrušení rezervace. *(ještě ve vývoji)*
+- **NotificationService** – ukládá interní oznámení po vytvoření, schválení nebo zrušení rezervace; e-mailové doručování není implementováno.
 
 ## Data model
 
@@ -365,3 +365,21 @@ Pro ověření této vlastnosti stanovujeme dva integrační testy: selhání hi
 V kódu ponecháváme gettery, jednoduché mapování výsledku, přesné znění oznámení a syntaxi frameworkových anotací. Význam transakční hranice je však součástí návrhu výše.
 
 Pravidla nyní vlastní jedna služba. Samostatnou třídu pro rozhodovací pravidla přidáme teprve tehdy, pokud vzniknou různé způsoby schvalování a bude potřeba je oddělit.
+
+## C08 — Automatické storno neschválených rezervací
+
+Implementační reference je commit `a5cf9d99bfa860a31a6cccfc870edc8e4bc6d4c4` na větvi `feat/auto-cancel-unapproved-reservations` ([PR #67](https://github.com/ksublo/consultation_reservation_system/pull/67)). Tento oddíl popisuje tento kód; dokumentační změny jsou na `main`.
+
+### Vlastnictví pravidla a běh
+
+`ReservationService` zůstává vlastníkem lifecycle. `ReservationExpiryScheduler` při zapnutém Spring schedulingu pravidelně volá `cancelExpiredPendingReservations()`; interval určuje `app.reservations.expiry-poll-interval-ms`, výchozí hodnota je 1000 ms. Repository vyhledá čekající rezervace se začátkem `<= now + 3 h`, seřadí je a načte se zámkem `PESSIMISTIC_WRITE`. Při čtení seznamu uživatele proběhne stejný sweep synchronně. Při pozdním pokusu o schválení approve cesta rezervaci zamkne, provede auto-storno a vrátí HTTP 409; `noRollbackFor=ApiException` zachová storno i při této odpovědi.
+
+### Stav, audit a oznámení
+
+Nový stav `EXPIRED` nepřibyl. Rezervace přejde z `PENDING` do `CANCELLED`, původní událost `CREATED` zůstává a přidá se auditní událost s důvodem `Pedagog žádost včas neschválil.`. Systémový aktér nemá uživatelské ID; migrace Flyway V15 proto dovoluje `NULL` v `reservation_history.actor_user_id`. V téže transakci se uloží jedno interní oznámení studentovi typu `RESERVATION_CANCELLED`, s názvem `Žádost automaticky stornována` a textem obsahujícím termín, pedagoga i důvod. Selhání auditu nebo oznámení vrací celou změnu zpět. Přechod do `CANCELLED` uvolní slot, protože aktivní rezervaci tvoří pouze stavy `PENDING` a `CONFIRMED`.
+
+### Cutoff a ověřené limity
+
+Schválení i ruční storno jsou zakázány při `startsAt <= now + 3 h`; UI deaktivuje odpovídající ovládání na stejné hranici. Vytvoření rezervace ale odmítá pouze čas dřívější než `now + 3 h`, takže přesnou hranici stále přijímá a scheduler ji může bezprostředně poté stornovat. Jde o známý nesjednocený okraj, nikoli o vlastnost vyřešenou C08.
+
+Scheduler může při běžném provozu reagovat s prodlevou intervalu a během výpadku backendu neběží; po restartu se prošlé žádosti dohledají. Testy pokrývají hranici, opakované zpracování, rollback auditu/oznámení, přímé API odmítnutí a frontendové disabled stavy. Samostatný test závodu více instancí scheduleru a provozní monitoring prodlevy doloženy nejsou. Výsledky a přesné počty jsou v [evidence C08](evidence-and-evolution.md#c08-verification-evidence--automatické-storno-neschválených-rezervací).

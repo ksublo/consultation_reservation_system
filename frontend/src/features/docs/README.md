@@ -17,6 +17,8 @@ docs/
   c05/en.json
   c07/cs.json
   c07/en.json
+  c08/cs.json
+  c08/en.json
 ```
 
 Every file contains one document with `title` and `sections`. Each section has
@@ -29,7 +31,7 @@ app loads. `DocumentationPage.tsx` is the single renderer for every part and
 both languages, so content files do not define their own visual styles.
 
 When adding another part, create matching `cs.json` and `en.json` files with
-the same structure, then add the part to `DocsSection`, `tabs` and the
+the same structure, then add the part to `DocsSection`, `tabs`, imports and the
 `documents` map in `DocumentationPage.tsx`. Format the files with
 `npm run format` from `frontend/`.
 
@@ -43,3 +45,9 @@ C07's complete assignment and filled project tables are in
 `frontend/src/features/docs/c07/`. Regenerate the responsive standalone page
 with `node docs/generate-c07-html.mjs`; its output is
 `docs/C07_Complete_Assignment.html`.
+
+C08 documents automatic cancellation of unapproved reservations. Its paired
+files summarize the same CR, baseline, impact matrix, alternatives, decision,
+verification evidence, and open follow-up as the project records. Keep results
+separated by revision; do not mark a BLOCKED baseline case or unverified PR
+review as complete.
