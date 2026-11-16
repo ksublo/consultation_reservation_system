@@ -1,0 +1,199 @@
+{
+  "title": "C09 · Verified release candidate",
+  "sections": [
+    {
+      "id": "goal-and-decision",
+      "title": "Goal, C08 handoff, and decision",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "C09 closes the approved C08 change. It verifies the actual C08 ACCEPT decision for CR-08: automatically cancel an unresolved PENDING reservation no later than three hours before the consultation starts. C09 adds no new requirement; it checks the scheduler, cutoff guard, audit, notification, UI, and migration against AC-01 through AC-06."
+        },
+        {
+          "type": "table",
+          "headers": ["Item", "Identification"],
+          "rows": [
+            [
+              "C08 decision",
+              "ACCEPT, option B: scheduler + approval guard + synchronous sweep on read."
+            ],
+            [
+              "Tested source",
+              "c79b07251ea114cf2725bc01ae21b60dfe556680; C08 implementation is in 3a49a89."
+            ],
+            ["Baseline", "main@99210f0; Flyway V14 before the change."],
+            [
+              "Candidate",
+              "C09 documentation is being prepared on docs/docs09; the final SHA will be recorded after the documentation commit."
+            ],
+            [
+              "Decision",
+              "CONDITIONAL — technical checks passed; an independent clean reproduction is still pending."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "warning",
+          "content": "CONDITIONAL is not deployment authorization. The remaining condition is an independent clean checkout and a repeat of the README build and test procedure."
+        }
+      ]
+    },
+    {
+      "id": "scope-and-identity",
+      "title": "Change scope and candidate identity",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Area", "C09 result"],
+          "rows": [
+            ["Lifecycle", "PENDING becomes CANCELLED; no EXPIRED state is added."],
+            [
+              "Scheduler and API",
+              "The scheduler finds expired requests; late approval/cancellation is rejected at the three-hour cutoff."
+            ],
+            [
+              "Persistence",
+              "Flyway V15 permits a NULL system actor in reservation_history; audit, notification, and state are transactional."
+            ],
+            ["Frontend", "TeacherPage and MyReservationsPage verify disabled late actions."],
+            ["Runtime", "Java 21, Spring Boot 4.1.1, PostgreSQL 17, React, TypeScript, and Vite."],
+            ["Configuration", "The polling interval is configurable; the default is 1000 ms."],
+            [
+              "Artifact",
+              "Docker Compose images consultation-reservation-backend:latest and consultation-reservation-frontend:latest were built."
+            ],
+            [
+              "Schema",
+              "Flyway V1–V15; the running backend successfully applied V15 against PostgreSQL 17.11."
+            ],
+            [
+              "Dependencies",
+              "frontend/package-lock.json was updated; npm audit reports 0 vulnerabilities after a clean install."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "verification",
+      "title": "Review, build, and tests",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Check", "Command / scope", "Actual result"],
+          "rows": [
+            [
+              "Backend",
+              "Maven clean test with PostgreSQL and Byte Buddy agent",
+              "PASS — 45 tests, 0 failures, 0 errors, BUILD SUCCESS."
+            ],
+            [
+              "C08 integration boundary",
+              "ReservationExpiryPersistenceTests",
+              "PASS — 6/6 against real PostgreSQL; boundary, idempotence, and audit/notification rollback."
+            ],
+            [
+              "Backend regression",
+              "Approval, cancellation, creation, authorization, and application tests",
+              "PASS — 45/45 total."
+            ],
+            [
+              "Frontend",
+              "npm ci, npm test, npm run typecheck, npm run lint, npm run build",
+              "PASS — 12/12 tests, typecheck and build; lint 0 errors and 1 existing warning."
+            ],
+            [
+              "Dependency audit",
+              "npm ci && npm audit --audit-level=moderate",
+              "PASS — 0 vulnerabilities after updating the frontend lockfile."
+            ],
+            [
+              "Compose",
+              "docker compose up -d --build",
+              "PASS — database, backend, and frontend built and started; backend verified PostgreSQL 17.11 and V15."
+            ],
+            [
+              "Peer review",
+              "PR #67 and C08 diff review",
+              "C08 review approved; the current C09 candidate review record still needs to be added."
+            ],
+            [
+              "Clean checkout",
+              "README procedure on a clean copy by another team member",
+              "PENDING; without this evidence the decision remains CONDITIONAL."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "The first host Maven run failed because PostgreSQL was not running and the Byte Buddy agent was not supplied. The candidate result is the repeated run with Compose PostgreSQL running and the explicit Byte Buddy agent. This separates an environment failure from the product result."
+        }
+      ]
+    },
+    {
+      "id": "handoff-risks",
+      "title": "Handoff and residual risks",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "While the backend is running, polling adds the interval, one second by default, plus database operation time.",
+            "Backend downtime delays automatic cancellation and notification until the backend restarts.",
+            "Creation exactly three hours ahead is still accepted, while expiry and approval treat the same boundary as closed; the product must decide whether to unify the cutoff or formally accept the current state.",
+            "No dedicated multi-scheduler concurrency test or job-lag monitoring is evidenced; add them if required by the deployment model.",
+            "TC-C08-02 remains BLOCKED because of the baseline create cutoff. The targeted baseline ReservationAuthorizationTests run passed, but it does not contain TC-C08-02 itself.",
+            "The PR #67 peer review is evidenced in the project and in docs/evidence-and-evolution.md."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dod",
+      "title": "Definition of Done",
+      "blocks": [
+        {
+          "type": "checklist",
+          "items": [
+            {
+              "label": "C08 CR, approved option, and observable acceptance criteria are recorded",
+              "done": true
+            },
+            {
+              "label": "Baseline and TC-C08-01/02 are described; TC-C08-01 has actual evidence",
+              "done": true
+            },
+            { "label": "The TC-C08-02 baseline boundary run is actually complete", "done": false },
+            { "label": "The impact matrix and alternatives are recorded", "done": true },
+            {
+              "label": "Implementation tests and limitations are separated by actual runs",
+              "done": true
+            },
+            { "label": "The PR #67 peer review is evidenced", "done": true },
+            {
+              "label": "Backend and frontend build/test are documented with repeatable commands",
+              "done": true
+            },
+            {
+              "label": "At least one integration check crosses the application/PostgreSQL boundary",
+              "done": true
+            },
+            {
+              "label": "Another team member repeated the check from a clean checkout",
+              "done": false
+            },
+            {
+              "label": "The release decision is based on an identified candidate and known limitations",
+              "done": true
+            }
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "The detailed project record is in docs/C09_release_candidate.md. The C08 decision and impact matrix are in docs/intent-and-change.md, implementation evidence is in docs/evidence-and-evolution.md, and architecture is in docs/architecture-and-decisions.md."
+        }
+      ]
+    }
+  ]
+}
