@@ -19,6 +19,8 @@ docs/
   c07/en.json
   c08/cs.json
   c08/en.json
+  c10/cs.json
+  c10/en.json
 ```
 
 Every file contains one document with `title` and `sections`. Each section has
@@ -51,3 +53,9 @@ files summarize the same CR, baseline, impact matrix, alternatives, decision,
 verification evidence, and open follow-up as the project records. Keep results
 separated by revision; do not mark a BLOCKED baseline case or unverified PR
 review as complete.
+
+C10 records the four operational trials from `docs/evidence-and-evolution.md`:
+successful confirmation, domain conflict, database outage and recovery, and an
+application restart. Keep API/log evidence separate from authoritative database
+state, include only useful log excerpts, and do not turn ordinary domain
+rejections into technical errors.

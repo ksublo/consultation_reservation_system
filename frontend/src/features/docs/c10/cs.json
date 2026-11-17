@@ -1,0 +1,177 @@
+{
+  "title": "C10 · Provozní situace a logy",
+  "sections": [
+    {
+      "id": "test-context",
+      "title": "Kontext a způsob ověření",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "C10 ověřuje, co se v rezervačním systému skutečně stalo, jak aplikace reagovala a které závěry lze získat z logů. Pokusy proběhly 17. 11. 2026 v odděleném Docker Compose projektu `consultation-c10` s vlastní PostgreSQL 17.11 databází a volume. Běžná lokální data nebyla použita."
+        },
+        {
+          "type": "table",
+          "headers": ["Položka", "Hodnota"],
+          "rows": [
+            [
+              "Výchozí revize",
+              "c79b07251ea114cf2725bc01ae21b60dfe556680; C10 oprava logování byla při testu ve working tree."
+            ],
+            ["Důkaz reakce", "HTTP status a bezpečné tělo odpovědi API."],
+            ["Důkaz stavu", "Samostatné SQL čtení rezervace, historie a oznámení."],
+            ["Důkaz provozu", "Relevantní řádky backendového logu pro poruchu, shutdown a start."],
+            [
+              "Bezpečnost",
+              "Bez tokenů, hesel a osobních údajů; poruchový požadavek byl pouze čtecí."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Log dokládá reakci procesu, nikoli autoritativní stav databáze. Proto byl stav po každém významném scénáři ověřen samostatně v PostgreSQL."
+        }
+      ]
+    },
+    {
+      "id": "operational-trials",
+      "title": "Očekávání a skutečné výsledky",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Situace", "Očekávání", "Skutečný výsledek", "Nezávislé ověření"],
+          "rows": [
+            [
+              "Úspěšné potvrzení",
+              "Vytvoření 201/PENDING a potvrzení vlastníkem 200/CONFIRMED.",
+              "PASS: obě API odpovědi a lifecycle odpovídaly očekávání.",
+              "SQL: CONFIRMED, confirmed_at vyplněno, historie CREATED + CONFIRMED a dvě odpovídající oznámení."
+            ],
+            [
+              "Zamítnutá kolize",
+              "Překrývající se rezervace bude odmítnuta 409 a data se nezmění.",
+              "PASS: API vrátilo 409 — The student already has an overlapping reservation.",
+              "SQL: na kolidujícím slotu 0 rezervací; původní rezervace zůstala CONFIRMED se dvěma událostmi historie."
+            ],
+            [
+              "Výpadek DB a obnova",
+              "Bezpečné 503, diagnostický log a po obnově zachovaný stav.",
+              "Baseline vrátila nesprávné 403 bez těla. Po opravě stejný pokus vrátil 503 a bezpečnou zprávu.",
+              "Po opětovném startu byla DB healthy a původní rezervace zůstala CONFIRMED."
+            ],
+            [
+              "Restart aplikace",
+              "Korektní stop/start, zachování potvrzené rezervace a funkční další zápis.",
+              "PASS: graceful shutdown a nový start; následný create vrátil 201/PENDING.",
+              "SQL současně načetlo původní CONFIRMED a novou PENDING rezervaci ze stejného volume."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "warning",
+          "content": "V tomto systému blokují čas už stavy PENDING i CONFIRMED. Překrývající se žádost je proto správně zamítnuta při vytvoření a do následného approve se podporovanou API cestou nedostane. Výsledek není vydáván za provedení neexistujícího potvrzovacího kroku."
+        }
+      ]
+    },
+    {
+      "id": "logging-decisions",
+      "title": "Rozhodnutí o logování",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Událost", "Logovat?", "Odůvodnění"],
+          "rows": [
+            [
+              "Běžný úspěch",
+              "Ne povinně",
+              "API a SQL stav jsou přesnější důkaz; doménová historie zůstává odděleným auditem."
+            ],
+            [
+              "Doménová kolize",
+              "Ne",
+              "Očekávané 409 není technická chyba. ERROR/WARN by vytvářel provozní šum."
+            ],
+            [
+              "Nedostupná databáze",
+              "Ano",
+              "Je potřeba čas, komponenta, operace, druh poruchy a pozorovaný výsledek."
+            ],
+            [
+              "Stop a start procesu",
+              "Ano",
+              "Lifecycle log dovoluje určit, zda shutdown proběhl korektně a kdy byl backend znovu připraven."
+            ]
+          ]
+        },
+        {
+          "type": "code",
+          "language": "log",
+          "content": "2026-11-17T15:59:02.715Z ERROR ... ReservationExpiryScheduler : event=reservation_expiry_dependency_failure operation=cancelExpiredPendingReservations failureType=CannotCreateTransactionException outcome=retry_on_next_schedule\n2026-11-17T16:00:51.088Z ERROR ... BearerTokenFilter : event=authentication_dependency_failure operation=authenticate path=/api/slots failureType=CannotCreateTransactionException outcome=http_503\n2026-11-17T16:03:20.222Z  INFO ... GracefulShutdown : Commencing graceful shutdown. Waiting for active requests to complete\n2026-11-17T16:03:20.224Z  INFO ... GracefulShutdown : Graceful shutdown complete\n2026-11-17T16:03:20.232Z  INFO ... HikariDataSource : HikariPool-1 - Shutdown completed.\n2026-11-17T16:03:37.955Z  INFO ... ConsultationReservationBackendApplication : Started ConsultationReservationBackendApplication in 6.364 seconds"
+        }
+      ]
+    },
+    {
+      "id": "finding-and-fix",
+      "title": "Nalezená chyba a minimální oprava",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Při nedostupné databázi selhalo ověření bearer session v bezpečnostním filtru. Baseline proto klientovi vrátila `403`, které mylně vypadalo jako problém oprávnění, zatímco log obsahoval pouze dlouhý frameworkový stack trace."
+        },
+        {
+          "type": "list",
+          "items": [
+            "BearerTokenFilter zachytí pouze databázové a transakční technické výjimky, zaloguje operaci bez tokenu a vrátí 503 s bezpečným tělem.",
+            "ApiExceptionHandler poskytuje stejnou bezpečnou 503 odpověď pro databázové chyby vzniklé uvnitř controller operace.",
+            "ReservationExpiryScheduler zaznamená typ poruchy a výsledek retry_on_next_schedule místo generického neošetřeného stack trace.",
+            "BearerTokenFilterTests ověřuje status 503, bezpečné tělo a to, že request při poruše nepokračuje dál."
+          ]
+        },
+        {
+          "type": "code",
+          "language": "http",
+          "content": "HTTP/1.1 503 Service Unavailable\nContent-Type: application/json\n\n{\"message\":\"Service temporarily unavailable.\"}"
+        }
+      ]
+    },
+    {
+      "id": "verification-and-conclusion",
+      "title": "Regrese, závěr a otevřený krok",
+      "blocks": [
+        {
+          "type": "checklist",
+          "items": [
+            {
+              "label": "Čtyři provozní situace provedeny na izolovaných testovacích datech",
+              "done": true
+            },
+            { "label": "API reakce a databázový stav ověřeny odděleně", "done": true },
+            { "label": "Relevantní logy neobsahují tokeny, hesla ani osobní údaje", "done": true },
+            {
+              "label": "Poslední lokální backendový běh: 46/46 testů úspěšných",
+              "done": true
+            },
+            {
+              "label": "Frontend: 13/13 testů, typecheck a produkční build prošly; lint 0 chyb",
+              "done": true
+            },
+            {
+              "label": "C10 commit cf56a603b169ad5c092a6c066193c5077b08df4d byl pushnut na větev docs/docs10",
+              "done": true
+            }
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "warning",
+          "content": "Celkový Java fmt:check stále hlásí pět dříve existujících odchylek mimo C10 soubory. C10 změněné a přidané soubory mezi nimi nejsou."
+        },
+        {
+          "type": "paragraph",
+          "content": "Technické selhání závislosti a lifecycle procesu má smysl logovat; běžný úspěch a očekávanou kolizi nikoli, pokud pro ně neexistuje samostatný auditní požadavek. Logy určily čas, komponentu, operaci, typ poruchy, reakci 503, plán dalšího pokusu scheduleru a průběh restartu. Správnost rezervací, absenci zápisu po kolizi a perzistenci po restartu prokázalo až samostatné SQL čtení. Implementace a dokumentace byly pushnuty na větev docs/docs10 v commitu cf56a603b169ad5c092a6c066193c5077b08df4d. Přiložený CI výpis ale ukazuje jednu chybu UnfinishedStubbing v historickém ReservationExpiryPersistenceTests; proto nelze tvrdit, že CI proběhlo zcela bez chyb."
+        }
+      ]
+    }
+  ]
+}
