@@ -149,7 +149,7 @@
             { "label": "API reakce a databázový stav ověřeny odděleně", "done": true },
             { "label": "Relevantní logy neobsahují tokeny, hesla ani osobní údaje", "done": true },
             {
-              "label": "Celá backendová sada: 50 testů, 0 failures, 0 errors, 0 skipped",
+              "label": "Poslední lokální backendový běh: 46/46 testů úspěšných",
               "done": true
             },
             {
@@ -157,8 +157,8 @@
               "done": true
             },
             {
-              "label": "Vytvořit finální C10 commit a nahradit working-tree údaj výsledným SHA",
-              "done": false
+              "label": "C10 commit cf56a603b169ad5c092a6c066193c5077b08df4d byl pushnut na větev docs/docs10",
+              "done": true
             }
           ]
         },
@@ -169,7 +169,7 @@
         },
         {
           "type": "paragraph",
-          "content": "Technické selhání závislosti a lifecycle procesu má smysl logovat; běžný úspěch a očekávanou kolizi nikoli, pokud pro ně neexistuje samostatný auditní požadavek. Logy určily čas, komponentu, operaci, typ poruchy, reakci 503, plán dalšího pokusu scheduleru a průběh restartu. Správnost rezervací, absenci zápisu po kolizi a perzistenci po restartu prokázalo až samostatné SQL čtení."
+          "content": "Technické selhání závislosti a lifecycle procesu má smysl logovat; běžný úspěch a očekávanou kolizi nikoli, pokud pro ně neexistuje samostatný auditní požadavek. Logy určily čas, komponentu, operaci, typ poruchy, reakci 503, plán dalšího pokusu scheduleru a průběh restartu. Správnost rezervací, absenci zápisu po kolizi a perzistenci po restartu prokázalo až samostatné SQL čtení. Implementace a dokumentace byly pushnuty na větev docs/docs10 v commitu cf56a603b169ad5c092a6c066193c5077b08df4d. Přiložený CI výpis ale ukazuje jednu chybu UnfinishedStubbing v historickém ReservationExpiryPersistenceTests; proto nelze tvrdit, že CI proběhlo zcela bez chyb."
         }
       ]
     }

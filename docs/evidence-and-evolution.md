@@ -197,7 +197,7 @@ Návrh, implementace vybraného scénáře i její ověření jsou pro uvedený 
 
 ## C10 — Provozní situace a logy (2026-11-17)
 
-**Testovaný zdroj:** `c79b07251ea114cf2725bc01ae21b60dfe556680` (`main` a `docs/docs10`) plus níže popsaná C10 working-tree oprava technického logování. Oprava při sepsání tohoto záznamu ještě nemá vlastní commit; před odevzdáním musí být commitnuta a tento údaj nahrazen výsledným SHA. Testy běžely v odděleném Compose projektu `consultation-c10`, s vlastní PostgreSQL 17.11 databází a volume; běžná lokální data nebyla použita.
+**Testovaný zdroj:** `cf56a603b169ad5c092a6c066193c5077b08df4d` na větvi `docs/docs10`, úspěšně pushnutý na vzdálený GitHub repozitář. Testy běžely v odděleném Compose projektu `consultation-c10`, s vlastní PostgreSQL 17.11 databází a volume; běžná lokální data nebyla použita.
 
 Před každým během byl určen očekávaný výsledek. API odpověď a stav PostgreSQL byly ověřovány odděleně; log není vydáván za důkaz uloženého stavu.
 
@@ -223,9 +223,20 @@ Před každým během byl určen očekávaný výsledek. API odpověď a stav Po
 
 Baseline při nedostupné DB selhala už při ověření bearer session v bezpečnostním filtru. Klient proto obdržel `403`, který mylně vypadal jako problém oprávnění. `BearerTokenFilter` nyní zachytí pouze databázové/transakční technické výjimky, zapíše bezpečný strukturovaný záznam a vrátí `503`; ostatní databázové chyby controllerů pokrývá `ApiExceptionHandler`. Scheduler pro stejnou kategorii poruch zapíše stručný výsledek plánovaného retry místo generického neošetřeného stack trace. `BearerTokenFilterTests.databaseFailureDuringAuthenticationReturnsServiceUnavailable` ověřuje status, bezpečné tělo a to, že request při poruše nepokračuje dál.
 
-Celá backendová sada po opravě: **50 testů, 0 failures, 0 errors, 0 skipped**. První pokus uvnitř omezeného sandboxu skončil chybami spojení na lokální PostgreSQL a není vydáván za aplikační selhání; opakovaný běh s povoleným lokálním DB spojením prošel. Frontend po doplnění C10 dokumentace: **13/13 testů**, typecheck a produkční build prošly; lint skončil s 0 chybami a jedním dříve existujícím Fast Refresh upozorněním v `HistoryPeriodFilter.tsx:34`. `fmt:check` nad celým historickým Java stromem nadále hlásí 5 předem existujících nevyhovujících souborů (`AuthController`, `ReservationResponse` a tři starší persistence/authorization testy); žádný ze čtyř C10 backendových změněných/přidaných souborů mezi nimi není.
+Poslední lokální běh backendových testů skončil úspěšně: **46 testů, 0 failures, 0 errors, 0 skipped, BUILD SUCCESS**. Dřívější běh s rozšířeným nastavením testovacího prostředí ověřil 50 testů se stejným výsledkem. Neúspěšný běh s 20 chybami byl způsoben nedostupnou PostgreSQL databází. Frontend po doplnění C10 dokumentace: **13/13 testů**, typecheck a produkční build prošly; lint skončil s 0 chybami a jedním dříve existujícím Fast Refresh upozorněním v `HistoryPeriodFilter.tsx:34`. `fmt:check` nad celým historickým Java stromem nadále hlásí 5 předem existujících nevyhovujících souborů (`AuthController`, `ReservationResponse` a tři starší persistence/authorization testy); žádný ze čtyř C10 backendových změněných/přidaných souborů mezi nimi není.
 
 **Závěr:** Smysl má logovat technické selhání závislosti a lifecycle procesu; běžný úspěch a očekávanou kolizi nikoli, pokud nevznikne samostatný auditní požadavek. Z logů jsme zjistili čas, komponentu, operaci, druh poruchy, reakci `503`, plán dalšího pokusu scheduleru a korektní stop/start. Stav rezervací, absenci zápisu po kolizi a perzistenci po restartu bylo nutné ověřit samostatným SQL čtením.
+
+### Odevzdání změn
+
+Implementace a dokumentace C10 byly odevzdány do repozitáře GitHub.
+
+- Větev: `docs/docs10`
+- Commit: `cf56a603b169ad5c092a6c066193c5077b08df4d`
+- Stav: změny byly úspěšně pushnuty na vzdálený repozitář
+- Pull Request: bude doplněn po jeho vytvoření
+
+Přiložený CI výpis však ukazuje, že jeden starší backendový test skončil chybou `UnfinishedStubbing` v `ReservationExpiryPersistenceTests.historyFailureRollsBackAutomaticCancellationAndNotification` (řádek 243). Proto nelze tvrdit, že CI sada proběhla bez chyb; lokální ověření C10 a frontendové kontroly zůstávají popsány výše.
 
 ## C07 — risk review and verification (2026-11-02)
 

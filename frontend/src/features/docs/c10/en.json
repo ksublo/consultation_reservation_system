@@ -155,7 +155,7 @@
               "done": true
             },
             {
-              "label": "Full backend suite: 50 tests, 0 failures, 0 errors, 0 skipped",
+              "label": "Latest local backend run: 46/46 tests passed",
               "done": true
             },
             {
@@ -163,8 +163,8 @@
               "done": true
             },
             {
-              "label": "Create the final C10 commit and replace the working-tree note with its SHA",
-              "done": false
+              "label": "C10 commit cf56a603b169ad5c092a6c066193c5077b08df4d was pushed to docs/docs10",
+              "done": true
             }
           ]
         },
@@ -175,7 +175,7 @@
         },
         {
           "type": "paragraph",
-          "content": "Technical dependency failures and process lifecycle events are worth logging; ordinary success and expected conflicts are not, unless a separate audit requirement exists. The logs established the time, component, operation, failure type, 503 reaction, scheduler retry plan, and restart sequence. Correct reservation state, absence of a conflict write, and persistence after restart required independent SQL reads."
+          "content": "Technical dependency failures and process lifecycle events are worth logging; ordinary success and expected conflicts are not, unless a separate audit requirement exists. The logs established the time, component, operation, failure type, 503 reaction, scheduler retry plan, and restart sequence. Correct reservation state, absence of a conflict write, and persistence after restart required independent SQL reads. The implementation and documentation were pushed to docs/docs10 in commit cf56a603b169ad5c092a6c066193c5077b08df4d. The attached CI output nevertheless shows one UnfinishedStubbing error in the historical ReservationExpiryPersistenceTests, so CI cannot be described as completely green."
         }
       ]
     }
