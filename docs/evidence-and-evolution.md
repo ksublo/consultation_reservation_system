@@ -195,6 +195,38 @@ Následující případy v ReservationApprovalPersistenceTests **prošly**:
 
 Návrh, implementace vybraného scénáře i její ověření jsou pro uvedený rozsah hotové. Souběžné schvalování zůstává přiznaným návrhovým rizikem a vyžaduje samostatné rozhodnutí.
 
+## C10 — Provozní situace a logy (2026-11-17)
+
+**Testovaný zdroj:** `c79b07251ea114cf2725bc01ae21b60dfe556680` (`main` a `docs/docs10`) plus níže popsaná C10 working-tree oprava technického logování. Oprava při sepsání tohoto záznamu ještě nemá vlastní commit; před odevzdáním musí být commitnuta a tento údaj nahrazen výsledným SHA. Testy běžely v odděleném Compose projektu `consultation-c10`, s vlastní PostgreSQL 17.11 databází a volume; běžná lokální data nebyla použita.
+
+Před každým během byl určen očekávaný výsledek. API odpověď a stav PostgreSQL byly ověřovány odděleně; log není vydáván za důkaz uloženého stavu.
+
+| Situace | Očekávaný a skutečný výsledek | Jak byla správnost ověřena | Co ukazují logy / je log potřeba? |
+| --- | --- | --- | --- |
+| Úspěšné potvrzení | Očekávání: vytvoření `201/PENDING`, potvrzení vlastníkem `200/CONFIRMED`. Skutečnost: obě odpovědi a stavy odpovídaly očekávání. | Čerstvé SQL čtení rezervace `4f47fa39-1108-4afa-a9f4-39d5081ee152`: `CONFIRMED`, `confirmed_at IS NOT NULL`, 2 záznamy historie (`CREATED`, `CONFIRMED`) a 2 oznámení. | Aplikační log úspěchu nevznikl a není potřeba; API plus SQL jsou lepší důkaz. Auditní historie je doménový záznam, ne provozní log. |
+| Zamítnutá kolize | Očekávání: překryv se zamítne `409` a data se nezmění. Skutečnost: `409` s `The student already has an overlapping reservation.` | SQL: pro kolidující slot je 0 rezervací; původní rezervace zůstala `CONFIRMED` se 2 záznamy historie. Protože `PENDING` i `CONFIRMED` v tomto systému blokují čas, kolize je správně odmítnuta už při vytvoření a doslovný následný approve překrývající se žádosti není podporovanou cestou. | Bez logu. Jde o očekávané doménové odmítnutí; odpověď API je dostačující a ERROR/WARN by vytvářel šum. |
+| Technická porucha a obnova | Očekávání: při zastavené DB bezpečné `503`, diagnostický záznam a po obnově zachovaný stav. Baseline skutečně vracela zavádějící `403` bez těla a dlouhý frameworkový stack trace. Po minimální opravě stejný pokus vrátil `503` a `{"message":"Service temporarily unavailable."}`. | DB byla zastavena jen v izolovaném projektu. Po jejím startu byla healthy a SQL znovu potvrdilo původní `CONFIRMED` a neprázdný `confirmed_at`. Neznámý zápis nebyl naslepo opakován; poruchový požadavek byl pouze čtecí. | Log po opravě přímo uvádí čas, komponentu, operaci/cestu, `CannotCreateTransactionException` a `outcome=http_503`. Scheduler uvádí stejný typ poruchy a `retry_on_next_schedule`. Tokeny ani osobní data se nelogují. |
+| Restart aplikace | Očekávání: korektní stop/start, zachování potvrzené rezervace a funkční další zápis. Skutečnost: backend se korektně zastavil a spustil; původní rezervace zůstala `CONFIRMED`; nový API zápis vrátil `201/PENDING`. | SQL po restartu současně načetlo původní `CONFIRMED` a novou rezervaci `ceaafcba-f003-46d5-aec0-4052a27915f7` jako `PENDING`. Obě jsou ve stejném zachovaném DB volume. | Standardní Spring log postačuje: graceful shutdown, uzavření JPA/Hikari a následný `Started ...`. Samotný startovací log neprokazuje perzistenci ani funkční zápis. |
+
+### Relevantní výřezy logu
+
+```text
+2026-11-17T15:59:02.715Z ERROR ... ReservationExpiryScheduler : event=reservation_expiry_dependency_failure operation=cancelExpiredPendingReservations failureType=CannotCreateTransactionException outcome=retry_on_next_schedule
+2026-11-17T16:00:51.088Z ERROR ... BearerTokenFilter : event=authentication_dependency_failure operation=authenticate path=/api/slots failureType=CannotCreateTransactionException outcome=http_503
+2026-11-17T16:03:20.222Z  INFO ... GracefulShutdown : Commencing graceful shutdown. Waiting for active requests to complete
+2026-11-17T16:03:20.224Z  INFO ... GracefulShutdown : Graceful shutdown complete
+2026-11-17T16:03:20.232Z  INFO ... HikariDataSource : HikariPool-1 - Shutdown completed.
+2026-11-17T16:03:37.955Z  INFO ... ConsultationReservationBackendApplication : Started ConsultationReservationBackendApplication in 6.364 seconds
+```
+
+### Nalezená chyba, oprava a regrese
+
+Baseline při nedostupné DB selhala už při ověření bearer session v bezpečnostním filtru. Klient proto obdržel `403`, který mylně vypadal jako problém oprávnění. `BearerTokenFilter` nyní zachytí pouze databázové/transakční technické výjimky, zapíše bezpečný strukturovaný záznam a vrátí `503`; ostatní databázové chyby controllerů pokrývá `ApiExceptionHandler`. Scheduler pro stejnou kategorii poruch zapíše stručný výsledek plánovaného retry místo generického neošetřeného stack trace. `BearerTokenFilterTests.databaseFailureDuringAuthenticationReturnsServiceUnavailable` ověřuje status, bezpečné tělo a to, že request při poruše nepokračuje dál.
+
+Celá backendová sada po opravě: **50 testů, 0 failures, 0 errors, 0 skipped**. První pokus uvnitř omezeného sandboxu skončil chybami spojení na lokální PostgreSQL a není vydáván za aplikační selhání; opakovaný běh s povoleným lokálním DB spojením prošel. Frontend po doplnění C10 dokumentace: **13/13 testů**, typecheck a produkční build prošly; lint skončil s 0 chybami a jedním dříve existujícím Fast Refresh upozorněním v `HistoryPeriodFilter.tsx:34`. `fmt:check` nad celým historickým Java stromem nadále hlásí 5 předem existujících nevyhovujících souborů (`AuthController`, `ReservationResponse` a tři starší persistence/authorization testy); žádný ze čtyř C10 backendových změněných/přidaných souborů mezi nimi není.
+
+**Závěr:** Smysl má logovat technické selhání závislosti a lifecycle procesu; běžný úspěch a očekávanou kolizi nikoli, pokud nevznikne samostatný auditní požadavek. Z logů jsme zjistili čas, komponentu, operaci, druh poruchy, reakci `503`, plán dalšího pokusu scheduleru a korektní stop/start. Stav rezervací, absenci zápisu po kolizi a perzistenci po restartu bylo nutné ověřit samostatným SQL čtením.
+
 ## C07 — risk review and verification (2026-11-02)
 
 **Tested source revision:** commit `31a22ad` on `fix/docs-c07&corrections`, based on `main@3c25e78`. C07 evidence and review updates were pushed later in commit `50a2909`; those documentation changes do not change the tested application code. The C07 review added a database row lock and a regression test after reproducing concurrent approval processing.

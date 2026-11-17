@@ -1,0 +1,183 @@
+{
+  "title": "C10 · Operational situations and logs",
+  "sections": [
+    {
+      "id": "test-context",
+      "title": "Context and verification method",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "C10 verifies what actually happened in the reservation system, how the application reacted, and which conclusions can be drawn from logs. The trials ran on 17 November 2026 in a separate `consultation-c10` Docker Compose project with its own PostgreSQL 17.11 database and volume. Normal local data was not used."
+        },
+        {
+          "type": "table",
+          "headers": ["Item", "Value"],
+          "rows": [
+            [
+              "Starting revision",
+              "c79b07251ea114cf2725bc01ae21b60dfe556680; the C10 logging fix was in the working tree during verification."
+            ],
+            ["Reaction evidence", "HTTP status and a safe API response body."],
+            [
+              "State evidence",
+              "Independent SQL reads of the reservation, history, and notifications."
+            ],
+            [
+              "Operational evidence",
+              "Relevant backend log lines for the failure, shutdown, and startup."
+            ],
+            ["Safety", "No tokens, passwords, or personal data; the failure request was read-only."]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "A log demonstrates the process reaction, not authoritative database state. State after each important scenario was therefore checked independently in PostgreSQL."
+        }
+      ]
+    },
+    {
+      "id": "operational-trials",
+      "title": "Expectations and actual results",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Situation", "Expectation", "Actual result", "Independent verification"],
+          "rows": [
+            [
+              "Successful confirmation",
+              "Creation returns 201/PENDING and owner confirmation returns 200/CONFIRMED.",
+              "PASS: both API responses and lifecycle states matched the expectation.",
+              "SQL: CONFIRMED, confirmed_at present, CREATED + CONFIRMED history, and two corresponding notifications."
+            ],
+            [
+              "Conflict rejection",
+              "An overlapping reservation is rejected with 409 and data remains unchanged.",
+              "PASS: the API returned 409 — The student already has an overlapping reservation.",
+              "SQL: zero reservations on the conflicting slot; the original remained CONFIRMED with two history events."
+            ],
+            [
+              "Database failure and recovery",
+              "Safe 503, a diagnostic log, and preserved state after recovery.",
+              "The baseline returned an incorrect empty 403. After the fix, the repeated trial returned 503 with a safe message.",
+              "After restart, the database was healthy and the original reservation remained CONFIRMED."
+            ],
+            [
+              "Application restart",
+              "Clean stop/start, preserved confirmed reservation, and a working subsequent write.",
+              "PASS: graceful shutdown and a new start; a subsequent create returned 201/PENDING.",
+              "SQL read the original CONFIRMED and the new PENDING reservation from the same volume."
+            ]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "warning",
+          "content": "In this system, both PENDING and CONFIRMED already block time. The overlapping request is therefore correctly rejected during creation and cannot reach a later approval through the supported API path. The result is not presented as execution of a nonexistent confirmation step."
+        }
+      ]
+    },
+    {
+      "id": "logging-decisions",
+      "title": "Logging decisions",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Event", "Log it?", "Reason"],
+          "rows": [
+            [
+              "Ordinary success",
+              "Not required",
+              "API and SQL state are stronger evidence; domain history remains a separate audit record."
+            ],
+            [
+              "Domain conflict",
+              "No",
+              "An expected 409 is not a technical error. ERROR/WARN would create operational noise."
+            ],
+            [
+              "Database unavailable",
+              "Yes",
+              "Time, component, operation, failure type, and observed outcome are required for diagnosis."
+            ],
+            [
+              "Process stop and start",
+              "Yes",
+              "Lifecycle logs show whether shutdown was clean and when the backend became ready again."
+            ]
+          ]
+        },
+        {
+          "type": "code",
+          "language": "log",
+          "content": "2026-11-17T15:59:02.715Z ERROR ... ReservationExpiryScheduler : event=reservation_expiry_dependency_failure operation=cancelExpiredPendingReservations failureType=CannotCreateTransactionException outcome=retry_on_next_schedule\n2026-11-17T16:00:51.088Z ERROR ... BearerTokenFilter : event=authentication_dependency_failure operation=authenticate path=/api/slots failureType=CannotCreateTransactionException outcome=http_503\n2026-11-17T16:03:20.222Z  INFO ... GracefulShutdown : Commencing graceful shutdown. Waiting for active requests to complete\n2026-11-17T16:03:20.224Z  INFO ... GracefulShutdown : Graceful shutdown complete\n2026-11-17T16:03:20.232Z  INFO ... HikariDataSource : HikariPool-1 - Shutdown completed.\n2026-11-17T16:03:37.955Z  INFO ... ConsultationReservationBackendApplication : Started ConsultationReservationBackendApplication in 6.364 seconds"
+        }
+      ]
+    },
+    {
+      "id": "finding-and-fix",
+      "title": "Finding and minimal fix",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "When the database was unavailable, bearer-session verification failed inside the security filter. The baseline consequently returned `403`, which incorrectly looked like an authorization problem, while the log contained only a long framework stack trace."
+        },
+        {
+          "type": "list",
+          "items": [
+            "BearerTokenFilter catches only database and transaction failures, logs the operation without the token, and returns 503 with a safe body.",
+            "ApiExceptionHandler provides the same safe 503 response for database errors raised inside controller operations.",
+            "ReservationExpiryScheduler records the failure type and retry_on_next_schedule outcome instead of a generic unhandled stack trace.",
+            "BearerTokenFilterTests verifies status 503, the safe body, and that the request does not continue after the failure."
+          ]
+        },
+        {
+          "type": "code",
+          "language": "http",
+          "content": "HTTP/1.1 503 Service Unavailable\nContent-Type: application/json\n\n{\"message\":\"Service temporarily unavailable.\"}"
+        }
+      ]
+    },
+    {
+      "id": "verification-and-conclusion",
+      "title": "Regression, conclusion, and open step",
+      "blocks": [
+        {
+          "type": "checklist",
+          "items": [
+            {
+              "label": "Four operational situations executed with isolated test data",
+              "done": true
+            },
+            { "label": "API reactions and database state verified separately", "done": true },
+            {
+              "label": "Relevant logs contain no tokens, passwords, or personal data",
+              "done": true
+            },
+            {
+              "label": "Full backend suite: 50 tests, 0 failures, 0 errors, 0 skipped",
+              "done": true
+            },
+            {
+              "label": "Frontend: 13/13 tests, typecheck, and production build passed; lint had 0 errors",
+              "done": true
+            },
+            {
+              "label": "Create the final C10 commit and replace the working-tree note with its SHA",
+              "done": false
+            }
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "warning",
+          "content": "The repository-wide Java fmt:check still reports five pre-existing deviations outside the C10 files. No C10 changed or added file is among them."
+        },
+        {
+          "type": "paragraph",
+          "content": "Technical dependency failures and process lifecycle events are worth logging; ordinary success and expected conflicts are not, unless a separate audit requirement exists. The logs established the time, component, operation, failure type, 503 reaction, scheduler retry plan, and restart sequence. Correct reservation state, absence of a conflict write, and persistence after restart required independent SQL reads."
+        }
+      ]
+    }
+  ]
+}
