@@ -68,10 +68,10 @@ public class ReservationService {
         || (request.consultationMode() == ConsultationMode.OFFLINE && !slot.isOfflineAvailable()))
       throw new ApiException(
           HttpStatus.CONFLICT, "This consultation mode is not available for the slot.");
-    if (slot.getStartsAt().isBefore(now.plusHours(RESERVATION_CUTOFF_HOURS)))
+    if (!slot.getStartsAt().isAfter(now.plusHours(RESERVATION_CUTOFF_HOURS)))
       throw new ApiException(
           HttpStatus.CONFLICT,
-          "Reservations must be created at least 3 hours before the consultation starts.");
+          "Reservations must be created more than 3 hours before the consultation starts.");
     if (reservations.findBySlotIdAndStatusIn(slot.getId(), ACTIVE).isPresent())
       throw new ApiException(HttpStatus.CONFLICT, "This slot is already reserved.");
     if (reservations.countByStudentIdAndStatus(student.getId(), ReservationStatus.PENDING)

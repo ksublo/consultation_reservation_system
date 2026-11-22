@@ -17,12 +17,15 @@ public interface ConsultationSlotRepository extends JpaRepository<ConsultationSl
   @Query(
       """
             select slot from ConsultationSlot slot
-            where slot.status = :slotStatus and slot.startsAt >= :from
+            where slot.status = :slotStatus
+              and slot.startsAt > :reservationCutoff
+              and slot.startsAt >= :from
               and not exists (select reservation from Reservation reservation where reservation.slot = slot and reservation.status in :reservationStatuses)
             order by slot.startsAt
             """)
   List<ConsultationSlot> findAvailable(
       @Param("slotStatus") SlotStatus slotStatus,
+      @Param("reservationCutoff") OffsetDateTime reservationCutoff,
       @Param("from") OffsetDateTime from,
       @Param("reservationStatuses") List<ReservationStatus> reservationStatuses);
 }

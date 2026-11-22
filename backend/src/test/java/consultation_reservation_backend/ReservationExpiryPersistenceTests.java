@@ -10,6 +10,7 @@ import consultation_reservation_backend.domain.*;
 import consultation_reservation_backend.repository.ReservationHistoryRepository;
 import consultation_reservation_backend.security.AuthenticatedUser;
 import consultation_reservation_backend.service.NotificationService;
+import consultation_reservation_backend.service.ReservationExpiryScheduler;
 import consultation_reservation_backend.service.ReservationService;
 import jakarta.persistence.EntityManager;
 import java.time.Clock;
@@ -31,6 +32,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -74,6 +76,7 @@ class ReservationExpiryPersistenceTests {
   @Autowired JdbcTemplate jdbc;
   @Autowired PlatformTransactionManager transactions;
   @Autowired Clock clock;
+  @MockitoBean ReservationExpiryScheduler expiryScheduler;
   @MockitoSpyBean ReservationHistoryRepository history;
   @MockitoSpyBean NotificationService notifications;
 

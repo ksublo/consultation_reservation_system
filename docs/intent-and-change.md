@@ -45,7 +45,7 @@ Pro stejný konzultační termín nemohou existovat dvě aktivní rezervace. Rez
 
 ## Domain-specific business rule
 
-Konzultační termíny lze vytvářet pouze v pracovní dny mezi 07:15 a 19:15. Rezervaci lze vytvořit nejméně tři hodiny před začátkem termínu; dostupné termíny s kratším předstihem se nenabízejí. Student může mít maximálně pět čekajících rezervací a nesmí si rezervovat čas, který se překrývá s jeho jinou aktivní rezervací.
+Konzultační termíny lze vytvářet pouze v pracovní dny mezi 07:15 a 19:15. Rezervaci lze vytvořit pouze více než tři hodiny před začátkem termínu; termíny začínající za tři hodiny nebo méně se nenabízejí. Student může mít maximálně pět čekajících rezervací a nesmí si rezervovat čas, který se překrývá s jeho jinou aktivní rezervací.
 
 ## External / system boundary
 
@@ -93,7 +93,7 @@ Commit `a5cf9d9` má jako přímého rodiče `99210f0`; proto jsou v dokumentaci
 | AC-05 | Oznámení, historie a změna rezervace jsou konzistentní a opakované zpracování nevytváří duplicity. | Zápisy proběhnou ve stejné transakci; chyba historie nebo oznámení rollbackne celé storno. Již stornovaná/potvrzená žádost se znovu nezpracuje.                                         |
 | AC-06 | Ruční storno a schválení nejsou možné v posledních třech hodinách přes UI ani API.                 | Přesně tři hodiny se považují za uzavřenou hranici. Student i pedagog vidí neaktivní ovládací prvek; backend vrací 409 u ručního storna.                                                |
 
-**Zachovaná hraniční výjimka:** pravidlo vytvoření rezervace odmítá jen sloty _dříve než_ `now + 3 h`; přesně tři hodiny předem tedy vytvoření ještě přijme. Nový expirační guard však považuje stejný okamžik za uzávěrku. Nově vytvořená žádost přesně na hranici tak může být vzápětí automaticky stornována. Implementační commit toto pravidlo nemění; je zapsáno jako zbytková produktová nejasnost k rozhodnutí, nikoli jako skrytě opravené chování.
+**Sjednocená hranice:** vytvoření rezervace i API dostupnosti nyní vyžadují `startsAt > now + 3 h`. Přesně tři hodiny předem se slot nenabízí a create vrací HTTP 409. Expirace, schválení a ruční storno používají doplňkovou uzavřenou podmínku `startsAt <= now + 3 h`, takže na hranici již nemůže vzniknout nová PENDING žádost určená k okamžitému stornu.
 
 ### Impact matrix
 
@@ -125,4 +125,4 @@ Commit `a5cf9d9` má jako přímého rodiče `99210f0`; proto jsou v dokumentaci
 
 ### Předání a zbývající rozhodnutí
 
-Implementační delta a testy už jsou v commit `a5cf9d9`; navazující práce má zachovat AC-01–AC-06 a pokrýt především přesně tříhodinové vytvoření rezervace, závod dvou scheduler instancí a zpožděné zpracování po výpadku backendu. Vlastník produktu má rozhodnout, zda se vytvoření přesně na hranici změní na odmítnutí; současný kód ho stále přijímá. TC-C08-02 zůstává BLOCKED, protože baseline create odmítá požadovaný slot za 2 h 59 min; peer review PR #67 je naopak doloženo a schváleno.
+Implementační delta automatického storna je v commit `a5cf9d9`; navazující oprava sjednocuje vytvoření a dostupnost s AC-01–AC-06 na uzavřené tříhodinové hranici. `ReservationCreationPersistenceTests` s fixními hodinami prokazuje, že create přesně na hranici vrací 409 a slot se nenabízí, zatímco jedna sekunda za hranicí je dostupná a rezervovatelná. Zbývající práce se týká závodu dvou scheduler instancí a zpožděného zpracování po výpadku backendu. TC-C08-02 prošel 22. 11. 2026 nad přesnou baseline `99210f0`: PENDING připravila izolovaná DB fixture mimo create API, approve vrátil HTTP 200 a committed SQL stav byl `CONFIRMED`. Peer review PR #67 je rovněž doloženo a schváleno.
