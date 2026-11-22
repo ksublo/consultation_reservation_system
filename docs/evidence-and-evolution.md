@@ -257,16 +257,16 @@ Očekávání v této části vycházejí z pravidel a kódu `main@99210f0`, nik
 
 #### TC-C08-02 — pozdní schválení čekající žádosti na původní baseline
 
-**Basis:** původní `ReservationService.approve()` ověřuje vlastníka a `PENDING`, ale nemá časovou kontrolu. **Data:** zamýšlená izolovaná `PENDING` rezervace s `startsAt = now + 2 h 59 min`, vlastník přihlášen jako pedagog. Baseline `create()` však takovou rezervaci přes podporovanou cestu odmítá ještě před uložením.
+**Basis:** původní `ReservationService.approve()` ověřuje vlastníka a `PENDING`, ale nemá časovou kontrolu. **Data:** izolovaná `PENDING` rezervace s `startsAt = now + 2 h 59 min`, vložená přímo testovací fixture mimo `create()`; vlastník se přihlásí skutečnou bearer session a volá HTTP approve endpoint. Přímá příprava je nutná, protože baseline `create()` správně odmítá rezervace méně než tři hodiny před začátkem.
 
 | #   | Akce                                                                | Expected před během podle původní implementace                                             | Actual / evidence po běhu                                                          |
 | --- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| 1   | Připravit PENDING rezervaci se začátkem za 2 h 59 min přes podporovanou create cestu. | PENDING blokuje slot; stav je nezávisle ověřen v DB. | **BLOCKED:** baseline `ReservationService.create()` na `main@99210f0` při `startsAt < now + 3 h` vrací `409 CONFLICT` s textem `Reservations must be created at least 3 hours before the consultation starts.`; k `saveAndFlush()` se nedostane. |
-| 2   | Zavolat approve jako vlastník.                                      | Původní kód nemá časový guard; u již existující PENDING by schválení mělo pokračovat. | **N/A:** rezervaci nebylo možné vytvořit podporovanou cestou, proto nebyl proveden approve. |
-| 3   | Znovu načíst stav a změny historie/oznámení.                        | Očekávaný výsledek při existující PENDING je `CONFIRMED`, jedna nová historie a oznámení. | **N/A:** nevznikl řádek rezervace, historie ani oznámení, které by šlo kontrolovat v DB. |
-| 4   | Resetovat izolovaná data a opakovat.                                | Stejný reprodukovatelný výsledek.                                                          | **NOT RUN:** další běh by vyžadoval předem vloženou PENDING rezervaci mimo podporovanou create cestu; tento workaround nebyl vydáván za požadovaný test. |
+| 1   | V čisté kopii `main@99210f0` vložit přes JPA fixture uživatele, slot a PENDING se začátkem za 2 h 59 min do náhodného izolovaného PostgreSQL schématu. | PENDING existuje před voláním API a blokuje slot. | **PASS:** SQL před voláním API vrátil `PENDING`; Flyway vytvořil samostatné schéma `c08_baseline_9434cd5b2c254447a37bc753229939b8` na PostgreSQL 17.11. |
+| 2   | Zavolat `POST /api/reservations/{id}/approve` jako vlastník pomocí bearer session. | Baseline bez časového guardu požadavek přijme. | **PASS:** HTTP 200; JSON obsahoval `status: CONFIRMED`, `confirmedAt` a stejné ID rezervace. |
+| 3   | Nezávisle načíst stav, historii a oznámení přes SQL/JdbcTemplate. | `CONFIRMED`, nastavený `confirmed_at`, jedna nová historie a oznámení studentovi. | **PASS:** `CONFIRMED`, nenulový `confirmed_at`, historie 2, oznámení 2; potvrzovací aktér odpovídá učiteli a příjemce approval oznámení studentovi. |
+| 4   | Ověřit výsledek cíleného testu. | Reprodukovatelný zelený běh proti přesné baseline. | **PASS:** `ReservationLateApprovalBaselineTests`: 1 test, 0 failures, 0 errors, `BUILD SUCCESS` dne 22. 11. 2026. |
 
-**Stav:** **BLOCKED / nedokončeno.** Konkrétní překážkou je tříhodinový cutoff v baseline create cestě, takže požadovanou PENDING rezervaci za 2 h 59 min nelze vytvořit přes aplikaci a není možné poctivě doložit DB stav po approve. Doplňkově proběhl cílený baseline běh `ReservationAuthorizationTests` z čisté kopie `99210f0`: příkaz `-Dtest=ReservationAuthorizationTests -DargLine=-javaagent:/home/netopus/.m2/repository/net/bytebuddy/byte-buddy-agent/1.18.11/byte-buddy-agent-1.18.11.jar test`, výsledek **15 testů, 0 chyb, BUILD SUCCESS**; tento běh však neobsahuje TC-C08-02 a není vydáván za jeho provedení. Opakovatelný další krok pro uzavření: připravit izolovanou DB a explicitně vložit testovací PENDING pouze tehdy, pokud vlastník zadání schválí takovou přípravu mimo create API; následně uložit API a SQL výstup.
+**Stav:** **PASS / dokončeno.** Test běžel nad nezměněným produkčním kódem `main@99210f0`; jediným doplněním v dočasné čisté kopii byl testovací harness. Fixture obešla pouze create cutoff, který znemožňuje připravit historický stav přes veřejné create API. Approval samotný prošel skutečným HTTP/security/service/persistence řetězcem a výsledek byl ověřen novým SQL čtením po commitu. Reprodukovatelný test, příkaz a redigovaný API/SQL výstup jsou v `docs/evidence/C08_baseline_TC-C08-02_2026-11-22/`.
 
 ### 3. Peer review PR #67
 
@@ -306,7 +306,7 @@ Plný backendový běh skončil úspěšně po opravě očekávaného času v oz
 4. Integrační testy ověřují idempotentní opakované zpracování, nikoli souběh více scheduler instancí. Query používá pessimistic write lock; dedikovaný distribuovaný lock/race test není doložen.
 5. Peer approval z PR #67 není součástí git historie, ale je doložené přímo PR událostí: `Falplp` schválil review 11. 11. 2026 bez inline připomínek.
 
-**C08 stav:** projektový CR, dopady, alternativy, decision, baseline evidence a peer-review záznam PR #67 jsou zapsané. TC-C08-01 má navázaný skutečný integrační důkaz na shodném backendovém stromu; TC-C08-02 zůstává oprávněně **BLOCKED / nedokončený** kvůli nemožnosti vytvořit požadovanou rezervaci přes baseline create cestu.
+**C08 stav:** projektový CR, dopady, alternativy, decision, oba baseline test cases a peer-review záznam PR #67 jsou doložené. TC-C08-01 používá existující integrační důkaz na backendově shodném stromu; TC-C08-02 dne 22. 11. 2026 samostatně prošel nad přesnou baseline `99210f0` s HTTP a committed SQL evidencí.
 
 ### 7. Porovnání návrhu s implementací a řešení rozdílů
 

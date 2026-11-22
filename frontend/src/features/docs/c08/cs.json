@@ -75,7 +75,7 @@
         },
         {
           "type": "paragraph",
-          "content": "Persistence testy používají izolovaná PostgreSQL schémata, Flyway a čtení committed stavu. Frontendové testy používají Vitest a Testing Library. Při této dokumentační práci nebyly databázové služby spuštěny; respektovali jsme požadavek ponechat Compose zastavený."
+          "content": "Persistence testy používají izolovaná PostgreSQL schémata, Flyway a čtení committed stavu. Frontendové testy používají Vitest a Testing Library. TC-C08-02 byl 22. 11. 2026 spuštěn v čisté kopii baseline 99210f0 proti samostatnému náhodnému PostgreSQL schématu."
         }
       ]
     },
@@ -95,14 +95,14 @@
             [
               "TC-C08-02 — pozdní approve baseline",
               "Na main@99210f0 připravit PENDING se startsAt = now + 2 h 59 min; approve jako vlastník; nezávisle načíst DB. Očekává se CONFIRMED, protože původní approve neměl časový guard.",
-              "BLOCKED / nedokončeno. Baseline create na main@99210f0 odmítá startsAt = now + 2 h 59 min HTTP 409 před saveAndFlush() kvůli pravidlu minimálně 3 hodiny před konzultací; proto nebylo možné vytvořit požadovanou PENDING a provést approve. Cílený běh ReservationAuthorizationTests z čisté kopie 99210f0 prošel 15/15, ale TC-C08-02 neobsahuje."
+              "PASS. V čisté kopii main@99210f0 připravila JPA fixture PENDING přímo v izolovaném PostgreSQL schématu, protože create API stav pod tříhodinovou hranicí záměrně nevytváří. Skutečný HTTP approve endpoint vrátil 200 a CONFIRMED; nové SQL čtení potvrdilo confirmedAt, 2 záznamy historie, 2 oznámení a správného aktéra i příjemce. Cílený běh: 1/1, BUILD SUCCESS dne 22. 11. 2026."
             ]
           ]
         },
         {
           "type": "note",
-          "variant": "warning",
-          "content": "TC-C08-02 zůstává oprávněně nedokončený. Kódová inspekce a 15/15 cílených baseline testů nejsou vydávány za provedení tohoto případu; uzavření vyžaduje schválený způsob přípravy PENDING mimo create API, izolovanou DB a SQL/API výstup po approve."
+          "variant": "info",
+          "content": "TC-C08-02 je dokončen. Přímá DB fixture obešla pouze baseline create cutoff; approval prošel skutečným HTTP/security/service/persistence řetězcem. Reprodukovatelný harness a redigovaný API/SQL výstup jsou v docs/evidence/C08_baseline_TC-C08-02_2026-11-22/."
         }
       ]
     },
@@ -254,7 +254,7 @@
             "Při běžícím backendu polling může přidat prodlevu intervalu (default 1 s) plus dobu DB operace; výpadek backendu odloží storno i oznámení do restartu.",
             "Rozhodnout, zda create přesně na hranici tří hodin odmítat, nebo formálně přijmout dnešní nesoulad cutoffů.",
             "Doplnit samostatný test souběhu více scheduler instancí a monitoring zpoždění jobu, pokud to provozní nasazení vyžaduje.",
-            "TC-C08-02 zůstává BLOCKED kvůli baseline create cutoff; peer review PR #67 je doloženo v projektu a v docs/evidence-and-evolution.md."
+            "TC-C08-02 prošel na baseline 99210f0 s izolovanou DB, HTTP a SQL evidencí; peer review PR #67 je doloženo v projektu a v docs/evidence-and-evolution.md."
           ]
         },
         {
@@ -265,7 +265,7 @@
               "label": "Baseline a dva test cases popsány; TC-C08-01 má skutečný důkaz",
               "done": true
             },
-            { "label": "TC-C08-02 baseline boundary běh skutečně proveden", "done": false },
+            { "label": "TC-C08-02 baseline boundary běh skutečně proveden", "done": true },
             {
               "label": "Impact matrix a alespoň dvě varianty rozhodnutí zaznamenány",
               "done": true

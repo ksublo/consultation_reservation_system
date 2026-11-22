@@ -78,7 +78,7 @@
         },
         {
           "type": "paragraph",
-          "content": "Persistence tests use isolated PostgreSQL schemas, Flyway, and reads of committed state. Frontend tests use Vitest and Testing Library. Database services were not started during this documentation task; Compose was kept stopped as requested."
+          "content": "Persistence tests use isolated PostgreSQL schemas, Flyway, and reads of committed state. Frontend tests use Vitest and Testing Library. TC-C08-02 was run on 22 November 2026 from a clean copy of baseline 99210f0 against a separate random PostgreSQL schema."
         }
       ]
     },
@@ -98,14 +98,14 @@
             [
               "TC-C08-02 — late approval on baseline",
               "On main@99210f0 prepare PENDING with startsAt = now + 2 h 59 min; approve as the owner; independently read the DB. Expect CONFIRMED because the original approve had no time guard.",
-              "BLOCKED / incomplete. Baseline create on main@99210f0 rejects startsAt = now + 2 h 59 min with HTTP 409 before saveAndFlush() because of the three-hour minimum; the required PENDING could therefore not be created and approved. A targeted ReservationAuthorizationTests run from a clean 99210f0 copy passed 15/15, but it does not contain TC-C08-02."
+              "PASS. In a clean main@99210f0 copy, a JPA fixture prepared PENDING directly in an isolated PostgreSQL schema because the create API intentionally cannot create that state below the three-hour boundary. The real HTTP approval endpoint returned 200 and CONFIRMED; a fresh SQL read confirmed confirmedAt, 2 history rows, 2 notifications, and the correct actor and recipient. Targeted run: 1/1, BUILD SUCCESS on 22 November 2026."
             ]
           ]
         },
         {
           "type": "note",
-          "variant": "warning",
-          "content": "TC-C08-02 remains correctly incomplete. Code inspection and the 15/15 targeted baseline tests are not presented as execution of this case; completion requires an approved way to prepare PENDING outside the create API, an isolated DB, and SQL/API output after approve."
+          "variant": "info",
+          "content": "TC-C08-02 is complete. The direct DB fixture bypassed only the baseline create cutoff; approval traversed the real HTTP/security/service/persistence chain. The reproducible harness and redacted API/SQL output are in docs/evidence/C08_baseline_TC-C08-02_2026-11-22/."
         }
       ]
     },
@@ -257,7 +257,7 @@
             "While the backend is running, polling can add the interval (default 1 s) plus DB operation time; downtime delays cancellation and notification until restart.",
             "Decide whether creation exactly three hours ahead should be rejected or whether the current cutoff mismatch is formally accepted.",
             "Add a dedicated multi-scheduler concurrency test and job-lag monitoring if required by the deployment model.",
-            "TC-C08-02 remains BLOCKED because of the baseline create cutoff; the PR #67 peer review is evidenced in the project and in docs/evidence-and-evolution.md."
+            "TC-C08-02 passed on baseline 99210f0 with isolated DB, HTTP, and SQL evidence; the PR #67 peer review is evidenced in the project and in docs/evidence-and-evolution.md."
           ]
         },
         {
@@ -268,7 +268,7 @@
               "label": "Baseline and two test cases documented; TC-C08-01 has actual evidence",
               "done": true
             },
-            { "label": "TC-C08-02 baseline boundary run actually executed", "done": false },
+            { "label": "TC-C08-02 baseline boundary run actually executed", "done": true },
             { "label": "Impact matrix and at least two alternatives recorded", "done": true },
             {
               "label": "Implementation tests and limitations distinguished by actual runs",
