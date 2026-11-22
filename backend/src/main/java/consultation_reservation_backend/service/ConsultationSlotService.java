@@ -3,6 +3,7 @@ package consultation_reservation_backend.service;
 import consultation_reservation_backend.api.*;
 import consultation_reservation_backend.domain.*;
 import consultation_reservation_backend.repository.ConsultationSlotRepository;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
@@ -24,10 +25,12 @@ public class ConsultationSlotService {
   private static final List<Long> ALLOWED_DURATIONS = List.of(15L, 30L, 45L, 60L, 90L);
   private final ConsultationSlotRepository slots;
   private final UserService users;
+  private final Clock clock;
 
-  public ConsultationSlotService(ConsultationSlotRepository slots, UserService users) {
+  public ConsultationSlotService(ConsultationSlotRepository slots, UserService users, Clock clock) {
     this.slots = slots;
     this.users = users;
+    this.clock = clock;
   }
 
   public SlotResponse create(CreateSlotRequest request) {
@@ -68,12 +71,14 @@ public class ConsultationSlotService {
   }
 
   public List<SlotResponse> available(OffsetDateTime from) {
-    OffsetDateTime earliestStart = OffsetDateTime.now().plusHours(RESERVATION_CUTOFF_HOURS);
-    if (from != null && from.isAfter(earliestStart)) earliestStart = from;
+    OffsetDateTime reservationCutoff =
+        OffsetDateTime.now(clock).plusHours(RESERVATION_CUTOFF_HOURS);
+    OffsetDateTime fromInclusive = from == null ? reservationCutoff : from;
     return slots
         .findAvailable(
             SlotStatus.ACTIVE,
-            earliestStart,
+            reservationCutoff,
+            fromInclusive,
             List.of(ReservationStatus.PENDING, ReservationStatus.CONFIRMED))
         .stream()
         .map(SlotResponse::from)

@@ -4,6 +4,7 @@ import { api } from '../../api/client'
 import type { TFunction } from '../../i18n'
 import type { ConsultationSlot, Session, Teacher, Toast } from '../../types/api'
 import BookingPage from './BookingPage'
+import { canCreateReservationAt } from './reservation-cutoff'
 
 vi.mock('../../api/client', () => ({
   api: {
@@ -125,6 +126,14 @@ describe('BookingPage reservation flow', () => {
 
     expect(api.reserve).not.toHaveBeenCalled()
     expect(onToast).toHaveBeenCalledWith({ type: 'error', message: 'reservationCutoffFailed' })
+  })
+
+  it('treats the exact three-hour creation boundary as closed', () => {
+    const now = Date.parse('2030-01-07T06:00:00Z')
+
+    expect(canCreateReservationAt('2030-01-07T09:00:00Z', now)).toBe(false)
+    expect(canCreateReservationAt('2030-01-07T09:00:01Z', now)).toBe(true)
+    expect(canCreateReservationAt('2030-01-07T08:59:59Z', now)).toBe(false)
   })
 
   it('shows the conflict returned when another student reserves the slot first', async () => {

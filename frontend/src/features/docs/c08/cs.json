@@ -47,8 +47,8 @@
         },
         {
           "type": "note",
-          "variant": "warning",
-          "content": "Známá hraniční nejednotnost: create odmítá jen začátek dřívější než now + 3 h, takže přesně tři hodiny přijme. Expirace a schválení považují stejnou hranici za uzavřenou; takto vytvořená žádost může být vzápětí stornována. C08 tuto podmínku nemění."
+          "variant": "info",
+          "content": "Tříhodinová hranice je sjednocená: create i API dostupnosti vyžadují startsAt > now + 3 h. Přesně na hranici se slot nenabízí a pokus o vytvoření vrátí 409; stejné startsAt <= now + 3 h používají expirace, schválení a ruční storno."
         }
       ]
     },
@@ -212,14 +212,19 @@
               "API autorizace, pozdní cancel a create méně než 3 h před termínem; mock persistence."
             ],
             [
+              "ReservationCreationPersistenceTests",
+              "PASS 3/3 cíleně",
+              "PostgreSQL s fixními hodinami: create přesně na hranici vrací 409, slot se nezobrazí jako dostupný a jedna sekunda za hranicí zůstává dostupná i rezervovatelná."
+            ],
+            [
               "Celý backend",
-              "PASS 44/44",
-              "Plný běh proběhl před přidáním posledního API testu; následně cílená autorizační sada 17/17. Netvrdíme finální full run 45/45."
+              "PASS 47/47",
+              "Finální plný běh 22. 11. 2026 zahrnuje i sjednocenou create/availability hranici."
             ],
             [
               "Frontend",
-              "PASS 12/12",
-              "4 Vitest soubory včetně přesného UI cutoffu pro studenta i pedagoga."
+              "PASS 13/13",
+              "4 Vitest soubory včetně přesného create, approve a cancel cutoffu."
             ],
             [
               "Typecheck / lint",
@@ -229,7 +234,7 @@
             [
               "Java fmt:check",
               "FAIL — nesouvisející",
-              "Čtyři starší formátovací odchylky v AuthController, ReservationResponse a dvou persistence testech; dokumentační práce zdroj neupravuje."
+              "Pět starších formátovacích odchylek v AuthController, ReservationResponse a třech starších testech; všechny soubory změněné touto opravou formátování splňují."
             ]
           ]
         },
@@ -252,7 +257,7 @@
           "type": "list",
           "items": [
             "Při běžícím backendu polling může přidat prodlevu intervalu (default 1 s) plus dobu DB operace; výpadek backendu odloží storno i oznámení do restartu.",
-            "Rozhodnout, zda create přesně na hranici tří hodin odmítat, nebo formálně přijmout dnešní nesoulad cutoffů.",
+            "Create, API dostupnosti, approval, expiry a ruční storno nyní používají stejnou uzavřenou tříhodinovou hranici.",
             "Doplnit samostatný test souběhu více scheduler instancí a monitoring zpoždění jobu, pokud to provozní nasazení vyžaduje.",
             "TC-C08-02 prošel na baseline 99210f0 s izolovanou DB, HTTP a SQL evidencí; peer review PR #67 je doloženo v projektu a v docs/evidence-and-evolution.md."
           ]
@@ -275,7 +280,10 @@
               "done": true
             },
             { "label": "Peer review doloženo z PR #67", "done": true },
-            { "label": "C09 předání obsahuje otevřené hraniční rozhodnutí", "done": true }
+            {
+              "label": "Tříhodinové hraniční rozhodnutí je implementováno a doloženo",
+              "done": true
+            }
           ]
         },
         {

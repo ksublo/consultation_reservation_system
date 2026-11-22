@@ -47,8 +47,8 @@
         },
         {
           "type": "note",
-          "variant": "warning",
-          "content": "Known boundary mismatch: create rejects only starts earlier than now + 3 h, so it accepts exactly three hours. Expiry and approval treat that same boundary as closed; a request created there can be cancelled shortly afterwards. C08 does not change this rule."
+          "variant": "info",
+          "content": "The three-hour boundary is aligned: create and the availability API require startsAt > now + 3 h. At the exact boundary, the slot is not offered and creation returns 409; expiry, approval, and manual cancellation use the same closed startsAt <= now + 3 h boundary."
         }
       ]
     },
@@ -215,14 +215,19 @@
               "API authorization, late cancellation, and create less than 3 h before slot; persistence is mocked."
             ],
             [
+              "ReservationCreationPersistenceTests",
+              "Targeted PASS 3/3",
+              "PostgreSQL with a fixed clock: creation at the exact boundary returns 409, the slot is absent from availability, and one second beyond the boundary remains available and reservable."
+            ],
+            [
               "Full backend",
-              "PASS 44/44",
-              "Full run preceded the final added API test; then the targeted authorization suite passed 17/17. We do not claim a final 45/45 full run."
+              "PASS 47/47",
+              "The final full run on 22 November 2026 includes the aligned create/availability boundary."
             ],
             [
               "Frontend",
-              "PASS 12/12",
-              "Four Vitest files, including exact UI cutoff for students and teachers."
+              "PASS 13/13",
+              "Four Vitest files, including exact create, approval, and cancellation cutoffs."
             ],
             [
               "Typecheck / lint",
@@ -232,7 +237,7 @@
             [
               "Java fmt:check",
               "FAIL — unrelated",
-              "Four earlier formatting deviations in AuthController, ReservationResponse, and two persistence test files; this documentation task does not edit source."
+              "Five earlier formatting deviations in AuthController, ReservationResponse, and three older test files; every file changed by this fix complies with formatting."
             ]
           ]
         },
@@ -255,7 +260,7 @@
           "type": "list",
           "items": [
             "While the backend is running, polling can add the interval (default 1 s) plus DB operation time; downtime delays cancellation and notification until restart.",
-            "Decide whether creation exactly three hours ahead should be rejected or whether the current cutoff mismatch is formally accepted.",
+            "Creation, availability, approval, expiry, and manual cancellation now use the same closed three-hour boundary.",
             "Add a dedicated multi-scheduler concurrency test and job-lag monitoring if required by the deployment model.",
             "TC-C08-02 passed on baseline 99210f0 with isolated DB, HTTP, and SQL evidence; the PR #67 peer review is evidenced in the project and in docs/evidence-and-evolution.md."
           ]
@@ -275,7 +280,10 @@
               "done": true
             },
             { "label": "Peer review evidenced from PR #67", "done": true },
-            { "label": "C09 handoff includes the open boundary decision", "done": true }
+            {
+              "label": "The three-hour boundary decision is implemented and evidenced",
+              "done": true
+            }
           ]
         },
         {
