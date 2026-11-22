@@ -6,9 +6,13 @@ import consultation_reservation_backend.api.ApiException;
 import consultation_reservation_backend.api.CreateReservationRequest;
 import consultation_reservation_backend.domain.*;
 import consultation_reservation_backend.security.AuthenticatedUser;
+import consultation_reservation_backend.service.ConsultationSlotService;
 import consultation_reservation_backend.service.ReservationService;
 import jakarta.persistence.EntityManager;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.AfterAll;
@@ -16,6 +20,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -28,6 +35,16 @@ import org.springframework.transaction.support.TransactionTemplate;
 class ReservationCreationPersistenceTests {
   private static final String SCHEMA =
       "c02_create_" + UUID.randomUUID().toString().replace("-", "");
+  private static final Instant NOW = Instant.parse("2030-01-07T06:00:00Z");
+
+  @TestConfiguration
+  static class FixedClockConfiguration {
+    @Bean
+    @Primary
+    Clock testClock() {
+      return Clock.fixed(NOW, ZoneOffset.UTC);
+    }
+  }
 
   @DynamicPropertySource
   static void database(DynamicPropertyRegistry properties) {
@@ -46,8 +63,10 @@ class ReservationCreationPersistenceTests {
   }
 
   @Autowired ReservationService service;
+  @Autowired ConsultationSlotService consultationSlots;
   @Autowired EntityManager entityManager;
   @Autowired PlatformTransactionManager transactions;
+  @Autowired Clock clock;
 
   private TransactionTemplate transaction;
   private AuthenticatedUser student;
@@ -55,6 +74,8 @@ class ReservationCreationPersistenceTests {
   private UUID overlappingSlotId;
   private UUID nextSlotId;
   private UUID previousSlotId;
+  private UUID exactBoundarySlotId;
+  private UUID afterBoundarySlotId;
 
   @BeforeEach
   void prepareSlots() {
@@ -65,8 +86,8 @@ class ReservationCreationPersistenceTests {
           entityManager.persist(studentUser);
           student = new AuthenticatedUser(studentUser.getId(), UserRole.STUDENT);
 
-          var start =
-              OffsetDateTime.now().plusDays(1).withHour(13).withMinute(0).withSecond(0).withNano(0);
+          var now = OffsetDateTime.now(clock);
+          var start = now.plusDays(1).withHour(13).withMinute(0).withSecond(0).withNano(0);
           var blocked = slot("blocked", start, start.plusMinutes(30));
           var overlapping = slot("overlap", start.plusMinutes(15), start.plusMinutes(45));
           var next = slot("next", start.plusMinutes(30), start.plusHours(1));
@@ -75,6 +96,11 @@ class ReservationCreationPersistenceTests {
           overlappingSlotId = overlapping.getId();
           nextSlotId = next.getId();
           previousSlotId = previous.getId();
+          var exactBoundary = slot("exact-boundary", now.plusHours(3), now.plusHours(4));
+          var afterBoundary =
+              slot("after-boundary", now.plusHours(3).plusSeconds(1), now.plusHours(4));
+          exactBoundarySlotId = exactBoundary.getId();
+          afterBoundarySlotId = afterBoundary.getId();
         });
   }
 
@@ -109,6 +135,26 @@ class ReservationCreationPersistenceTests {
 
     assertEquals(ReservationStatus.PENDING, createAndGetStatus(nextSlotId));
     assertEquals(ReservationStatus.PENDING, createAndGetStatus(previousSlotId));
+  }
+
+  @Test
+  void creationRejectsTheExactThreeHourBoundary() {
+    ApiException error = assertThrows(ApiException.class, () -> create(exactBoundarySlotId));
+
+    assertEquals(409, error.getStatus().value());
+    assertEquals(
+        "Reservations must be created more than 3 hours before the consultation starts.",
+        error.getMessage());
+  }
+
+  @Test
+  void creationAndAvailabilityUseTheSameExclusiveBoundary() {
+    var availableIds =
+        consultationSlots.available(null).stream().map(response -> response.id()).toList();
+
+    assertFalse(availableIds.contains(exactBoundarySlotId));
+    assertTrue(availableIds.contains(afterBoundarySlotId));
+    assertEquals(ReservationStatus.PENDING, createAndGetStatus(afterBoundarySlotId));
   }
 
   private ReservationStatus createAndGetStatus(UUID slotId) {

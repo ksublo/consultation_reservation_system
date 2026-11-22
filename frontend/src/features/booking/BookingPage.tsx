@@ -3,6 +3,7 @@ import { api } from '../../api/client'
 import type { Language, TFunction } from '../../i18n'
 import { localeFor } from '../../i18n'
 import type { ConsultationSlot, Reservation, Session, Teacher, Toast } from '../../types/api'
+import { canCreateReservationAt } from './reservation-cutoff'
 
 const timeZone = 'Europe/Prague'
 const weekdays = {
@@ -237,10 +238,7 @@ export default function BookingPage({
       return
     }
     const selectedSlot = slots.find((slot) => slot.id === slotId)
-    if (
-      selectedSlot &&
-      new Date(selectedSlot.startsAt).getTime() - Date.now() < 3 * 60 * 60 * 1000
-    ) {
+    if (selectedSlot && !canCreateReservationAt(selectedSlot.startsAt)) {
       onToast({ type: 'error', message: t('reservationCutoffFailed') })
       return
     }
