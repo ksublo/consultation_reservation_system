@@ -110,9 +110,9 @@ const apiMessages: Record<string, Record<Language, string>> = {
     cs: 'Termín musí povolovat online nebo osobní konzultaci.',
     en: 'A slot must allow online or in-person consultations.',
   },
-  'Reservations must be created at least 3 hours before the consultation starts.': {
-    cs: 'Rezervaci lze vytvořit nejpozději 3 hodiny před začátkem konzultace.',
-    en: 'Reservations must be created at least 3 hours before the consultation starts.',
+  'Reservations must be created more than 3 hours before the consultation starts.': {
+    cs: 'Rezervaci lze vytvořit pouze více než 3 hodiny před začátkem konzultace.',
+    en: 'Reservations must be created more than 3 hours before the consultation starts.',
   },
   'This slot is already reserved.': {
     cs: 'Tento termín je již rezervovaný.',

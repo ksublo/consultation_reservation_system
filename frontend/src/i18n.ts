@@ -161,7 +161,8 @@ const messages = {
     slotCreated: 'Termín byl vytvořen.',
     slotCreateFailed: 'Termín se překrývá nebo se nepodařilo vytvořit.',
     pastSlotCreateFailed: 'Nelze vytvořit termín v minulosti.',
-    reservationCutoffFailed: 'Rezervaci lze vytvořit nejpozději 3 hodiny před začátkem konzultace.',
+    reservationCutoffFailed:
+      'Rezervaci lze vytvořit pouze více než 3 hodiny před začátkem konzultace.',
     workingHoursFailed: 'Termín musí být v pracovní den mezi 07:15 a 19:15.',
     slotCancelled: 'Termín byl zrušen.',
     slotCancelFailed: 'Termín se nepodařilo zrušit.',
@@ -344,7 +345,7 @@ const messages = {
     slotCreateFailed: 'The slot overlaps or could not be created.',
     pastSlotCreateFailed: 'Cannot create a slot in the past.',
     reservationCutoffFailed:
-      'Reservations must be created at least 3 hours before the consultation starts.',
+      'Reservations must be created more than 3 hours before the consultation starts.',
     workingHoursFailed: 'Slots must be on a workday between 07:15 and 19:15.',
     slotCancelled: 'Slot was cancelled.',
     slotCancelFailed: 'The slot could not be cancelled.',
