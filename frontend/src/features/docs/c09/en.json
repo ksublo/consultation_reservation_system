@@ -24,18 +24,18 @@
             ["Baseline", "main@99210f0; Flyway V14 before the change."],
             [
               "Candidate",
-              "C09 documentation is being prepared on docs/docs09; the final SHA will be recorded after the documentation commit."
+              "Checked candidate: docs/docs09 branch, commit e6e2e9c; the checkout was clean during the review."
             ],
             [
               "Decision",
-              "CONDITIONAL — technical checks passed; an independent clean reproduction is still pending."
+              "CONDITIONAL — another team member repeated the checks from a clean checkout on 22 Nov 2026; TC-C08-02 remains BLOCKED."
             ]
           ]
         },
         {
           "type": "note",
           "variant": "warning",
-          "content": "CONDITIONAL is not deployment authorization. The remaining condition is an independent clean checkout and a repeat of the README build and test procedure."
+          "content": "CONDITIONAL is not deployment authorization. The independent clean-checkout review is complete; TC-C08-02 remains the open blocker. The exact three-hour cutoff is also still an open product decision."
         }
       ]
     },
@@ -116,12 +116,12 @@
             [
               "Peer review",
               "PR #67 and C08 diff review",
-              "C08 review approved; the current C09 candidate review record still needs to be added."
+              "C08 review approved; another team member repeated the C09 candidate checks from a clean checkout on 22 Nov 2026."
             ],
             [
               "Clean checkout",
               "README procedure on a clean copy by another team member",
-              "PENDING; without this evidence the decision remains CONDITIONAL."
+              "PASS — another team member repeated the checks from a clean checkout at e6e2e9c on 22 Nov 2026."
             ]
           ]
         },
@@ -142,7 +142,7 @@
             "Backend downtime delays automatic cancellation and notification until the backend restarts.",
             "Creation exactly three hours ahead is still accepted, while expiry and approval treat the same boundary as closed; the product must decide whether to unify the cutoff or formally accept the current state.",
             "No dedicated multi-scheduler concurrency test or job-lag monitoring is evidenced; add them if required by the deployment model.",
-            "TC-C08-02 remains BLOCKED because of the baseline create cutoff. The targeted baseline ReservationAuthorizationTests run passed, but it does not contain TC-C08-02 itself.",
+            "The TC-C08-02 baseline boundary attempt was made, but the test remains BLOCKED: baseline create rejects reservations inside the three-hour cutoff (409), so the subsequent approval cannot be verified. A fix is pending.",
             "The PR #67 peer review is evidenced in the project and in docs/evidence-and-evolution.md."
           ]
         }
@@ -163,7 +163,7 @@
               "label": "Baseline and TC-C08-01/02 are described; TC-C08-01 has actual evidence",
               "done": true
             },
-            { "label": "The TC-C08-02 baseline boundary run is actually complete", "done": false },
+            { "label": "The TC-C08-02 baseline boundary run is complete", "done": false },
             { "label": "The impact matrix and alternatives are recorded", "done": true },
             {
               "label": "Implementation tests and limitations are separated by actual runs",
@@ -180,7 +180,7 @@
             },
             {
               "label": "Another team member repeated the check from a clean checkout",
-              "done": false
+              "done": true
             },
             {
               "label": "The release decision is based on an identified candidate and known limitations",

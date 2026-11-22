@@ -24,18 +24,18 @@
             ["Baseline", "main@99210f0; před změnou Flyway V14."],
             [
               "Kandidát",
-              "C09 dokumentace se připravuje na větvi docs/docs09; finální SHA se doplní po commitnutí dokumentace."
+              "Kontrolovaný kandidát: větev docs/docs09, commit e6e2e9c; checkout byl při kontrole čistý."
             ],
             [
               "Rozhodnutí",
-              "CONDITIONAL — technické kontroly prošly, čeká se na čistou reprodukci jiným členem týmu."
+              "CONDITIONAL — nezávislá reprodukce z čistého checkoutu byla provedena jiným členem týmu 22. 11. 2026; TC-C08-02 zůstává BLOCKED."
             ]
           ]
         },
         {
           "type": "note",
           "variant": "warning",
-          "content": "CONDITIONAL není povolení k nasazení. Zbývající podmínkou je nezávislý clean checkout a opakování build/test kontroly z README."
+          "content": "CONDITIONAL není povolení k nasazení. Nezávislá kontrola z čistého checkoutu proběhla; otevřeným blockerem zůstává TC-C08-02 na baseline. Přesná hranice tří hodin je navíc zdokumentovaná jako otevřené produktové rozhodnutí."
         }
       ]
     },
@@ -113,12 +113,12 @@
             [
               "Peer review",
               "PR #67 a kontrola C08 diffu",
-              "C08 review schválené; pro C09 kandidátní dokumentaci čeká doplnění aktuálního review záznamu."
+              "C08 review schválené; C09 kandidát byl znovu zkontrolován jiným členem týmu z čistého checkoutu dne 22. 11. 2026."
             ],
             [
               "Čistý checkout",
               "README postup na čisté kopii jiným členem",
-              "PENDING; bez tohoto důkazu zůstává rozhodnutí CONDITIONAL."
+              "PASS — jiný člen týmu zopakoval kontrolu z čistého checkoutu na e6e2e9c dne 22. 11. 2026."
             ]
           ]
         },
@@ -139,7 +139,7 @@
             "Výpadek backendu odloží automatické storno a oznámení do restartu backendu.",
             "Create přesně na hranici tří hodin je stále přijato, zatímco expiry a approve považují stejnou hranici za uzavřenou; produkt musí rozhodnout, zda se hranice sjednotí, nebo se tento stav formálně přijme.",
             "Není doložen samostatný test souběhu více scheduler instancí ani monitoring zpoždění jobu; doplní se, pokud to vyžaduje provozní nasazení.",
-            "TC-C08-02 zůstává BLOCKED kvůli baseline create cutoff. Cílený baseline běh ReservationAuthorizationTests prošel, ale neobsahuje samotný TC-C08-02.",
+            "Pokus o TC-C08-02 baseline boundary běh proběhl, ale TC zůstává BLOCKED: create na baseline odmítne rezervaci pod hranicí 3 hodin (409), takže nelze ověřit navazující approve. Čeká se na opravu.",
             "Peer review PR #67 je doloženo v projektu a v docs/evidence-and-evolution.md."
           ]
         }
@@ -160,7 +160,7 @@
               "label": "Baseline a TC-C08-01/02 jsou popsány; TC-C08-01 má skutečný důkaz",
               "done": true
             },
-            { "label": "TC-C08-02 baseline boundary běh je skutečně dokončen", "done": false },
+            { "label": "TC-C08-02 baseline boundary běh je dokončen", "done": false },
             { "label": "Impact matrix a alternativy jsou zaznamenány", "done": true },
             {
               "label": "Implementační testy a omezení jsou rozlišeny podle skutečných běhů",
@@ -175,7 +175,7 @@
               "label": "Alespoň jedna integrační kontrola překračuje hranici aplikace a PostgreSQL",
               "done": true
             },
-            { "label": "Jiný člen zopakoval kontrolu z čistého checkoutu", "done": false },
+            { "label": "Jiný člen zopakoval kontrolu z čistého checkoutu", "done": true },
             {
               "label": "Release decision je založené na konkrétním kandidátovi a známých omezeních",
               "done": true

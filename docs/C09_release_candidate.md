@@ -65,7 +65,9 @@ npm run lint
 npm run build
 ```
 
-Stav nezávislé reprodukce: **PENDING**. Dokud nebude zapsán výsledek jiného člena, není splněno celé acceptance criterion C09-4.
+Stav nezávislé reprodukce: **PASS** — jiný člen týmu zopakoval kontrolu z čistého checkoutu na `e6e2e9c` dne 22. 11. 2026.
+
+**TC-C08-02: BLOCKED.** Pokus o baseline boundary běh byl skutečně proveden, ale test zůstává blokován: baseline create odmítá rezervaci za 2 h 59 min (`409 CONFLICT`), takže nelze dokončit ověření následného approve. Čeká se na opravu tohoto blokujícího nesouladu.
 
 ## Známá omezení
 
@@ -78,4 +80,4 @@ Stav nezávislé reprodukce: **PENDING**. Dokud nebude zapsán výsledek jiného
 
 **CONDITIONAL**
 
-Důvod: kandidát prošel backendovým během 45/45 testů, skutečnou PostgreSQL integrační kontrolou, migrací V15, frontendovými testy a Compose buildem. Rozhodnutí bude možné změnit na `READY` po nezávislém čistém checkoutu a opakování uvedených příkazů jiným členem týmu. Pokud reprodukce selže, kandidát přechází na `HOLD` až do opravy a opakování kontroly.
+Důvod: kandidát prošel backendovým během 45/45 testů, skutečnou PostgreSQL integrační kontrolou, migrací V15, frontendovými testy, Compose buildem a kontrolou jiným členem týmu z čistého checkoutu. Release zůstává `CONDITIONAL`, protože TC-C08-02 je stále blokován baseline boundary nesouladem a čeká na opravu. Pokud se při opakování kontroly po opravě objeví selhání, kandidát přechází na `HOLD`.
