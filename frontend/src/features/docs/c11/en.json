@@ -7,12 +7,12 @@
       "blocks": [
         {
           "type": "note",
-          "variant": "warning",
-          "content": "PREPARED / NOT RUN. C11 defines protocols only. No participant session has been conducted, no result is PASS, and all actual observations remain NOT RUN until C12."
+          "variant": "info",
+          "content": "PREPARED / NOT RUN means: C11 preparation is complete; the C12 study has not been conducted. The assignment requires completed A–D protocols but explicitly leaves actual results empty. Concrete tasks, questions, cards, criteria and checks are prepared below. NOT RUN applies only to future observations, timings, quotations and results; it does not mean the plan is missing."
         },
         {
           "type": "paragraph",
-          "content": "Plan version `C11-plan-v1`, tracked by issue `#75`, was prepared from baseline `ebcc5fd177155d5fb95bff4d6c2e2322d105fab2`. The Git revision containing the plan is its authoritative delivery version."
+          "content": "Plan version `C11-plan-v2`, tracked by issue `#75`, was prepared from baseline `ebcc5fd177155d5fb95bff4d6c2e2322d105fab2`. The Git revision containing the plan is its authoritative delivery version."
         },
         {
           "type": "table",
@@ -89,6 +89,89 @@
             "Read back ordered lifecycle history and notifications for the same reservation ID.",
             "Do not capture tokens, password hashes or unrelated personal data."
           ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Privately match exact slot ID, student, teacher, mode and time. Follow the same reservation ID through C/D. After cancellation, zero occupancy is insufficient: the slot must remain ACTIVE, in the future and outside the three-hour cutoff; compare UI availability too. Check notification type and recipient: RESERVATION_CREATED → teacher, RESERVATION_APPROVED → student, RESERVATION_CANCELLED after student cancellation → teacher. Compare seeded reservation history before and after the task. A database notification proves neither email delivery nor human reading. Complete SQL queries are in docs/C11_validation_plan.md."
+        }
+      ]
+    },
+    {
+      "id": "c11-session-protocol",
+      "title": "Session procedure and interpretation rules",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "The moderator prepares the environment, gives only the applicable card and introduces planned events. An observer records actions and checks the database; one person may cover both roles, recording pauses for evidence collection. Use separate browser profiles for student and teacher. Do not give participants the full internal plan or this C11 tab."
+        },
+        {
+          "type": "list",
+          "items": [
+            "Before the session record the selected method, git rev-parse HEAD, date/time/timezone, UI language, browser, moderator, observer, anonymous participant code and previous experience. Explain the purpose, obtain agreement to take notes and allow withdrawal.",
+            "After reset, obtain exact slot dates in Europe/Prague and supply them with the card as ordinary scheduling information. A1/B/C1/D use Karel tomorrow 14:00–14:30; A2/C2 use Eva two calendar days after reset at 14:00.",
+            "A: up to 10 minutes per task. B: about 10 minutes of interview and 10 for the probe. C: 15–20 minutes. D: 20–25 minutes. These are session limits, not product quality thresholds.",
+            "Record time, actions, errors, hesitation, exact statements and all assistance. Restating the goal is allowed; naming a page, control, sequence or status meaning is procedural help.",
+            "If preparation fails or the participant stops, record the interruption and last state. Do not reset during a task or secretly complete it. In D, stop dependent events if the preceding checkpoint fails.",
+            "A reset separates A1/A2 data but cannot remove human learning. Record order and counterbalance across multiple participants. Conduct B's interview before showing the workflow."
+          ]
+        },
+        {
+          "type": "table",
+          "headers": ["Evaluation situation", "Predeclared interpretation"],
+          "rows": [
+            [
+              "Correct state and understanding without procedural help",
+              "Completed without help for this task; no population success estimate."
+            ],
+            [
+              "Correct state but incorrect participant understanding",
+              "Technical completion with a comprehension problem."
+            ],
+            ["Goal reached after a hint", "Completed with help; record the exact intervention."],
+            [
+              "Participant declares completion but stored state contradicts the goal",
+              "Apparent completion; identify the specific mismatch."
+            ],
+            [
+              "Missing evidence or session ended before the goal",
+              "Unverified or incomplete; do not report success."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c11-participant-cards",
+      "title": "Separate participant cards",
+      "blocks": [
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Copy only the applicable card and supply the actual slot date from preparation. Shared access: http://localhost:15173, password password; ordinary UI and user help are allowed. SQL, technical expectations and the internal protocol remain private."
+        },
+        {
+          "type": "paragraph",
+          "content": "**Card A1:** You are a student arranging an in-person consultation with Karel Cerny in the supplied 14:00–14:30 slot. Use DVO0001, title C11-A1 and topic “Review the reservation-system validation plan.” Arrange the consultation. Tell us when you have done everything currently possible as a student and describe its current state in your own words."
+        },
+        {
+          "type": "paragraph",
+          "content": "**Card A2:** Use KRA0001. Your approved consultation with Eva Svobodova on the supplied date at 14:00 no longer fits your schedule. Arrange for it not to take place and give “Schedule conflict” as the reason. Tell us when you believe you are finished and describe the outcome."
+        },
+        {
+          "type": "paragraph",
+          "content": "**Card B — probe after interview:** As DVO0001, arrange an online consultation with Karel Cerny in the supplied 14:00–14:30 slot. Use title C11-B and topic “Discuss the validation evidence.” Tell us when you consider the task complete, what happened and what you expect next."
+        },
+        {
+          "type": "paragraph",
+          "content": "**Card C1:** As DVO0001, arrange an in-person project consultation with Karel Cerny in the supplied 14:00–14:30 slot. Use title C11-C1 and topic “Review the validation plan before submission.” Explain whether you can rely on the meeting taking place. Later you will hear that the teacher has responded; find out what that means for your plans. Is the outcome suitable for your university work? What is missing or unclear?"
+        },
+        {
+          "type": "paragraph",
+          "content": "**Card C2:** As KRA0001, you have an approved consultation with Eva Svobodova on the supplied date at 14:00, but your plans have changed. Arrange for it not to take place, giving “Schedule conflict” as the reason. Is the resulting information sufficient to decide whether to attend? What is missing or unclear?"
+        },
+        {
+          "type": "paragraph",
+          "content": "**Card D:** You are preparing a project submission and need an in-person consultation with Karel Cerny in the supplied 14:00–14:30 slot. Use DVO0001, title C11-D and topic “Review the project before submission.” Tell the observer when you have done everything currently possible. You will receive new information during the session; respond as in an ordinary university day and describe what it means for you."
         }
       ]
     },
@@ -170,6 +253,10 @@
           "content": "**Practical probe:** after a fresh reset, DVO0001 requests Karel Cerny's prepared slot online with title `C11-B` and describes when the task is complete, what happened and what should happen next. The observer does not explain PENDING or approval. The team later verifies the stored reservation, CREATED history and teacher notification."
         },
         {
+          "type": "paragraph",
+          "content": "Internal procedure: ask all five questions before the probe, record exact answers and keep inferred expectations in a separate column. Follow up with “Can you tell me more?” and “What makes that important?” Predeclared probe outcome: exactly one C11-B for DVO0001, selected CER0001 slot, ONLINE mode and PENDING state. Compare expected completion, next actor and certainty of attendance with actual state. A submitted request does not yet demonstrate an agreed consultation."
+        },
+        {
           "type": "table",
           "headers": [
             "Source",
@@ -208,7 +295,7 @@
           "rows": [
             [
               "C1: request and obtain approval",
-              "C11-C1 is first stored PENDING with teacher notification. Only Karel approves it outside the cutoff; the same ID becomes CONFIRMED with confirmed_at, history and student notification. The UI distinguishes waiting from approved.",
+              "C11-C1 is first stored PENDING with teacher notification. In this scenario Karel approves it outside the cutoff; the same ID becomes CONFIRMED with confirmed_at, history and student notification. The UI distinguishes waiting from approved.",
               "Ask whether the outcome is sufficient to decide whether to attend, what essential condition is missing and which assumption is unclear. Execute in C12 with DVO0001 and moderator approval as CER0001; read back before and after."
             ],
             [
@@ -217,6 +304,10 @@
               "Ask whether the participant can tell whether the consultation will happen, what confirmation is missing and which assumption is unclear. If selected, use the normal UI and private readback."
             ]
           ]
+        },
+        {
+          "type": "paragraph",
+          "content": "When C is selected, execute at least C1: give the separate card, check creation, then the moderator approves that exact request in a separate CER0001 profile and says “The teacher has responded. Find out what this means for your plans.” C2 may be reviewed only; without execution its technical result remains NOT RUN. Rate each executed criterion as met / unmet / unverified with evidence. Separately record proxy accept / accept with reservation / reject / unable to assess and the exact objection. C1 demonstrates owner approval, not rejection of every other account; that requires separate authorization tests."
         },
         {
           "type": "table",
@@ -249,7 +340,7 @@
         },
         {
           "type": "paragraph",
-          "content": "**Participant story:** as DVO0001, request Karel Cerny's prepared slot in person with title `C11-D` and the supplied project-review topic. After the PENDING readback, the moderator approves the exact request as CER0001. The participant is told only that the teacher processed it and must find out what happened. After the CONFIRMED readback, a required class is moved into the time; the participant must ensure the consultation will not happen and use reason `Required class moved`."
+          "content": "**Private moderator scenario — do not give to participant:** provide only card D. After verifying the PENDING request, the moderator approves the same ID as CER0001. Then say: “The teacher has processed your request. Find out what happened and what it means for your meeting.” After verifying CONFIRMED and recording the participant's explanation, introduce the second event: “A required class has moved into this time. Arrange for the consultation not to take place; the reason is Required class moved.”"
         },
         {
           "type": "table",
@@ -307,6 +398,10 @@
           "type": "note",
           "variant": "info",
           "content": "A short seeded simulation with immediate moderator approval cannot demonstrate long-term adoption, real response times, workload, reliability, capacity, population accessibility or outage behavior."
+        },
+        {
+          "type": "paragraph",
+          "content": "Pilot interpretation: assess continuity across the same ID and participant understanding at each event. Distinguish completion without help, with help, an incomplete workflow and apparent completion contradicted by stored state. Name the phase of the mismatch; do not infer later success after a failed checkpoint. Immediate moderator approval is not a measured real teacher response time."
         }
       ]
     },
@@ -317,8 +412,14 @@
         {
           "type": "checklist",
           "items": [
-            { "label": "All four methods use implemented UI and lifecycle behavior", "done": true },
-            { "label": "Participant cards omit the hidden procedure and oracle", "done": true },
+            {
+              "label": "All four methods use implemented UI and lifecycle behavior",
+              "done": true
+            },
+            {
+              "label": "Participant cards omit the hidden procedure and oracle",
+              "done": true
+            },
             {
               "label": "Criteria, interpretation and private readbacks are predeclared",
               "done": true
@@ -327,10 +428,22 @@
               "label": "The environment and destructive reset are isolated by project name",
               "done": true
             },
-            { "label": "Every method and the proxy role state their limits", "done": true },
-            { "label": "Blank records contain NOT RUN and no fabricated PASS", "done": true },
-            { "label": "Instructor-selected C12 method recorded — NOT RUN", "done": false },
-            { "label": "Participant observations and actual readbacks — NOT RUN", "done": false }
+            {
+              "label": "Every method and the proxy role state their limits",
+              "done": true
+            },
+            {
+              "label": "Blank records contain NOT RUN and no fabricated PASS",
+              "done": true
+            },
+            {
+              "label": "Instructor-selected C12 method recorded — NOT RUN",
+              "done": false
+            },
+            {
+              "label": "Participant observations and actual readbacks — NOT RUN",
+              "done": false
+            }
           ]
         },
         {

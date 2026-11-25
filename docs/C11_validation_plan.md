@@ -1,11 +1,23 @@
 # C11 — Validation plan
 
 - Status: **PREPARED / NOT RUN**
-- Plan version: `C11-plan-v1`
+- Plan version: `C11-plan-v2`
 - Tracking issue: [#75](https://github.com/ksublo/consultation_reservation_system/issues/75)
 - Planning baseline: `ebcc5fd177155d5fb95bff4d6c2e2322d105fab2`
 
 This document prepares four validation approaches for the existing Consultation Reservation System. It contains protocols and blank records, not experimental results. Every result remains **NOT RUN** until C12 selects and executes a method.
+
+**C11 preparation is complete; C12 execution is pending.** The assignment and its worked example explicitly require actual observations to remain empty. `NOT RUN` in a recording form is therefore intentional, not a missing scenario or acceptance criterion. All tasks, questions, starting conditions, evidence checks and interpretation rules below are prepared. Participant quotations, elapsed times and study conclusions can only be filled from a real session.
+
+### Session procedure and recording rules
+
+The moderator prepares the isolated instance, gives only the applicable participant card, delivers the planned events and logs any help. An observer records actions and runs the private checks; one team member may cover both roles, noting pauses for evidence collection. Use separate browser profiles for student and teacher so approval does not replace the participant's login. Never show this full internal plan or the C11 documentation tab to the participant.
+
+Before a session record the selected method, `git rev-parse HEAD`, date/time/timezone, UI language, browser, moderator, observer, anonymous participant code and previous experience. Explain that the software is being evaluated, obtain agreement to take notes, and allow the participant to stop. Record actual slot dates from the prepared database in Europe/Prague; give these dates as ordinary scheduling information with the cards. Do not guess future session details now.
+
+Observe A for up to 10 minutes per task; allow about 10 minutes for B's questions and 10 for its probe, 15–20 minutes for C, and 20–25 minutes for D. These are session limits, not product acceptance thresholds. Log elapsed time, material actions, exact statements, errors, hesitation and every intervention. If a prerequisite fails or the participant stops, record the interruption and last observed state; do not silently reset or complete their task. In D, stop dependent events if the preceding checkpoint fails.
+
+For each checkpoint keep the participant's claim, UI observation, database evidence and interpretation separate. Record the reservation ID, timestamp and recipient of each relevant notification. Capture before/after history for seeded C2/A2 so existing seed events are not mistaken for new actions. A missing readback means **unverified**, not a successful completion. A correct stored state with an incorrect explanation means technical completion with a comprehension problem. Reusing a participant across methods introduces learning; run B's interview before showing the workflow and record method/task order.
 
 ## 0. Shared context
 
@@ -54,7 +66,8 @@ The team may use these queries after a participant declares completion. Replace 
 docker compose -p consultation-c11 exec -T database \
   psql -U consultation_reservation -d consultation_reservation -P pager=off -c "
 SELECT r.id, student.login AS student_login, teacher.login AS teacher_login,
-       r.reason_title, r.consultation_mode, r.status, s.starts_at,
+       r.reason_title, r.consultation_mode, r.status,
+       s.id AS slot_id, s.status AS slot_status, s.starts_at, s.ends_at,
        r.confirmed_at, r.cancelled_at, canceller.login AS cancelled_by,
        r.cancellation_note,
        (SELECT count(*) FROM reservations active
@@ -80,13 +93,17 @@ FROM reservation_history
 WHERE reservation_id = '<RESERVATION_ID>'
 ORDER BY created_at;
 
-SELECT type, title, message, created_at, read_at
-FROM notifications
-WHERE reservation_id = '<RESERVATION_ID>'
-ORDER BY created_at;"
+SELECT n.type, recipient.login AS recipient_login,
+       n.title, n.message, n.created_at, n.read_at
+FROM notifications n
+JOIN app_users recipient ON recipient.id = n.recipient_user_id
+WHERE n.reservation_id = '<RESERVATION_ID>'
+ORDER BY n.created_at;"
 ```
 
 The operator copies only the necessary rows into the private record. Tokens, password hashes and unrelated personal data are never captured.
+
+Match the returned slot ID, teacher, student, mode and time to the planned task; save the returned reservation ID and follow that exact ID through C/D. After a student cancellation, verify both zero active reservations and an `ACTIVE` future slot outside the cutoff, then compare availability in the ordinary UI. Zero occupancy alone does not prove that a cancelled or expired slot can be booked. Creation must notify the owning teacher (`RESERVATION_CREATED`), approval the student (`RESERVATION_APPROVED`), and student cancellation the teacher (`RESERVATION_CANCELLED`). These database records prove application notification creation, not email delivery or that a person read the notification.
 
 ## A. Observed user tasks
 
@@ -100,7 +117,7 @@ Give only this section to the participant, with the reset-specific dates filled 
 >
 > **A1 — request a consultation:** Sign in as `DVO0001` with the supplied development password `password`. Arrange an **in-person** consultation with **Karel Cerny** in his prepared 14:00–14:30 slot. Use title `C11-A1` and note `Review the reservation-system validation plan.` Stop when you believe you have done everything currently possible as a student.
 >
-> **A2 — cancel a different consultation:** Start from a freshly reset system and sign in as `KRA0001` with the supplied development password `password`. Your already approved consultation with **Eva Svobodova** no longer fits your schedule. Cancel it and record `Schedule conflict` as the reason. Stop when you believe it is no longer booked.
+> **A2 — cancel a different consultation:** Sign in as `KRA0001` with the supplied development password `password`. Your already approved consultation with **Eva Svobodova** on the supplied date at 14:00 no longer fits your schedule. Cancel it and record `Schedule conflict` as the reason. Stop when you believe it is no longer booked.
 
 The card deliberately states goals and business data, not screen sequence, button names, database values or expected status codes.
 
@@ -109,7 +126,7 @@ The card deliberately states goals and business data, not screen sequence, butto
 | Item                              | A1                                                                                                                                                                                     | A2                                                                                                                                                                              |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Starting state                    | Fresh reset; Karel's named slot is `ACTIVE`, unoccupied and more than three hours away.                                                                                                | Separate fresh reset; reservation `cccc...ccc2` is `CONFIRMED`, belongs to `KRA0001`, and starts more than three hours away.                                                    |
-| Independence                      | Reset before A2. Do not carry the A1 reservation, learning or session into A2. Counterbalance task order if more than one participant is later used.                                   | Uses a different account, teacher and seeded reservation.                                                                                                                       |
+| Independence                      | Reset before A2 so it does not depend on A1's success or data. A reset cannot remove participant learning: record task order and counterbalance it if multiple participants are used.  | Uses a different account, teacher and seeded reservation; data independence does not imply independent participant experience.                                                  |
 | Help rule                         | Observer may restate the goal or explain a word from ordinary documentation. Naming a control, page, sequence or status meaning counts as procedural help and is logged verbatim.      | Same rule.                                                                                                                                                                      |
 | Predeclared successful completion | One reservation with title `C11-A1`, student `DVO0001`, teacher `CER0001`, mode `OFFLINE`, selected slot and stored state `PENDING`; participant says it still needs teacher approval. | Seed reservation has state `CANCELLED`, non-null cancellation time, actor Anna, and reason `Schedule conflict`; no active (`PENDING`/`CONFIRMED`) reservation blocks that slot. |
 | Oracle                            | Reservation query plus `CREATED` history and teacher `RESERVATION_CREATED` notification.                                                                                               | Reservation query plus `CANCELLED` history and teacher `RESERVATION_CANCELLED` notification.                                                                                    |
@@ -147,6 +164,8 @@ Permitted follow-ups are “Can you tell me more?” and “What makes that impo
 
 Use a fresh reset. The observer does not explain `PENDING` or teacher approval. After the participant finishes speaking, the team privately verifies the reservation, `CREATED` history and teacher notification.
 
+The predeclared probe outcome is exactly one `C11-B` request by `DVO0001` for Karel's selected slot, mode `ONLINE`, stored as `PENDING`. Compare the participant's own meaning of completion with that state. This checks submission and understanding of the next step, not a completed agreement with the teacher. Record the five answers before product use; compare expected information, next actor and certainty of attendance with the observed UI and readback. Do not supply model answers.
+
 ### Blank interview and probe record B
 
 | Source        | Exact statement / observed action | Inferred expectation (kept separate) | Product evidence | Alignment, mismatch or open question |
@@ -168,10 +187,18 @@ Use a fresh reset. The observer does not explain `PENDING` or teacher approval. 
 
 | Scenario and user value                                                                                                                                     | Predeclared acceptance conditions                                                                                                                                                                                                                                                                                                           | Proxy review card                                                                                                                                                                             | Running-system verification                                                                                                                                                 |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **C1 — request and obtain approval.** A student needs assurance that a requested consultation has become agreed.                                            | Creating title `C11-C1` for Karel's prepared slot stores exactly one `PENDING` reservation and notifies Karel. Only Karel can approve it while outside the cutoff. Approval stores `CONFIRMED`, `confirmed_at`, one `CONFIRMED` history transition and a student approval notification. The student UI distinguishes waiting from approved. | “Review the request and approval outcome. Would it give you enough information to decide whether to attend? What essential condition or information is missing? Which assumption is unclear?” | In C12, the participant creates the request as `DVO0001`; the moderator then signs in as `CER0001` and approves that exact ID. Capture readbacks before and after approval. |
+| **C1 — request and obtain approval.** A student needs assurance that a requested consultation has become agreed.                                            | Creating title `C11-C1` for Karel's prepared slot stores exactly one `PENDING` reservation and notifies Karel. In this scenario Karel approves it while outside the cutoff. Approval stores `CONFIRMED`, `confirmed_at`, one `CONFIRMED` history transition and a student approval notification. The student UI distinguishes waiting from approved. | “Review the request and approval outcome. Would it give you enough information to decide whether to attend? What essential condition or information is missing? Which assumption is unclear?” | In C12, the participant creates the request as `DVO0001`; the moderator then signs in as `CER0001` and approves that exact ID. Capture readbacks before and after approval. |
 | **C2 — cancel an approved consultation after plans change.** The student and teacher need an auditable cancellation and the time must cease to be occupied. | Starting from seed reservation `cccc...ccc2`, cancellation by `KRA0001` with reason `Schedule conflict` stores `CANCELLED`, cancellation actor/time/reason, one transition and a teacher notification. No `PENDING` or `CONFIRMED` reservation remains on the slot.                                                                         | “Review the cancellation outcome. Could you tell whether the consultation will still happen? What essential confirmation or information is missing? Which assumption is unclear?”             | If selected for execution, cancel through the normal UI and verify reservation, active occupancy, history and notification using the private queries.                       |
 
-The moderator records accept / accept with reservation / reject / unable to assess, the exact objection, and any unresolved assumption separately from technical execution.
+The moderator records accept / accept with reservation / reject / unable to assess, the exact objection, and any unresolved assumption separately from technical execution. Execute at least C1 when C is selected; C2 may be reviewed without execution, in which case its technical result remains NOT RUN. C1 demonstrates approval by the owning teacher; the rule that other users cannot approve is a product constraint, not a security property proven by this successful path. Record each executed criterion as met, unmet or unverified, with its evidence. A proxy acceptance does not override an unmet technical criterion, and a technically correct result does not erase a suitability objection.
+
+### Participant cards C
+
+> **C1:** You are a student arranging a project consultation with Karel Cerny in the supplied 14:00–14:30 slot. Use `DVO0001` / `password`, an in-person meeting, title `C11-C1` and note `Review the validation plan before submission.` Arrange the consultation and explain whether you can rely on it taking place. Later you will be told that the teacher has responded; find out what this means for your plans. Would the outcome be suitable for your university work? What information is missing or unclear?
+>
+> **C2:** Use `KRA0001` / `password`. Your approved consultation with Eva Svobodova on the supplied date at 14:00 no longer fits your schedule. Arrange for it not to take place and give `Schedule conflict` as the reason. Would the resulting information be enough to decide whether to attend? What is missing or unclear?
+
+Only give the applicable card and ordinary access details. For C1, the moderator privately approves the matching request as `CER0001` after the creation checkpoint and then says: “The teacher has responded. Find out what this means for your plans.”
 
 ### Blank acceptance record C
 
@@ -207,6 +234,8 @@ The moderator reveals each later event only after the preceding readback:
 | Changed plans        | How the participant locates the reservation, reacts to confirmation, supplies a cancellation reason and checks the outcome.          | Same ID is `CANCELLED`; actor, time and reason are stored; teacher cancellation notification exists; no active reservation blocks the slot. |
 
 Prepare a fresh isolated environment, fill the reset-specific date on the card, and allow 20–25 minutes. The participant may use ordinary UI documentation. Record interventions; do not expose SQL, IDs, status expectations or button sequences.
+
+**Interpretation rule D:** assess continuity across the same reservation ID and the participant's understanding at each event. Distinguish an uninterrupted workflow without help, completion with help, an incomplete workflow, and apparent completion contradicted by stored state. Report the phase at which a mismatch occurred. Do not infer success for later phases after an earlier checkpoint fails. Teacher processing time is simulated by the moderator and cannot be reported as measured real-world response time.
 
 ### Blank pilot timeline D
 
