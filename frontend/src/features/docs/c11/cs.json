@@ -1,0 +1,456 @@
+{
+  "title": "C11 · Plán validace produktu",
+  "sections": [
+    {
+      "id": "c11-status-and-context",
+      "title": "Stav a společný kontext",
+      "blocks": [
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "PŘIPRAVENO / NOT RUN znamená: příprava C11 je hotová, vlastní studie C12 ještě neproběhla. Zadání požaduje vyplněné protokoly A–D, ale výslovně ponechává skutečné výsledky prázdné. Níže jsou konkrétní úlohy, otázky, karty, kritéria a ověření. NOT RUN se týká pouze budoucích pozorování, časů, výroků a výsledků; nejde o chybějící plán."
+        },
+        {
+          "type": "paragraph",
+          "content": "Verze plánu `C11-plan-v2`, vedená v issue `#75`, vznikla nad baseline `ebcc5fd177155d5fb95bff4d6c2e2322d105fab2`. Autoritativní odevzdanou verzí je Git revize, která tento plán obsahuje."
+        },
+        {
+          "type": "table",
+          "headers": ["Položka", "Připravená hodnota"],
+          "rows": [
+            [
+              "Cílová role a účel",
+              "Vysokoškolský student najde termín pedagoga, odešle žádost, rozliší čekání od schválení a při změně plánů rezervaci zruší. Moderátor použije účet pedagoga pouze pro naplánované skutečné schválení."
+            ],
+            [
+              "Skutečný kontrakt",
+              "Vytvoření uloží PENDING; vlastník termínu může uložit CONFIRMED; oprávněný student nebo pedagog může uložit CANCELLED. Vytvoření, schválení a ruční storno vyžadují více než tři hodiny do začátku."
+            ],
+            [
+              "Rozhraní",
+              "Běžné webové UI React v češtině nebo angličtině. SQL je soukromý oracle týmu a nikdy není podkladem účastníka."
+            ],
+            [
+              "Runtime",
+              "Docker Compose s React/TypeScript, Java 21/Spring Boot, PostgreSQL 17 a Flyway."
+            ],
+            [
+              "Hranice proxy",
+              "Student z jiného týmu je dostupný zástupce, ne reprezentativní zákazník ani vzorek populace. Zaznamená se předchozí zkušenost s doménou a softwarem."
+            ],
+            [
+              "Zdroj skutečnosti",
+              "Read-only databázová kontrola rezervace, termínu, historie a oznámení. Toast, badge, HTTP status ani výrok účastníka samy nejsou důkazem."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c11-environment-and-oracle",
+      "title": "Izolované prostředí, účty a readback",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Před vybraným sezením C12 se znovu vytvoří pouze izolovaný volume projektu `consultation-c11`. Vyhrazené hostitelské porty jsou 15173 pro UI, 18081 pro API a 55431 pro PostgreSQL. Reset volume se nikdy nespouští nad běžným vývojovým projektem."
+        },
+        {
+          "type": "code",
+          "language": "sh",
+          "content": "docker compose -p consultation-c11 down -v\nPOSTGRES_PORT=55431 BACKEND_PORT=18081 FRONTEND_PORT=15173 \\\n  docker compose -p consultation-c11 up -d --build\ndocker compose -p consultation-c11 ps"
+        },
+        {
+          "type": "table",
+          "headers": ["Účel", "Účet", "Připravený stav po resetu"],
+          "rows": [
+            [
+              "Nová žádost",
+              "DVO0001 / STUDENT / password",
+              "Petr Dvorak; může použít volný termín Karla Cerneho zítra 14:00–14:30."
+            ],
+            [
+              "Nezávislé storno",
+              "KRA0001 / STUDENT / password",
+              "Anna Kralova vlastní schválenou rezervaci cccccccc-cccc-cccc-cccc-ccccccccccc2 u Evy Svobodove."
+            ],
+            [
+              "Schválení",
+              "CER0001 / TEACHER / password",
+              "Karel Cerny vlastní volný termín 66666666-6666-6666-6666-666666666501, online i osobně."
+            ]
+          ]
+        },
+        {
+          "type": "list",
+          "items": [
+            "Před tiskem karet zaznamenat skutečná data relativní k okamžiku resetu.",
+            "Pokud termín chybí, je obsazený nebo uvnitř tříhodinové hranice, přípravu zastavit a resetovat; po zahájení úlohy data nezaměňovat.",
+            "Přečíst ID rezervace, účty, název, formu, stav, čas termínu, údaje schválení/storna a počet aktivních rezervací termínu.",
+            "Pro stejné ID přečíst seřazenou lifecycle historii a oznámení.",
+            "Nezachycovat tokeny, hashe hesel ani nesouvisející osobní údaje."
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Soukromá kontrola porovná přesné ID termínu, studenta, pedagoga, formu a čas. Ve scénářích C/D se dále sleduje stejné ID rezervace. Po stornu nestačí nulový počet rezervací: termín musí být ACTIVE, v budoucnosti a mimo tříhodinovou hranici; porovná se i dostupnost v UI. U oznámení se ověří typ i příjemce: RESERVATION_CREATED → pedagog, RESERVATION_APPROVED → student, RESERVATION_CANCELLED po stornu studentem → pedagog. U seed rezervace se historie porovná před a po úloze. Databázové oznámení neprokazuje doručení e-mailu ani přečtení člověkem. Úplné SQL dotazy jsou v docs/C11_validation_plan.md."
+        }
+      ]
+    },
+    {
+      "id": "c11-session-protocol",
+      "title": "Průběh sezení a pravidla vyhodnocení",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Moderátor připraví prostředí, předá pouze příslušnou kartu a oznámí naplánované události. Pozorovatel zapisuje průběh a ověřuje databázi; role lze spojit, ale přestávky na kontrolu se zaznamenají. Student a pedagog používají oddělené profily prohlížeče. Účastníkovi se nepředává celý interní plán ani tato záložka C11."
+        },
+        {
+          "type": "list",
+          "items": [
+            "Před sezením zapsat vybranou metodu, výstup git rev-parse HEAD, datum a časové pásmo, jazyk UI, prohlížeč, moderátora, pozorovatele, anonymní kód účastníka a jeho předchozí zkušenosti. Vysvětlit účel, získat souhlas s poznámkami a umožnit ukončení.",
+            "Po resetu zjistit přesná data termínů v Europe/Prague a předat je s kartou jako běžné údaje o konzultaci. A1/B/C1/D používají Karla zítra 14:00–14:30; A2/C2 Evu dva kalendářní dny po resetu ve 14:00.",
+            "A: nejvýše 10 minut na úlohu. B: přibližně 10 minut rozhovor a 10 minut sonda. C: 15–20 minut. D: 20–25 minut. Jde o časový rámec sezení, nikoliv limit kvality produktu.",
+            "Zapisovat čas, akce, chyby, váhání, přesné výroky a každou pomoc. Cíl lze zopakovat; rada o stránce, tlačítku, pořadí nebo významu stavu je procedurální pomoc.",
+            "Při chybě přípravy nebo ukončení účastníkem zaznamenat přerušení a poslední stav. Neresetovat během úlohy ani ji tajně nedokončit. U D bez úspěšného checkpointu nespouštět navazující událost.",
+            "Reset odděluje data A1 a A2, ale nemaže zkušenost člověka. Zaznamenat pořadí, při více účastnících pořadí střídat. Rozhovor B vést před ukázáním workflow."
+          ]
+        },
+        {
+          "type": "table",
+          "headers": ["Situace při vyhodnocení", "Předem určená interpretace"],
+          "rows": [
+            [
+              "Správný stav, správné porozumění, bez procedurální pomoci",
+              "Dokončeno bez pomoci v dané úloze; žádný odhad úspěšnosti populace."
+            ],
+            [
+              "Správný stav, ale chybná představa účastníka",
+              "Technické dokončení s problémem porozumění."
+            ],
+            ["Cíl dosažen až po radě", "Dokončeno s pomocí; zaznamenat přesnou radu."],
+            [
+              "Účastník hlásí hotovo, uložený stav odporuje cíli",
+              "Zdánlivé dokončení; uvést konkrétní rozpor."
+            ],
+            [
+              "Chybí důkaz nebo sezení skončilo před cílem",
+              "Neověřeno nebo nedokončeno; neoznačovat úspěch."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c11-participant-cards",
+      "title": "Samostatné karty pro účastníka",
+      "blocks": [
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Kopírujte pouze příslušnou kartu a doplňte skutečné datum termínu podle přípravy. Společný přístup: http://localhost:15173, heslo password; účastník smí používat běžné UI a běžnou uživatelskou nápovědu. SQL, technická očekávání a interní protokol zůstávají týmu."
+        },
+        {
+          "type": "paragraph",
+          "content": "**Karta A1:** Jste student a chcete osobní konzultaci s Karlem Cernym v dodaném termínu 14:00–14:30. Použijte účet DVO0001, název C11-A1 a téma „Review the reservation-system validation plan.“ Zařiďte konzultaci. Až uděláte vše, co nyní jako student můžete, oznamte to a vlastními slovy popište její aktuální stav."
+        },
+        {
+          "type": "paragraph",
+          "content": "**Karta A2:** Použijte účet KRA0001. Vaše již schválená konzultace s Evou Svobodovou v dodaný den ve 14:00 vám nevyhovuje. Zařiďte, aby se neuskutečnila, a uveďte důvod „Schedule conflict“. Až budete přesvědčeni, že je hotovo, oznamte to a popište výsledek."
+        },
+        {
+          "type": "paragraph",
+          "content": "**Karta B — sonda po rozhovoru:** Jako DVO0001 si sjednejte online konzultaci s Karlem Cernym v dodaném termínu 14:00–14:30. Název je C11-B, téma „Discuss the validation evidence.“ Řekněte, kdy považujete úlohu za hotovou, co se stalo a co očekáváte dál."
+        },
+        {
+          "type": "paragraph",
+          "content": "**Karta C1:** Jako DVO0001 si domluvte osobní konzultaci projektu s Karlem Cernym v dodaném termínu 14:00–14:30. Použijte název C11-C1 a téma „Review the validation plan before submission.“ Vysvětlete, zda se můžete spolehnout, že konzultace proběhne. Později dostanete zprávu o reakci pedagoga; zjistěte její význam pro své plány. Vyhovuje vám tento výsledek pro studium? Co chybí nebo není jasné?"
+        },
+        {
+          "type": "paragraph",
+          "content": "**Karta C2:** Jako KRA0001 máte schválenou konzultaci s Evou Svobodovou v dodaný den ve 14:00, ale vaše plány se změnily. Zařiďte, aby se neuskutečnila, s důvodem „Schedule conflict“. Stačí výsledné informace k rozhodnutí, zda se dostavit? Co chybí nebo není jasné?"
+        },
+        {
+          "type": "paragraph",
+          "content": "**Karta D:** Připravujete odevzdání projektu a potřebujete osobní konzultaci s Karlem Cernym v dodaném termínu 14:00–14:30. Použijte účet DVO0001, název C11-D a téma „Review the project before submission.“ Až uděláte vše, co je nyní možné, řekněte to pozorovateli. Během sezení přijdou další informace; reagujte jako v běžném studijním dni a popisujte, co pro vás znamenají."
+        }
+      ]
+    },
+    {
+      "id": "c11-method-a",
+      "title": "A · Pozorované uživatelské úlohy",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "**Validační otázka:** Dokáže student, který systém vidí poprvé, splnit dva běžné cíle a bez procedurální nápovědy správně rozlišit žádost čekající na schválení od zrušené rezervace?"
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Úloha účastníka",
+            "Soukromý počáteční stav",
+            "Předem dané dokončení a oracle"
+          ],
+          "rows": [
+            [
+              "A1: Jako DVO0001 zajistit osobní konzultaci s Karlem Cernym v připraveném termínu 14:00–14:30. Použít název C11-A1 a zadané téma. Skončit, až student udělal vše, co nyní může, a vysvětlit stav.",
+              "Čerstvý reset; pojmenovaný termín Karla je ACTIVE, volný a více než tři hodiny vzdálený.",
+              "Existuje právě jedna odpovídající OFFLINE rezervace PENDING; účastník řekne, že je ještě třeba schválení pedagoga. Readback rezervace, historie CREATED a oznámení pedagoga."
+            ],
+            [
+              "A2: Po samostatném resetu jako KRA0001 zrušit již schválenou konzultaci s Evou Svobodovou s důvodem Schedule conflict. Skončit, až už není rezervovaná.",
+              "Seed rezervace cccc…ccc2 je CONFIRMED, patří KRA0001 a je mimo cutoff. A2 nesdílí stav s A1.",
+              "Seed rezervace je CANCELLED s aktérem, časem a důvodem; na termínu nezůstane PENDING/CONFIRMED rezervace. Readback historie a oznámení pedagoga."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Měření začne předáním karty a skončí prohlášením účastníka nebo po deseti minutách na úlohu. Cíl lze zopakovat. Pojmenování ovládacího prvku, stránky, pořadí nebo významu stavu je procedurální pomoc a zapíše se doslova."
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Úloha",
+            "Čas/akce",
+            "Chyby/váhání",
+            "Pomoc",
+            "Přesná slova dokončení",
+            "Readback",
+            "Interpretace"
+          ],
+          "rows": [
+            ["A1", "NOT RUN", "NOT RUN", "NOT RUN", "NOT RUN", "NOT RUN", "NOT RUN"],
+            ["A2", "NOT RUN", "NOT RUN", "NOT RUN", "NOT RUN", "NOT RUN", "NOT RUN"]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Každá úloha se interpretuje zvlášť: dokončeno bez procedurální pomoci, s pomocí, nedokončeno nebo zdánlivé dokončení vyvrácené readbackem. Jedna proxy neurčuje úspěšnost populace, přístupnost ani dlouhodobou naučitelnost."
+        }
+      ]
+    },
+    {
+      "id": "c11-method-b",
+      "title": "B · Strukturovaný rozhovor a použití",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "**Validační otázka:** Co pro studenta znamená, že je konzultace rezervovaná, a komunikuje workflow žádosti a schválení tento význam při skutečném použití?"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Jak při domlouvání konzultace s pedagogem poznáte, že je schůzka skutečně dohodnutá?",
+            "Jaké informace byste chtěli mít před odesláním žádosti o konzultaci?",
+            "Co byste očekávali po odeslání žádosti?",
+            "Jaké informace byste potřebovali, kdyby se vaše plány po přijetí pedagogem změnily?",
+            "Co byste očekávali, kdyby pedagog nereagoval a začátek konzultace se blížil?"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "**Praktická sonda:** po čerstvém resetu DVO0001 požádá o připravený termín Karla Cerneho online s názvem `C11-B` a popíše, kdy je úloha hotová, co se stalo a co má následovat. Pozorovatel nevysvětluje PENDING ani schválení. Tým poté ověří uloženou rezervaci, historii CREATED a oznámení pedagoga."
+        },
+        {
+          "type": "paragraph",
+          "content": "Interní postup: položit všech pět otázek před sondou, odpovědi zaznamenat doslova a odvozené očekávání do samostatného sloupce. Doplňující otázky: „Můžete to rozvést?“ a „Proč je to pro vás důležité?“ Předem očekávaný technický výsledek sondy: právě jedna C11-B pro DVO0001, vybraný termín CER0001, forma ONLINE a stav PENDING. Porovnat představu o dokončení, dalším aktérovi a jistotě schůzky se skutečným stavem. Odeslaná žádost ještě nedokazuje dohodnutou konzultaci."
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Zdroj",
+            "Přesný výrok/akce",
+            "Odvozené očekávání",
+            "Důkaz produktu",
+            "Shoda/rozpor"
+          ],
+          "rows": [
+            ["Otázka 1", "NOT RUN", "NOT RUN", "Nevztahuje se", "NOT RUN"],
+            ["Otázka 2", "NOT RUN", "NOT RUN", "Nevztahuje se", "NOT RUN"],
+            ["Otázka 3", "NOT RUN", "NOT RUN", "Nevztahuje se", "NOT RUN"],
+            ["Otázka 4", "NOT RUN", "NOT RUN", "Nevztahuje se", "NOT RUN"],
+            ["Otázka 5", "NOT RUN", "NOT RUN", "Nevztahuje se", "NOT RUN"],
+            ["Sonda s produktem", "NOT RUN", "NOT RUN", "NOT RUN", "NOT RUN"]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Doslovné výroky a odvozená očekávání zůstávají oddělené. Rozhovor ukáže slovník a možné rozpory; nedokazuje chování softwaru ani rozšíření názoru. Názor se nepřevádí na PASS/FAIL."
+        }
+      ]
+    },
+    {
+      "id": "c11-method-c",
+      "title": "C · Scénářové akceptační posouzení",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "**Validační otázka:** Jsou dva důležité výsledky pro studenta vhodné pro zamýšlené univerzitní workflow a dokáže běžící systém předem dané podmínky prokázat?"
+        },
+        {
+          "type": "table",
+          "headers": ["Scénář", "Předem dané akceptační podmínky", "Posouzení a ověření"],
+          "rows": [
+            [
+              "C1: požádat a získat schválení",
+              "C11-C1 se nejprve uloží PENDING s oznámením pedagoga. Mimo cutoff ji v tomto scénáři schválí Karel; stejné ID bude CONFIRMED s confirmed_at, historií a oznámením studenta. UI odliší čekání od schválení.",
+              "Ptát se, zda výsledek stačí k rozhodnutí, zda se dostavit, která podstatná podmínka chybí a který předpoklad je nejasný. V C12 provede DVO0001 a moderátor schválí jako CER0001; readback před i po."
+            ],
+            [
+              "C2: zrušit schválenou konzultaci",
+              "KRA0001 zruší seed rezervaci cccc…ccc2 s důvodem Schedule conflict. Uloží se stav, aktér, čas, důvod, historie a oznámení pedagoga; na termínu nezůstane aktivní rezervace.",
+              "Ptát se, zda účastník pozná, zda konzultace proběhne, jaké potvrzení chybí a který předpoklad je nejasný. Pokud bude vybrán, použít běžné UI a soukromý readback."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Při výběru metody C se provede alespoň C1: účastník dostane samostatnou kartu, moderátor po kontrole vytvoření schválí přesnou žádost v odděleném profilu CER0001 a oznámí „Pedagog odpověděl. Zjistěte, co to znamená pro vaše plány.“ C2 lze jen posoudit; bez provedení zůstává technický výsledek NOT RUN. Každé provedené kritérium má hodnocení splněno / nesplněno / neověřeno s důkazem. Zvlášť se zaznamená rozhodnutí proxy přijímá / přijímá s výhradou / odmítá / nedokáže posoudit a přesná námitka. C1 ověřuje schválení vlastníkem, nikoliv zákaz schválení všemi ostatními účty; ten vyžaduje samostatné testy oprávnění."
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Scénář",
+            "Rozhodnutí/námitka proxy",
+            "Očekávaný výsledek",
+            "Skutečný readback",
+            "Interpretace"
+          ],
+          "rows": [
+            ["C1", "NOT RUN", "Stanoveno výše", "NOT RUN", "NOT RUN"],
+            ["C2", "NOT RUN", "Stanoveno výše", "NOT RUN", "NOT RUN"]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "warning",
+          "content": "Studentská proxy zaznamená vhodnost a námitky, ale nemůže udělit formální zákaznickou akceptaci. Dvě připravené cesty nepokrývají všechna oprávnění, race conditions, hranice cutoffu, poruchy, potřeby přístupnosti ani provozní podmínky."
+        }
+      ]
+    },
+    {
+      "id": "c11-method-d",
+      "title": "D · Krátký realistický pilot",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "**Validační otázka:** Dokáže student projít souvislým workflow žádost → schválení → změna plánů → storno a přitom správně rozumět stavu konzultace?"
+        },
+        {
+          "type": "paragraph",
+          "content": "**Interní scénář moderátora — nepředávat účastníkovi:** účastník dostane pouze kartu D. Po ověření žádosti PENDING moderátor schválí stejné ID jako CER0001. Pak řekne: „Pedagog zpracoval vaši žádost. Zjistěte výsledek a jeho význam pro svou schůzku.“ Po ověření CONFIRMED a vyjádření účastníka předá druhou událost: „Do stejného času se přesunula povinná výuka. Zařiďte, aby konzultace neproběhla; důvod je Required class moved.“"
+        },
+        {
+          "type": "table",
+          "headers": ["Fáze", "Pozorování", "Soukromý checkpoint"],
+          "rows": [
+            [
+              "Žádost",
+              "Nalezení pedagoga/termínu, volba formy a formuláře, reakce na zprávu po vytvoření a slova dokončení.",
+              "C11-D je PENDING s historií CREATED a oznámením pedagoga."
+            ],
+            [
+              "Událost schválení",
+              "Moderátor zaznamená přesné ID/čas; účastník nevidí postup pedagoga.",
+              "Stejné ID je CONFIRMED s confirmed_at, historií a oznámením studenta."
+            ],
+            [
+              "Kontrola účastníka",
+              "Zda bez procedurální pomoci najde a vyloží reakci pedagoga.",
+              "Výrok účastníka se porovná se stavem SQL."
+            ],
+            [
+              "Změna plánů",
+              "Jak rezervaci najde, zruší a ověří výsledek.",
+              "Stejné ID je CANCELLED s aktérem/časem/důvodem a oznámením; termín nemá aktivní rezervaci."
+            ]
+          ]
+        },
+        {
+          "type": "list",
+          "items": [
+            "Délka: 20–25 minut v čerstvě resetovaném izolovaném prostředí.",
+            "Debrief: Ve kterých bodech jste museli stav konzultace předpokládat?",
+            "Debrief: Jakou informaci nebo ovládací prvek byste potřebovali v běžném studijním týdnu?",
+            "Neodhalovat SQL, interní ID, očekávané stavy ani pořadí ovládacích prvků."
+          ]
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Událost",
+            "Akce / přesná slova",
+            "Pomoc/problém",
+            "Stav v UI",
+            "Readback",
+            "Interpretace"
+          ],
+          "rows": [
+            ["Žádost", "NOT RUN", "NOT RUN", "NOT RUN", "NOT RUN", "NOT RUN"],
+            ["Schválení", "NOT RUN", "NOT RUN", "NOT RUN", "NOT RUN", "NOT RUN"],
+            ["Kontrola účastníka", "NOT RUN", "NOT RUN", "NOT RUN", "NOT RUN", "NOT RUN"],
+            ["Storno", "NOT RUN", "NOT RUN", "NOT RUN", "NOT RUN", "NOT RUN"]
+          ]
+        },
+        {
+          "type": "note",
+          "variant": "info",
+          "content": "Krátká simulace se seed daty a okamžitým schválením moderátora nedokáže prokázat dlouhodobé přijetí, skutečné reakční doby, pracovní zátěž, spolehlivost, kapacitu, přístupnost populace ani chování při výpadku."
+        },
+        {
+          "type": "paragraph",
+          "content": "Interpretace pilotu: u stejného ID vyhodnotit návaznost fází a porozumění účastníka v každém bodě. Rozlišit průchod bez pomoci, s pomocí, nedokončený průchod a zdánlivé dokončení vyvrácené uloženým stavem. Uvést fázi rozporu; při selhání předchozího checkpointu nepředpokládat úspěch následujících. Okamžité schválení moderátorem není změřená reakční doba skutečného pedagoga."
+        }
+      ]
+    },
+    {
+      "id": "c11-c12-gate",
+      "title": "Brána provedení C12",
+      "blocks": [
+        {
+          "type": "checklist",
+          "items": [
+            {
+              "label": "Všechny čtyři metody používají implementované UI a lifecycle",
+              "done": true
+            },
+            {
+              "label": "Karty účastníka neobsahují skrytý postup ani oracle",
+              "done": true
+            },
+            {
+              "label": "Kritéria, interpretace a soukromé readbacky jsou stanovené předem",
+              "done": true
+            },
+            {
+              "label": "Prostředí a destruktivní reset jsou izolované názvem projektu",
+              "done": true
+            },
+            {
+              "label": "Každá metoda i role proxy uvádějí své limity",
+              "done": true
+            },
+            {
+              "label": "Prázdné záznamy obsahují NOT RUN a žádný vymyšlený PASS",
+              "done": true
+            },
+            {
+              "label": "Zapsaná metoda vybraná vyučujícím pro C12 — NOT RUN",
+              "done": false
+            },
+            {
+              "label": "Pozorování účastníka a skutečné readbacky — NOT RUN",
+              "done": false
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "Dokončené kontroly hodnotí **plán**, nikoliv výsledek validace produktu. Poslední dvě položky záměrně zůstávají otevřené pro C12. Úplné karty účastníka, SQL readbacky a prázdné formuláře jsou v `docs/C11_validation_plan.md`."
+        }
+      ]
+    }
+  ]
+}

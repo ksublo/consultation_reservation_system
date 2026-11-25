@@ -10,6 +10,7 @@ import csC07 from './c07/cs.json'
 import csC08 from './c08/cs.json'
 import csC09 from './c09/cs.json'
 import csC10 from './c10/cs.json'
+import csC11 from './c11/cs.json'
 import enC01 from './c01/en.json'
 import enC02 from './c02/en.json'
 import enC03A from './c03a/en.json'
@@ -19,6 +20,7 @@ import enC07 from './c07/en.json'
 import enC08 from './c08/en.json'
 import enC09 from './c09/en.json'
 import enC10 from './c10/en.json'
+import enC11 from './c11/en.json'
 import c06Source from './c06/C06_Assessment_consultation_reservation_system.md?raw'
 import {
   parseDocumentation,
@@ -26,7 +28,8 @@ import {
   type DocumentationBlock,
 } from './documentation-model'
 
-type DocsSection = 'c01' | 'c02' | 'c03a' | 'c03b' | 'c05' | 'c06' | 'c07' | 'c08' | 'c09' | 'c10'
+type DocsSection =
+  'c01' | 'c02' | 'c03a' | 'c03b' | 'c05' | 'c06' | 'c07' | 'c08' | 'c09' | 'c10' | 'c11'
 
 type StructuredDocsSection = Exclude<DocsSection, 'c06'>
 
@@ -35,7 +38,19 @@ interface DocumentationPageProps {
   t: TFunction
 }
 
-const tabs: DocsSection[] = ['c01', 'c02', 'c03a', 'c03b', 'c05', 'c06', 'c07', 'c08', 'c09', 'c10']
+const tabs: DocsSection[] = [
+  'c01',
+  'c02',
+  'c03a',
+  'c03b',
+  'c05',
+  'c06',
+  'c07',
+  'c08',
+  'c09',
+  'c10',
+  'c11',
+]
 const c07Documents = [
   {
     titleCs: 'A · Technická obhajoba',
@@ -530,6 +545,7 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
         c08: parseDocumentation(csC08, 'C08 / cs'),
         c09: parseDocumentation(csC09, 'C09 / cs'),
         c10: parseDocumentation(csC10, 'C10 / cs'),
+        c11: parseDocumentation(csC11, 'C11 / cs'),
       },
       en: {
         c01: parseDocumentation(enC01, 'C01 / en'),
@@ -541,6 +557,7 @@ export default function DocumentationPage({ language, t }: DocumentationPageProp
         c08: parseDocumentation(enC08, 'C08 / en'),
         c09: parseDocumentation(enC09, 'C09 / en'),
         c10: parseDocumentation(enC10, 'C10 / en'),
+        c11: parseDocumentation(enC11, 'C11 / en'),
       },
     }),
     [],

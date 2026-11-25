@@ -5,7 +5,7 @@ import DocumentationPage from './DocumentationPage'
 
 const translate = ((key: string) => key) as TFunction
 
-describe('DocumentationPage C10', () => {
+describe('DocumentationPage structured evidence', () => {
   afterEach(cleanup)
 
   it('opens the C10 operational evidence in both languages', () => {
@@ -22,5 +22,24 @@ describe('DocumentationPage C10', () => {
       screen.getByRole('heading', { level: 1, name: 'C10 · Operational situations and logs' }),
     ).toBeTruthy()
     expect(screen.getByText(/The baseline returned an incorrect empty 403/)).toBeTruthy()
+  })
+
+  it('opens the prepared C11 validation plan in both languages', () => {
+    const page = render(<DocumentationPage language="cs" t={translate} />)
+
+    fireEvent.click(screen.getByRole('tab', { name: 'C11' }))
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'C11 · Plán validace produktu' }),
+    ).toBeTruthy()
+    expect(screen.getByText(/PŘIPRAVENO \/ NOT RUN/)).toBeTruthy()
+    expect(screen.getAllByText(/Pozorované uživatelské úlohy/).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/PASS:/)).toBeNull()
+
+    page.rerender(<DocumentationPage language="en" t={translate} />)
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'C11 · Product validation plan' }),
+    ).toBeTruthy()
+    expect(screen.getByText(/PREPARED \/ NOT RUN/)).toBeTruthy()
+    expect(screen.getAllByText(/Observed user tasks/).length).toBeGreaterThan(0)
   })
 })

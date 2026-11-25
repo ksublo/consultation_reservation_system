@@ -56,8 +56,9 @@ Projektové podklady a rozhodnutí jsou v `docs/`; aplikační dokumentace je zo
 | [`docs/architecture-and-decisions.md`](docs/architecture-and-decisions.md) | Architektura, datový model a technická rozhodnutí včetně C08 |
 | [`docs/evidence-and-evolution.md`](docs/evidence-and-evolution.md)         | Testovací evidence, výsledky etap a omezení                  |
 | [`docs/deployment-development.md`](docs/deployment-development.md)         | Vývojové a nasazovací podklady                               |
+| [`docs/C11_validation_plan.md`](docs/C11_validation_plan.md)               | Plán čtyř metod validace C11; výsledky zůstávají `NOT RUN`   |
 | [`docs/diagrams/`](docs/diagrams/)                                         | Zdrojové a vykreslené diagramy                               |
 
-Aplikační dokumentace používá české a anglické JSON soubory. Jednotlivé části jsou `c01`, `c02`, `c03a`, `c03b`, `c05`, `c07`, `c08` a `c10`; C06 se načítá z Markdownu. Renderer a obsahový model jsou v `frontend/src/features/docs/DocumentationPage.tsx` a `documentation-model.ts`. Struktura a postup rozšíření jsou popsány v [`frontend/src/features/docs/README.md`](frontend/src/features/docs/README.md).
+Aplikační dokumentace používá české a anglické JSON soubory. Jednotlivé části jsou `c01`, `c02`, `c03a`, `c03b`, `c05`, `c07`, `c08`, `c09`, `c10` a `c11`; C06 se načítá z Markdownu. Renderer a obsahový model jsou v `frontend/src/features/docs/DocumentationPage.tsx` a `documentation-model.ts`. Struktura a postup rozšíření jsou popsány v [`frontend/src/features/docs/README.md`](frontend/src/features/docs/README.md).
 
 C08 dokumentuje automatické storno neschválených rezervací podle implementačního commitu `a5cf9d9` a [PR #67](https://github.com/ksublo/consultation_reservation_system/pull/67). Projektové dokumenty i česká a anglická aplikační verze zachovávají rozdíl mezi skutečně spuštěnými testy, neprovedeným baseline testem a neověřeným PR review.
