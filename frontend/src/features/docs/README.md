@@ -19,8 +19,12 @@ docs/
   c07/en.json
   c08/cs.json
   c08/en.json
+  c09/cs.json
+  c09/en.json
   c10/cs.json
   c10/en.json
+  c11/cs.json
+  c11/en.json
 ```
 
 Every file contains one document with `title` and `sections`. Each section has
@@ -59,3 +63,8 @@ successful confirmation, domain conflict, database outage and recovery, and an
 application restart. Keep API/log evidence separate from authoritative database
 state, include only useful log excerpts, and do not turn ordinary domain
 rejections into technical errors.
+
+C11 presents the prepared product-validation plan from
+`docs/C11_validation_plan.md`. Keep all four A–D protocols aligned with the real
+seed data and lifecycle, preserve the participant/private-protocol separation,
+and leave every actual observation and result as `NOT RUN` until C12.
